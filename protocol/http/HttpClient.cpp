@@ -86,7 +86,7 @@ namespace util
             std::string const & host, 
             error_code & ec)
         {
-            return bind_host(NetName(addr), ec);
+            return bind_host(NetName(host), ec);
         }
 
         error_code HttpClient::bind_host(

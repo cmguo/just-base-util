@@ -399,17 +399,17 @@ namespace util
 
             HttpResponseHead & response_head()
             {
-                return response_.head();
+                return response().head();
             }
 
-            HttpRequestHead & request_data()
+            boost::asio::streambuf & request_data()
             {
                 return request().data();
             }
 
-            HttpResponseHead & response_data()
+            boost::asio::streambuf & response_data()
             {
-                return response_.data();
+                return response().data();
             }
 
 			Statistics const & stat() const
