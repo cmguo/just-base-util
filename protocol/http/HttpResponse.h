@@ -55,6 +55,13 @@ namespace util
             }
 
             HttpResponse(
+                HttpResponseHead const & head)
+                : HttpPacket(head_)
+                , head_(head)
+            {
+            }
+
+            HttpResponse(
                 HttpResponse const & r)
                 : HttpPacket(head_)
                 , head_(r.head())

@@ -31,15 +31,19 @@ namespace util
                 void reset()
                 {
                     HttpSocket::Statistics::reset();
-                    request_head_time 
+                    send_pend_time 
+                        = request_head_time 
                         = request_data_time 
+                        = recv_pend_time 
                         = response_head_time 
                         = response_data_time
                         = (boost::uint32_t)-1;
                 }
 
+                boost::uint32_t send_pend_time;
                 boost::uint32_t request_head_time;
                 boost::uint32_t request_data_time;
+                boost::uint32_t recv_pend_time;
                 boost::uint32_t response_head_time;
                 boost::uint32_t response_data_time;
             };
@@ -86,7 +90,11 @@ namespace util
             boost::system::error_code open(
                 framework::string::Url const & url, 
                 HttpRequestHead::MethodEnum method, 
-                boost::system::error_code & ec);
+                boost::system::error_code & ec)
+            {
+                HttpRequestHead head;
+                return open(url_to_head(head, url, method), ec);
+            }
 
             boost::system::error_code open(
                 framework::string::Url const & url, 
@@ -104,25 +112,16 @@ namespace util
 
             boost::system::error_code open(
                 HttpRequestHead const & head, 
-                boost::system::error_code & ec);
+                boost::system::error_code & ec)
+            {
+                return open(HttpRequest(head), ec);
+            }
 
             boost::system::error_code open(
                 HttpRequest const & request, 
                 boost::system::error_code & ec);
 
             boost::system::error_code reopen(
-                framework::network::NetName const & addr, 
-                HttpRequest const & request, 
-                boost::system::error_code & ec);
-
-            boost::system::error_code reopen(
-                boost::system::error_code & ec);
-
-            boost::system::error_code reopen(
-                boost::uint64_t offset, 
-                boost::system::error_code & ec);
-
-            boost::system::error_code poll(
                 boost::system::error_code & ec);
 
             bool is_open(
@@ -131,7 +130,11 @@ namespace util
             void async_open(
                 framework::string::Url const & url, 
                 HttpRequestHead::MethodEnum method, 
-                response_type const & resp);
+                response_type const & resp)
+            {
+                HttpRequestHead head;
+                async_open(url_to_head(head, url, method), resp);
+            }
 
             void async_open(
                 framework::string::Url const & url, 
@@ -149,10 +152,16 @@ namespace util
 
             void async_open(
                 HttpRequestHead const & head, 
-                response_type const & resp);
+                response_type const & resp)
+            {
+                async_open(HttpRequest(head), resp);
+            }
 
             void async_open(
                 HttpRequest const & request, 
+                response_type const & resp);
+
+            void async_reopen(
                 response_type const & resp);
 
             boost::system::error_code read_finish(
@@ -169,7 +178,11 @@ namespace util
             boost::system::error_code fetch(
                 framework::string::Url const & url, 
                 HttpRequestHead::MethodEnum method, 
-                boost::system::error_code & ec);
+                boost::system::error_code & ec)
+            {
+                HttpRequestHead head;
+                return fetch(url_to_head(head, url, method), ec);
+            }
 
             boost::system::error_code fetch(
                 framework::string::Url const & url, 
@@ -187,7 +200,10 @@ namespace util
 
             boost::system::error_code fetch(
                 HttpRequestHead const & head, 
-                boost::system::error_code & ec);
+                boost::system::error_code & ec)
+            {
+                return fetch(HttpRequest(head), ec);
+            }
 
             boost::system::error_code fetch(
                 HttpRequest const & request, 
@@ -230,7 +246,11 @@ namespace util
             void async_fetch(
                 framework::string::Url const & url, 
                 HttpRequestHead::MethodEnum method, 
-                response_type const & resp);
+                response_type const & resp)
+            {
+                HttpRequestHead head;
+                return async_fetch(url_to_head(head, url, method), resp);
+            }
 
             void async_fetch(
                 framework::string::Url const & url, 
@@ -248,7 +268,10 @@ namespace util
 
             void async_fetch(
                 HttpRequestHead const & head, 
-                response_type const & resp);
+                response_type const & resp)
+            {
+                return async_fetch(HttpRequest(head), resp);
+            }
 
             void async_fetch(
                 HttpRequest const & request, 
@@ -285,18 +308,83 @@ namespace util
                 async_fetch(url, HttpRequestHead::post, resp);
             }
 
+        private:
+            static HttpRequestHead const & url_to_head(
+                HttpRequestHead & head, 
+                framework::string::Url const & url, 
+                HttpRequestHead::MethodEnum method)
+            {
+                head.method = method;
+                head.path = url.path_all();
+                if (!url.host().empty())
+                    head.host.reset(url.host_svc());
+                return head;
+            }
+
+        private:
+            enum ConnectionStatusEnum
+            {
+                closed, 
+                connectting, 
+                established, 
+                ready, // 第一个请求已经打开，并且所有请求已经发出去
+                broken, 
+            };
+
+            enum RequestStatusEnum
+            {
+                send_pending, 
+                sending_req_head, 
+                sending_req_data, 
+                recv_pending, 
+                recving_resp_head, 
+                opened, 
+                recving_resp_data, 
+                finished, 
+            };
+
+        private:
+            struct Request
+                : HttpRequest
+            {
+                Request(
+                    size_t id, 
+                    HttpRequest const & request, 
+                    bool is_fetch)
+                    : HttpRequest(request)
+                    , id(id)
+                    , is_fetch(is_fetch)
+                    , is_async(false)
+                    , status(send_pending)
+                {
+                }
+
+                Request(
+                    size_t id, 
+                    HttpRequest const & request, 
+                    bool is_fetch, 
+                    response_type const & resp)
+                    : HttpRequest(request)
+                    , id(id)
+                    , is_fetch(is_fetch)
+                    , is_async(true)
+                    , status(send_pending)
+                    , resp(resp)
+                {
+                }
+
+                size_t id;
+                bool is_fetch;
+                bool is_async;
+                RequestStatusEnum status;
+                Statistics stat;
+                response_type resp;
+            };
+
         public:
-            HttpRequest & get_request();
-
-            HttpResponse & get_response();
-
-            HttpRequestHead & get_request_head();
-
-            HttpResponseHead & get_response_head();
-
             HttpRequest & request()
             {
-                return request_;
+                return requests_[0];
             }
 
             HttpResponse & response()
@@ -306,7 +394,7 @@ namespace util
 
             HttpRequestHead & request_head()
             {
-                return request_.head();
+                return request().head();
             }
 
             HttpResponseHead & response_head()
@@ -314,59 +402,90 @@ namespace util
                 return response_.head();
             }
 
+            HttpRequestHead & request_data()
+            {
+                return request().data();
+            }
+
+            HttpResponseHead & response_data()
+            {
+                return response_.data();
+            }
+
 			Statistics const & stat() const
-			{
-				return stat_;
-			}
+            {
+                return requests_[0].stat;
+            }
 
         private:
-            enum StatusEnum
-            {
-                closed, 
-                connectting, 
-                established, 
-                sending_req_head, 
-                sending_req_data, 
-                recving_resp_head, 
-                opened, 
-                recving_resp_data, 
-                closing
-            };
-
-        protected:
-            boost::system::error_code resume(
+            boost::system::error_code post_reqeust(
+                Request const & request, 
                 boost::system::error_code & ec);
 
-            void async_start(
-                response_type const & resp);
+            boost::system::error_code resume(
+                bool pending, 
+                boost::system::error_code & ec);
 
-            void handle_async(
+            boost::system::error_code resume_connect(
+                boost::system::error_code & ec);
+
+            boost::system::error_code resume_request(
+                bool pending, 
+                boost::system::error_code & ec);
+
+            void async_resume();
+
+            void handle_async_connect(
                 boost::system::error_code const & ec);
 
-            void response(
+            void handle_async_reqeust(
+                bool pending, 
+                boost::system::error_code const & ec);
+
+            void response_request(
+                Request & request, 
                 boost::system::error_code const & ec);
 
             bool handle_redirect(
+                Request & request, 
                 boost::system::error_code & ec);
 
-            void post_handle(
+            bool handle_next(
+                boost::system::error_code & ec);
+
+            void post_handle_request(
+                Request & request, 
+                boost::system::error_code & ec);
+
+            void dump(
+                char const * function, 
+                boost::system::error_code const & ec);
+
+            void dump_request(
+                Request const & request, 
+                char const * function, 
+                boost::system::error_code const & ec);
+
+            void close_socket(
                 boost::system::error_code & ec);
 
         private:
-            static std::string const status_str[];
+            static std::string const con_status_str[];
+            static std::string const req_status_str[];
 
         private:
             static size_t next_id_;
 
         private:
             framework::network::NetName addr_;
-            StatusEnum status_;
-            bool is_async_;
-            bool is_fetch_;
-            HttpRequest request_;
+            framework::network::NetName req_addr_;
+            ConnectionStatusEnum status_;
+            boost::system::error_code broken_error_;
+            bool is_keep_alive_;
+            std::deque<Request> requests_;
             HttpResponse response_;
-            response_type resp_;
-			Statistics stat_;
+            size_t req_id_;
+            size_t num_sent_;   // 已经发出去的请求数
 
         private:
             size_t id_;
