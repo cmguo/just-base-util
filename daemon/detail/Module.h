@@ -47,7 +47,7 @@ namespace util
                     return daemon_.config();
                 }
 
-                framework::logger::Logger & logger()
+                framework::logger::LoggerManager & logger()
                 {
                     return daemon_.logger();
                 }
