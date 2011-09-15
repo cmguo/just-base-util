@@ -361,7 +361,7 @@ namespace util
             on_receive_response_head(response_.head());
 
             if (!response_.head().content_length.is_initialized()) {
-                response_.head().connection.reset(http_filed::Connection::close);
+                response_.head().connection.reset(http_field::Connection::close);
             }
 
             http_to_client_.async_write(response_.head(), 
@@ -445,7 +445,7 @@ namespace util
             on_finish();
 
             if (!response_.head().connection
-                || response_.head().connection.get() == http_filed::Connection::close) {
+                || response_.head().connection.get() == http_field::Connection::close) {
                     delete this;
             } else {
                 start();
@@ -493,7 +493,7 @@ namespace util
             }
             head.err_msg = ec.message();
             head.content_length.reset(0);
-            response_.head().connection = http_filed::Connection::close;
+            response_.head().connection = http_field::Connection::close;
             on_error(ec);
             http_to_client_.async_write(response_.head(), 
                 boost::bind(&HttpProxy::handle_response_error, this, _1, _2));

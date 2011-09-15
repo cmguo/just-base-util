@@ -211,7 +211,7 @@ namespace util
 
             if (status_ != established)
                 status_ = closed;
-            request_.head().range.reset(http_filed::Range(offset));
+            request_.head().range.reset(http_field::Range(offset));
             // 在connect的时候会自动关闭
             return resume(ec);
         }
@@ -323,7 +323,7 @@ namespace util
             }
             if (status_ == established 
                 && response_.head().connection
-                && response_.head().connection.get() == http_filed::Connection::close) {
+                && response_.head().connection.get() == http_field::Connection::close) {
                     LOG_F(Logger::kLevelDebug, "[read_finish] close (id = %u, status = %s)" 
                         % id_ % status_str[status_]);
                     close(ec);
@@ -481,7 +481,7 @@ namespace util
                         request_.head().content_length.reset(request_.data().size());
                     }
                     if (!request_.head().connection.is_initialized()) {
-                        request_.head().connection.reset(http_filed::Connection());
+                        request_.head().connection.reset(http_field::Connection());
                     }
                     status_ = sending_req_head;
                 case sending_req_head:
@@ -790,7 +790,7 @@ namespace util
 
             if (status_ == established 
                 && response_.head().connection
-                && response_.head().connection.get() == http_filed::Connection::close) {
+                && response_.head().connection.get() == http_field::Connection::close) {
                     close(ec);
                     LOG_F(Logger::kLevelDebug, "[post_handle] connection closed (id = %u, status = %s, ec = %s)" 
                         % id_ % status_str[status_] % ec.message());

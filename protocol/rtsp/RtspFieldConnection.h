@@ -1,4 +1,4 @@
-// Connection.h
+// RtspFieldConnection.h
 
 #ifndef _UTIL_PROTOCOL_RTSP_FIELD_CONNECTION_H_
 #define _UTIL_PROTOCOL_RTSP_FIELD_CONNECTION_H_
@@ -12,7 +12,7 @@ namespace util
 {
     namespace protocol
     {
-        namespace rtsp_filed
+        namespace rtsp_field
         {
 
             class Connection

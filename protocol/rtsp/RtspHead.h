@@ -69,7 +69,7 @@ namespace util
             boost::optional<std::string> host;
             boost::optional<std::string> location;
             boost::optional<std::string> public_;
-            boost::optional<rtsp_filed::Range> range;
+            boost::optional<rtsp_field::Range> range;
             std::vector<std::string> pragma;
 
         private:

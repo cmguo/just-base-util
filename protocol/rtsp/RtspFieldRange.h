@@ -15,7 +15,7 @@ namespace util
 {
     namespace protocol
     {
-        namespace rtsp_filed
+        namespace rtsp_field
         {
 
             class Range
@@ -134,7 +134,7 @@ namespace util
 {
     namespace protocol
     {
-        namespace rtsp_filed
+        namespace rtsp_field
         {
 
             inline std::string Range::to_string() const

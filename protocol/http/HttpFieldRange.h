@@ -15,7 +15,7 @@ namespace util
 {
     namespace protocol
     {
-        namespace http_filed
+        namespace http_field
         {
 
             class Range
@@ -163,7 +163,7 @@ namespace util
 {
     namespace protocol
     {
-        namespace http_filed
+        namespace http_field
         {
 
             inline std::string Range::to_string() const
