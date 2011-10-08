@@ -68,9 +68,9 @@ namespace util
             boost::optional<boost::uint64_t> content_length;
             boost::optional<std::string> host;
             boost::optional<std::string> location;
-            boost::optional<http_filed::Range> range;
-            boost::optional<http_filed::ContentRange> content_range;
-            boost::optional<http_filed::Connection> connection;
+            boost::optional<http_field::Range> range;
+            boost::optional<http_field::ContentRange> content_range;
+            boost::optional<http_field::Connection> connection;
             std::vector<std::string> pragma;
 
         private:

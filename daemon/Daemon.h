@@ -79,7 +79,7 @@ namespace util
                 return config_;
             }
 
-            framework::logger::LoggerManager & logger()
+            framework::logger::Logger & logger()
             {
                 return logger_;
             }
@@ -123,7 +123,7 @@ namespace util
             boost::asio::io_service::work * io_work_;
             boost::thread_group th_grp_;
             framework::configure::Config config_;
-            framework::logger::LoggerManager logger_;
+            framework::logger::Logger logger_;
 
             detail::ModuleRegistry * module_registry_;
         };

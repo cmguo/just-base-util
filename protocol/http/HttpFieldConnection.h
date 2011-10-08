@@ -1,4 +1,4 @@
-// Connection.h
+// HttpFieldConnection.h
 
 #ifndef _UTIL_PROTOCOL_HTTP_FIELD_CONNECTION_H_
 #define _UTIL_PROTOCOL_HTTP_FIELD_CONNECTION_H_
@@ -12,7 +12,7 @@ namespace util
 {
     namespace protocol
     {
-        namespace http_filed
+        namespace http_field
         {
 
             class Connection
