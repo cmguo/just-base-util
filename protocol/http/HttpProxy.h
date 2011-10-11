@@ -6,7 +6,6 @@
 #include "util/protocol/http/HttpSocket.h"
 #include "util/protocol/http/HttpRequest.h"
 #include "util/protocol/http/HttpResponse.h"
-#include "util/stream/StreamTransfer.h"
 
 #include <framework/network/NetName.h>
 
@@ -17,6 +16,8 @@ namespace util
 {
     namespace protocol
     {
+
+        typedef std::pair<std::size_t, std::size_t> transfer_size;
 
         class HttpProxy
         {
@@ -189,7 +190,7 @@ namespace util
 
             void handle_transfer_request_data(
                 boost::system::error_code const & ec, 
-                util::stream::transfer_size const & bytes_transferred);
+                transfer_size const & bytes_transferred);
 
             void handle_local_process(
                 boost::system::error_code const & ec);
@@ -208,7 +209,7 @@ namespace util
 
             void handle_transfer_response_data(
                 boost::system::error_code const & ec, 
-                util::stream::transfer_size const & bytes_transferred);
+                transfer_size const & bytes_transferred);
 
             void handle_response_error(
                 boost::system::error_code const & ec, 
