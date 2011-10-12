@@ -52,6 +52,8 @@ namespace util
             boost::system::error_code start(
                 size_t concurrency = 0);
 
+            void run();
+
             typedef boost::function<
                 void (boost::system::error_code const &)
             > start_call_back_type;

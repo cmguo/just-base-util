@@ -67,18 +67,6 @@ namespace util
             cond.notify_all();
         }
 
-        static void startup_result(
-            Daemon & daemon, 
-            boost::system::error_code & result2, 
-            boost::system::error_code const & result)
-        {
-            LOG_S(Logger::kLevelDebug, "[start] end");
-            result2 = result;
-            if (result) {
-                daemon.post_stop();
-            }
-        }
-
         boost::system::error_code Daemon::start(
             size_t concurrency)
         {
@@ -86,13 +74,8 @@ namespace util
             boost::system::error_code result;
             LOG_S(Logger::kLevelDebug, "[start] beg");
             if (concurrency == 0) {
-                io_svc_.post(boost::bind(startup_result, 
-                    boost::ref(*this), 
-                    boost::ref(result), 
-                    boost::bind(&detail::ModuleRegistry::startup, module_registry_)));
-                io_svc_.run();
-                io_svc_.reset();
-                LOG_S(Logger::kLevelDebug, "[stop] end");
+                result = module_registry_->startup();
+                LOG_S(Logger::kLevelDebug, "[start] end");
             } else {
                 boost::mutex mutex;
                 boost::condition_variable cond;
@@ -107,11 +90,18 @@ namespace util
                 }
                 cond.wait(lock);
                 LOG_S(Logger::kLevelDebug, "[start] end");
-                if (result) {
-                    stop();
-                }
+            }
+            if (result) {
+                stop();
             }
             return result;
+        }
+
+        void Daemon::run()
+        {
+            io_svc_.run();
+            io_svc_.reset();
+            LOG_S(Logger::kLevelDebug, "[stop] end");
         }
 
         static void startup_call_back(
