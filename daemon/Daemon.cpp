@@ -75,7 +75,6 @@ namespace util
             LOG_S(Logger::kLevelDebug, "[start] beg");
             if (concurrency == 0) {
                 result = module_registry_->startup();
-                LOG_S(Logger::kLevelDebug, "[start] end");
             } else {
                 boost::mutex mutex;
                 boost::condition_variable cond;
@@ -89,33 +88,15 @@ namespace util
                     th_grp_.create_thread(boost::bind(&boost::asio::io_service::run, &io_svc_));
                 }
                 cond.wait(lock);
-                LOG_S(Logger::kLevelDebug, "[start] end");
             }
+            LOG_S(Logger::kLevelDebug, "[start] end");
             if (result) {
-                stop();
+                LOG_S(Logger::kLevelDebug, "[stop] beg");
+                delete io_work_;
+                io_work_ = NULL;
+                run();
             }
             return result;
-        }
-
-        void Daemon::run()
-        {
-            io_svc_.run();
-            io_svc_.reset();
-            LOG_S(Logger::kLevelDebug, "[stop] end");
-        }
-
-        static void startup_call_back(
-            Daemon & daemon, 
-            boost::system::error_code & result2, 
-            Daemon::start_call_back_type const & start_call_back, 
-            boost::system::error_code const & result)
-        {
-            LOG_S(Logger::kLevelDebug, "[start] end");
-            result2 = result;
-            start_call_back(result);
-            if (result) {
-                daemon.post_stop();
-            }
         }
 
         boost::system::error_code Daemon::start(
@@ -124,15 +105,28 @@ namespace util
             LOG_S(Logger::kLevelDebug, "[start] beg");
             io_work_ = new boost::asio::io_service::work(io_svc_);
             boost::system::error_code result;
-            io_svc_.post(boost::bind(startup_call_back, 
-                boost::ref(*this), 
-                boost::ref(result), 
-                boost::cref(start_call_back), 
-                boost::bind(&detail::ModuleRegistry::startup, module_registry_)));
-            io_svc_.run();
-            io_svc_.reset();
-            LOG_S(Logger::kLevelDebug, "[stop] end");
+            result = module_registry_->startup();
+            LOG_S(Logger::kLevelDebug, "[start] end");
+            start_call_back(result);
+            if (result) {
+            	LOG_S(Logger::kLevelDebug, "[stop] beg");
+                delete io_work_;
+                io_work_ = NULL;
+            }
+            run();
             return result;
+        }
+
+        void Daemon::run()
+        {
+            if (th_grp_.size()) {
+                th_grp_.join_all();
+                io_svc_.reset();
+            } else {
+                io_svc_.run();
+                io_svc_.reset();
+            }
+            LOG_S(Logger::kLevelDebug, "[stop] end");
         }
 
         void Daemon::stop()
@@ -142,11 +136,7 @@ namespace util
             io_work_ = NULL;
             io_svc_.post(
                 boost::bind(&detail::ModuleRegistry::shutdown, module_registry_));
-            if (th_grp_.size()) {
-                th_grp_.join_all();
-                io_svc_.reset();
-                LOG_S(Logger::kLevelDebug, "[stop] end");
-            }
+            run();
         }
 
         void Daemon::post_stop()
