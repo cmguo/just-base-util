@@ -28,11 +28,45 @@ namespace util
 
         FRAMEWORK_LOGGER_DECLARE_MODULE("HttpProxy");
 
+        std::string const HttpProxy::state_str[] = {
+            "stopped", 
+            "receiving_request_head", 
+            "preparing", 
+            "connectting", 
+            "sending_request_head", 
+            "transferring_request_data", 
+            "local_processing", 
+            "receiving_response_head", 
+            "sending_response_head", 
+            "transferring_response_data", 
+            "exiting", 
+        };
+
+        std::string HttpProxy::Size::to_string() const
+        {
+            switch (type_) {
+                case 0:
+                    return "none";
+                case 1:
+                    return get_bool() ? "true" : "false";
+                case 2:
+                    return format(s1_);
+                case 3:
+                    return "{" + format(s1_) + ", " + format(s2_) + "}";
+                default:
+                    return "ERROR";
+            }
+        }
+
         HttpProxy::HttpProxy(
             boost::asio::io_service & io_svc)
-            : http_to_client_(io_svc)
+            : state_(stopped)
+            , watch_state_(watch_stopped)
+            , http_to_client_(io_svc)
             , http_to_server_(NULL)
         {
+            static size_t gid = 0;
+            id_ = gid++;
         }
 
         HttpProxy::~HttpProxy()
@@ -44,6 +78,11 @@ namespace util
             }
         }
 
+        void HttpProxy::start()
+        {
+            handle_async(error_code(), Size());
+        }
+
         void HttpProxy::close()
         {
             boost::system::error_code ec;
@@ -53,6 +92,22 @@ namespace util
             }
         }
 
+        void HttpProxy::cancel()
+        {
+            if (http_to_server_)
+                http_to_server_->cancel();
+            http_to_client_.cancel();
+        }
+
+        error_code HttpProxy::cancel(
+            error_code & ec)
+        {
+            if (http_to_server_)
+                http_to_server_->cancel(ec);
+            http_to_client_.cancel(ec);
+            return ec;
+        }
+        
         /*
         Local:
             receive_request_head
@@ -75,341 +130,201 @@ namespace util
             transfer_response_data
         */
 
-        void HttpProxy::start()
-        {
-            LOG_F(Logger::kLevelDebug, "[start]");
-
-            http_to_client_.async_read(request_.head(), 
-                boost::bind(&HttpProxy::handle_receive_request_head, this, _1, _2));
-        }
-
-        void HttpProxy::cancel()
-        {
-            if (http_to_server_)
-                http_to_server_->cancel();
-            http_to_client_.cancel();
-        }
-
-        error_code HttpProxy::cancel(
-            error_code & ec)
-        {
-            if (http_to_server_)
-                http_to_server_->cancel(ec);
-            http_to_client_.cancel(ec);
-            return ec;
-        }
-
-        HttpRequest & HttpProxy::get_request()
-        {
-            return request_;
-        }
-
-        HttpResponse & HttpProxy::get_response()
-        {
-            return response_;
-        }
-
-        HttpRequestHead & HttpProxy::get_request_head()
-        {
-            return request_.head();
-        }
-
-        HttpResponseHead & HttpProxy::get_response_head()
-        {
-            return response_.head();
-        }
-
-        HttpSocket & HttpProxy::get_client_data_stream()
-        {
-            return http_to_client_;
-        }
-
-        HttpSocket & HttpProxy::get_server_data_stream()
-        {
-            assert(http_to_server_);
-            if (http_to_server_)
-                return *http_to_server_;
-            else
-                return *(HttpSocket *)NULL;
-        }
-
-        bool HttpProxy::is_local()
-        {
-            return http_to_server_ == NULL;
-        }
-
-        void HttpProxy::handle_receive_request_head(
-            error_code const & ec, 
-            size_t bytes_transferred)
+        void HttpProxy::handle_async(
+            boost::system::error_code const & ec, 
+            Size const & bytes_transferred)
         {
             LOG_SECTION();
 
-            LOG_F(Logger::kLevelDebug, "[handle_receive_request_head] ec = %s, bytes_transferred = %u" 
-                % ec.message().c_str() % bytes_transferred);
+            LOG_F(Logger::kLevelDebug, "[handle_async] (id = %u, status = %s, ec = %s, bytes_transferred = %s)" 
+                %id_ % state_str[state_] % ec.message() % bytes_transferred.to_string());
+
+            if (watch_state_ == broken) {
+                delete this;
+                return;
+            }
 
             if (ec) {
-                request_.clear_data();
-                error_code ec1;
-                bool block = !http_to_client_.get_non_block(ec1);
-                if (block)
-                    http_to_client_.set_non_block(true, ec1);
-                boost::asio::read(http_to_client_, request_.data(), boost::asio::transfer_at_least(4096), ec1);
-                if (block)
-                    http_to_client_.set_non_block(false, ec1);
-                if (request_.data().size() > 4096) {
-                    LOG_HEX(Logger::kLevelDebug, 
-                        boost::asio::buffer_cast<unsigned char const *>(request_.data().data()), 4096);
-                    LOG_STR(Logger::kLevelDebug, (format(request_.data().size() - 4096) + " bytes remain").c_str());
-                } else {
-                    LOG_HEX(Logger::kLevelDebug, 
-                        boost::asio::buffer_cast<unsigned char const *>(request_.data().data()), request_.data().size());
+                if (watch_state_ == watching) {
+                    error_code ec1;
+                    http_to_client_.cancel(ec1);
                 }
-                handle_error(ec);
-                return;
-            }
-
-            on_receive_request_head(
-                request_.head(), 
-                boost::bind(&HttpProxy::handle_prepare, this, _1, _2));
-        }
-
-        void HttpProxy::handle_prepare(
-            boost::system::error_code const & ec, 
-            bool proxy)
-        {
-            LOG_SECTION();
-
-            LOG_F(Logger::kLevelDebug, "[handle_prepare] ec = %s" 
-                % ec.message().c_str());
-
-            if (ec) {
-                response_error(ec);
-                return;
-            }
-            if (proxy) {
-                if (!http_to_server_)
-                    http_to_server_ = new HttpSocket(http_to_client_.get_io_service());
-                NetName addr;
-                addr.svc("http");
-                if (request_.head().host.is_initialized())
-                    addr.from_string(request_.head().host.get());
-                http_to_server_->async_connect(addr, 
-                    boost::bind(&HttpProxy::handle_connect_server, this, _1));
-            } else {
-                response_.head().connection = request_.head().connection;
-                transfer_request_data(
-                    boost::bind(&HttpProxy::handle_transfer_request_data, this, _1, _2));
-            }
-        }
-
-        void HttpProxy::handle_connect_server(
-            error_code const & ec)
-        {
-            LOG_SECTION();
-
-            LOG_F(Logger::kLevelDebug, "[handle_connect_server] ec = %s" 
-                % ec.message().c_str());
-
-            if (ec) {
-                response_error(ec);
-                return;
-            }
-
-            http_to_server_->async_write(request_.head(), 
-                boost::bind(&HttpProxy::handle_send_request_head, this, _1, _2));
-        }
-
-        void HttpProxy::handle_send_request_head(
-            error_code const & ec, 
-            size_t bytes_transferred)
-        {
-            LOG_SECTION();
-
-            LOG_F(Logger::kLevelDebug, "[handle_send_request_head] ec = %s, bytes_transferred = %u" 
-                % ec.message().c_str() % bytes_transferred);
-
-            if (ec) {
-                response_error(ec);
-                return;
-            }
-            
-            transfer_request_data(
-                boost::bind(&HttpProxy::handle_transfer_request_data, this, _1, _2));
-        }
-
-        void HttpProxy::handle_receive_request_data(
-            boost::system::error_code const & ec, 
-            size_t bytes_transferred)
-        {
-            LOG_SECTION();
-
-            LOG_F(Logger::kLevelDebug, "[handle_receive_request_head] ec = %s, bytes_transferred = %u" 
-                % ec.message().c_str() % bytes_transferred);
-
-            if (ec) {
-                handle_error(ec);
-                return;
-            }
-
-            on_receive_request_data(transfer_buf_);
-            transfer_buf_.consume(transfer_buf_.size());
-            handle_transfer_request_data(ec, transfer_size(bytes_transferred, bytes_transferred));
-        }
-
-        void HttpProxy::handle_transfer_request_data(
-            boost::system::error_code const & ec, 
-            transfer_size const & bytes_transferred)
-        {
-            LOG_SECTION();
-
-            LOG_F(Logger::kLevelDebug, "[handle_transfer_request_data] ec = %s, bytes_transferred = {%u, %u}" 
-                % ec.message().c_str() % bytes_transferred.first % bytes_transferred.second);
-
-            if (ec) {
-                handle_error(ec);
-                return;
-            }
-
-            local_process(
-                boost::bind(&HttpProxy::handle_local_process, this, _1));
-        }
-
-        void HttpProxy::handle_local_process(
-            error_code const & ec)
-        {
-            LOG_SECTION();
-
-            LOG_F(Logger::kLevelDebug, "[handle_local_process] ec = %s" 
-                % ec.message().c_str());
-
-            if (ec) {
-                response_error(ec);
-                return;
-            }
-
-            if (is_local()) {
-                handle_receive_response_head(ec, 0);
-            } else {
-                http_to_server_->async_read(response_.head(), 
-                    boost::bind(&HttpProxy::handle_receive_response_head, this, _1, _2));
-            }
-        }
-
-        void HttpProxy::handle_receive_response_head(
-            error_code const & ec, 
-            size_t bytes_transferred)
-        {
-            LOG_SECTION();
-
-            LOG_F(Logger::kLevelDebug, "[handle_receive_response_head] ec = %s, bytes_transferred = %u" 
-                % ec.message().c_str() % bytes_transferred);
-
-            if (ec) {
-                response_.clear_data();
-                error_code ec1;
-                bool block = !http_to_server_->get_non_block(ec1);
-                if (block)
-                    http_to_server_->set_non_block(true, ec1);
-                boost::asio::read(*http_to_server_, response_.data(), boost::asio::transfer_at_least(4096), ec1);
-                if (block)
-                    http_to_server_->set_non_block(false, ec1);
-                if (response_.data().size() > 4096) {
-                    LOG_HEX(Logger::kLevelDebug, 
-                        boost::asio::buffer_cast<unsigned char const *>(response_.data().data()), 4096);
-                    LOG_STR(Logger::kLevelDebug, (format(response_.data().size() - 4096) + " bytes remain").c_str());
-                } else {
-                    LOG_HEX(Logger::kLevelDebug, 
-                        boost::asio::buffer_cast<unsigned char const *>(response_.data().data()), response_.data().size());
+                on_error(ec);
+                switch (state_) {
+                    case receiving_request_head:
+                    case transferring_request_data:
+                    case sending_response_head:
+                    case transferring_response_data:
+                        on_finish();
+                        state_ = exiting;
+                        break;
+                    case preparing:
+                    case connectting:
+                    case sending_request_head:
+                    case local_processing:
+                    case receiving_response_head:
+                        state_ = sending_response_head;
+                        response_error(ec, boost::bind(&HttpProxy::handle_async, this, _1, _2));
+                        break;
+                    default:
+                        assert(0);
+                        break;
                 }
-                response_error(ec);
                 return;
             }
 
-            on_receive_response_head(response_.head());
-
-            if (!response_.head().content_length.is_initialized()) {
-                response_.head().connection.reset(http_field::Connection::close);
+            switch (state_) {
+                case stopped:
+                    state_ = receiving_request_head;
+                    http_to_client_.async_read(request_.head(), 
+                        boost::bind(&HttpProxy::handle_async, this, _1, _2));
+                    break;
+                case receiving_request_head:
+                    state_ = preparing;
+                    if (watch_state_ == watch_stopped 
+                        && request_.head().content_length.get_value_or(0) == 0) {
+                            watch_state_ = watching;
+                            http_to_client_.async_read_some(boost::asio::null_buffers(), 
+                                boost::bind(&HttpProxy::handle_watch, this, _1));
+                    }
+                    on_receive_request_head(
+                        request_.head(), 
+                        boost::bind(&HttpProxy::handle_async, this, _1, _2));
+                    break;
+                case preparing:
+                    if (bytes_transferred.get_bool()) {
+                        if (!http_to_server_)
+                            http_to_server_ = new HttpSocket(http_to_client_.get_io_service());
+                        state_ = connectting;
+                        http_to_server_->async_connect(request_.head().host.get(), 
+                            boost::bind(&HttpProxy::handle_async, this, _1, Size()));
+                    } else {
+                        response_.head().connection = request_.head().connection;
+                        state_ = transferring_request_data;
+                        transfer_request_data(
+                            boost::bind(&HttpProxy::handle_async, this, _1, _2));
+                    }
+                    break;
+                case connectting:
+                    state_ = sending_request_head;
+                    http_to_server_->async_write(request_.head(), 
+                        boost::bind(&HttpProxy::handle_async, this, _1, _2));
+                    break;
+                case sending_request_head:
+                    state_ = transferring_request_data;
+                    transfer_request_data(
+                        boost::bind(&HttpProxy::handle_async, this, _1, _2));
+                    break;
+                case transferring_request_data:
+                    if (is_local()) {
+                        on_receive_request_data(transfer_buf_);
+                        transfer_buf_.consume(transfer_buf_.size());
+                    }
+                    state_ = local_processing;
+                    if (watch_state_ == watch_stopped) {
+                        watch_state_ = watching;
+                        http_to_client_.async_read_some(boost::asio::null_buffers(), 
+                            boost::bind(&HttpProxy::handle_watch, this, _1));
+                    }
+                    local_process(
+                        boost::bind(&HttpProxy::handle_async, this, _1, Size()));
+                    break;
+                case local_processing:
+                    if (is_local()) {
+                        state_ = receiving_response_head;
+                        on_receive_response_head(response_.head());
+                        if (!response_.head().content_length.is_initialized() && bytes_transferred.is_size_t()) {
+                            response_.head().content_length.reset(bytes_transferred.get_size_t());
+                        }
+                        if (!response_.head().connection.is_initialized()) {
+                            response_.head().connection.reset(http_field::Connection());
+                        }
+                        handle_async(ec, Size());
+                    } else {
+                        state_ = receiving_response_head;
+                        http_to_server_->async_read(response_.head(), 
+                            boost::bind(&HttpProxy::handle_async, this, _1, _2));
+                    }
+                    break;
+                case receiving_response_head:
+                    if (!is_local()) {
+                        on_receive_response_head(response_.head());
+                        if (!response_.head().connection.is_initialized()) {
+                            response_.head().connection.reset(http_field::Connection());
+                        }
+                    }
+                    state_ = sending_response_head;
+                    http_to_client_.async_write(response_.head(), 
+                        boost::bind(&HttpProxy::handle_async, this, _1, _2));
+                    break;
+                case sending_response_head:
+                    state_ = transferring_response_data;
+                    transfer_response_data(
+                        boost::bind(&HttpProxy::handle_async, this, _1, _2));
+                    break;
+                case transferring_response_data:
+                    on_finish();
+                    if (!response_.head().connection
+                        || response_.head().connection.get() == http_field::Connection::close) {
+                            state_ = exiting;
+                            if (watch_state_ != watching) {
+                                delete this;
+                            } else {
+                                error_code ec;
+                                http_to_client_.cancel(ec);
+                            }
+                    } else {
+                        state_ = stopped;
+                        if (watch_state_ != watching) {
+                            // restart
+                            handle_async(ec, Size());
+                        } else {
+                            error_code ec;
+                            http_to_client_.cancel(ec);
+                        }
+                    }
+                    break;
+                default:
+                    assert(0);
+                    break;
             }
-
-            http_to_client_.async_write(response_.head(), 
-                boost::bind(&HttpProxy::handle_send_response_head, this, _1, _2));
         }
 
-        void HttpProxy::handle_send_response_head(
-            error_code const & ec, 
-            size_t bytes_transferred)
+        void HttpProxy::handle_watch(
+            boost::system::error_code const & ec)
         {
             LOG_SECTION();
 
-            LOG_F(Logger::kLevelDebug, "[handle_send_response_head] ec = %s, bytes_transferred = %u" 
-                % ec.message().c_str() % bytes_transferred);
+            LOG_F(Logger::kLevelDebug, "[handle_watch] (id = %u, status = %s, ec = %s)" 
+                %id_ % state_str[state_] % ec.message());
 
-            if (ec) {
-                handle_error(ec);
-                return;
-            }
-
-            transfer_response_data(
-                boost::bind(&HttpProxy::handle_transfer_response_data, this, _1, _2));
-        }
-
-        void HttpProxy::handle_send_response_data(
-            boost::system::error_code const & ec, 
-            size_t bytes_transferred)
-        {
-            handle_transfer_response_data(ec, transfer_size(bytes_transferred, bytes_transferred));
-        }
-
-        void HttpProxy::handle_transfer_response_data(
-            boost::system::error_code const & ec, 
-            transfer_size const & bytes_transferred)
-        {
-            LOG_SECTION();
-
-            LOG_F(Logger::kLevelDebug, "[handle_transfer_response_data] ec = %s, bytes_transferred = {%u, %u}" 
-                % ec.message().c_str() % bytes_transferred.first % bytes_transferred.second);
-
-            if (ec) {
-                handle_error(ec);
-                return;
-            }
-
-            on_finish();
-
-            if (!response_.head().connection
-                || response_.head().connection.get() == http_field::Connection::close) {
-                    delete this;
-            } else {
+            if (state_ == exiting) {
+                delete this;
+            } else if (state_ == stopped) {
+                // restart
+                watch_state_ = watch_stopped;
                 start();
+            } else if (ec != boost::asio::error::operation_aborted) {
+                watch_state_ = broken;
+                on_broken_pipe();
             }
         }
 
-        void HttpProxy::handle_response_error(
-            boost::system::error_code const & ec, 
-            size_t bytes_transferred)
+        void HttpProxy::local_process(
+            response_type const & resp)
         {
-            LOG_SECTION();
-
-            LOG_F(Logger::kLevelDebug, "[handle_response_error] ec = %s" 
-                % ec.message().c_str());
-
-            on_finish();
-            delete this;
+            resp(boost::system::error_code(), Size());
         }
 
-       void HttpProxy::handle_error(
-            error_code const & ec)
+        void HttpProxy::on_broken_pipe()
         {
-            LOG_F(Logger::kLevelDebug, "[handle_error] ec = %s" 
-                % ec.message().c_str());
-
-            on_error(ec);
-            on_finish();
-            delete this;
+            error_code ec;
+            cancel(ec);
         }
 
         void HttpProxy::response_error(
-            error_code const & ec)
+            error_code const & ec, 
+            response_type const & resp)
         {
             HttpResponseHead & head = response_.head();
             head = HttpResponseHead(); // clear
@@ -426,9 +341,8 @@ namespace util
             head.err_msg = ec.message();
             head.content_length.reset(0);
             response_.head().connection = http_field::Connection::close;
-            on_error(ec);
             http_to_client_.async_write(response_.head(), 
-                boost::bind(&HttpProxy::handle_response_error, this, _1, _2));
+                boost::bind(resp, _1, _2));
         }
 
     } // namespace protocol

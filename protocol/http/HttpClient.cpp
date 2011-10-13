@@ -276,15 +276,15 @@ namespace util
                 ec = broken_error_;
                 return ec;
             } else if (requests_.empty()) {
-                is_keep_alive_ = (http_filed::Connection::keep_alive 
-                    == request.head().connection.get_value_or(http_filed::Connection::close));
+                is_keep_alive_ = (http_field::Connection::keep_alive 
+                    == request.head().connection.get_value_or(http_field::Connection::close));
             } else {
                 if (is_keep_alive_) {
-                    is_keep_alive_ &= (http_filed::Connection::keep_alive 
-                        == request.head().connection.get_value_or(http_filed::Connection::close));
+                    is_keep_alive_ &= (http_field::Connection::keep_alive 
+                        == request.head().connection.get_value_or(http_field::Connection::close));
                 } else {
-                    if (http_filed::Connection::keep_alive 
-                        == request.head().connection.get_value_or(http_filed::Connection::close)) {
+                    if (http_field::Connection::keep_alive 
+                        == request.head().connection.get_value_or(http_field::Connection::close)) {
                             ec = keepalive_error;
                     } else {
                             ec = busy_work;
@@ -751,7 +751,7 @@ namespace util
                 request.head().path = location.path_all();
             }
             // 重定向之后不能keep alive
-            request.head().connection = http_filed::Connection::close;
+            request.head().connection = http_field::Connection::close;
             return true;
         }
 
@@ -824,7 +824,7 @@ namespace util
             if ((status_ == established || status_ == ready)
                 && request.status >= opened 
                 && response_.head().connection
-                && response_.head().connection.get() == http_filed::Connection::close) {
+                && response_.head().connection.get() == http_field::Connection::close) {
                     if (request.status > opened) {
                         close_socket(broken_error_);
                         status_ = broken;
