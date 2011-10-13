@@ -65,6 +65,13 @@ namespace util
             }
 
             HttpRequest(
+                HttpRequestHead const & head)
+                : HttpPacket(head_)
+                , head_(head)
+            {
+            }
+
+            HttpRequest(
                 HttpRequest const & r)
                 : HttpPacket(head_)
                 , head_(r.head())

@@ -34,47 +34,60 @@ namespace util
 
         FRAMEWORK_LOGGER_DECLARE_MODULE("HttpClient");
 
-        static char const DEFAULT_PORT[] = "80";
+        static char const SERVICE_NAME[] = "http";
 
-        std::string const HttpClient::status_str[] = {
+        std::string const HttpClient::con_status_str[] = {
             "closed", 
             "connectting", 
             "established", 
+            "ready", 
+            "broken", 
+        };
+
+        std::string const HttpClient::req_status_str[] = {
+            "send_pending", 
             "sending_req_head", 
             "sending_req_data", 
+            "recv_pending", 
             "recving_resp_head", 
             "opened", 
             "recving_resp_data", 
-            "closing"
+            "finished", 
         };
 
         HttpClient::HttpClient(
             boost::asio::io_service & io_svc)
             : HttpSocket(io_svc)
             , status_(closed)
-            , is_async_(false)
-            , is_fetch_(false)
+            , is_keep_alive_(false)
+            , req_id_(0)
+            , num_sent_(0)
         {
             static size_t gid = 0;
             id_ = gid++;
-            addr_.svc(DEFAULT_PORT);
+            addr_.svc(SERVICE_NAME);
+            req_addr_.svc(SERVICE_NAME);
         }
 
         HttpClient::~HttpClient()
         {
             error_code ec;
-            close(ec);
-            assert(status_ == closed);
+            if (status_ >= established) {
+                status_ = broken;
+                broken_error_ = boost::asio::error::operation_aborted;
+            }
+            while (handle_next(ec))
+                resume(false, ec);
+            HttpSocket::close(ec);
+            status_ = closed;
+            broken_error_.clear();
         }
 
         error_code HttpClient::bind_host(
             std::string const & host, 
             error_code & ec)
         {
-            NetName addr;
-            addr.svc(DEFAULT_PORT);
-            addr.from_string(host);
-            return bind_host(addr, ec);
+            return bind_host(NetName(host), ec);
         }
 
         error_code HttpClient::bind_host(
@@ -89,6 +102,10 @@ namespace util
             NetName const & addr, 
             error_code & ec)
         {
+            if (addr == addr_) {
+                ec.clear();
+                return ec;
+            }
             if (status_ != closed) {
                 return ec = already_open;
             }
@@ -96,418 +113,333 @@ namespace util
                 return ec = invalid_argument;
             }
             addr_ = addr;
-            ec = succeed;
+            if (addr_.svc().empty())
+                addr_.svc(SERVICE_NAME);
+            ec.clear();
             return ec;
-        }
-
-        HttpRequest & HttpClient::get_request()
-        {
-            return request_;
-        }
-
-        HttpResponse & HttpClient::get_response()
-        {
-            return response_;
-        }
-
-        HttpRequestHead & HttpClient::get_request_head()
-        {
-            return request_.head();
-        }
-
-        HttpResponseHead & HttpClient::get_response_head()
-        {
-            return response_.head();
-        }
-
-        error_code HttpClient::open(
-            Url const & url, 
-            HttpRequestHead::MethodEnum method, 
-            error_code & ec)
-        {
-            LOG_F(Logger::kLevelDebug, "[open] (id = %u, addr = %s, url = %s)" 
-                % id_ % addr_.to_string() % url.path_all());
-
-            if (status_ != closed && status_ != established) {
-                ec = busy_work;
-                return ec;
-            }
-            HttpRequestHead & head = request_.head();
-            head.method = method;
-            head.path = url.path_all();
-            head.host.reset(url.host() + ":" + url.svc_or("80"));
-            if (request_.data().size())
-                request_.head().content_length.reset(request_.data().size());
-            return resume(ec);
-        }
-
-        error_code HttpClient::open(
-            HttpRequestHead const & head, 
-            error_code & ec)
-        {
-            LOG_F(Logger::kLevelDebug, "[open] (id = %u, addr = %s, url = %s)" 
-                % id_ % addr_.to_string() % head.path);
-
-            if (status_ != closed && status_ != established) {
-                ec = busy_work;
-                return ec;
-            }
-            request_.head() = head;
-            if (request_.data().size())
-                request_.head().content_length.reset(request_.data().size());
-            return resume(ec);
         }
 
         error_code HttpClient::open(
             HttpRequest const & request, 
             error_code & ec)
         {
-            LOG_F(Logger::kLevelDebug, "[open] (id = %u, addr = %s, url = %s)" 
-                % id_ % addr_.to_string() % request.head().path.c_str());
+            LOG_F(Logger::kLevelDebug, "[open] (id = %u, url = %s)" 
+                % id_ % request.head().path.c_str());
 
-            if (status_ != closed && status_ != established) {
-                ec = busy_work;
-                return ec;
-            }
-            request_ = request;
-            if (request_.data().size())
-                request_.head().content_length.reset(request_.data().size());
-            return resume(ec);
-        }
-
-        error_code HttpClient::reopen(
-            NetName const & addr, 
-            HttpRequest const & request, 
-            error_code & ec)
-        {
-            LOG_F(Logger::kLevelDebug, "[reopen] (id = %u, addr = %s, url = %s)" 
-                % id_ % addr.to_string() % request.head().path);
-
-            status_ = closed;
-            addr_ = addr;
-            request_ = request;
-            // 在connect的时候会自动关闭
-            return resume(ec);
-        }
-
-        error_code HttpClient::reopen(
-            error_code & ec)
-        {
-            LOG_F(Logger::kLevelDebug, "[reopen] (id = %u, addr = %s, url = %s)" 
-                % id_ % addr_.to_string() % request_.head().path);
-
-            if (status_ != established)
-                status_ = closed;
-            // 在connect的时候会自动关闭
-            return resume(ec);
-        }
-
-        error_code HttpClient::reopen(
-            boost::uint64_t offset, 
-            error_code & ec)
-        {
-            LOG_F(Logger::kLevelDebug, "[reopen] (id = %u, addr = %s, url = %s, offset = %lu)" 
-                % id_ % addr_.to_string() % request_.head().path % (long unsigned int)offset);
-
-            if (status_ != established)
-                status_ = closed;
-            request_.head().range.reset(http_field::Range(offset));
-            // 在connect的时候会自动关闭
-            return resume(ec);
-        }
-
-        error_code HttpClient::poll(
-            error_code & ec)
-        {
-            if (status_ == closed) {
-                ec = not_open;
-            } else if (status_ == connectting) {
-                send(null_buffers(), 0, ec);
-            } else if (status_ == established 
-                || status_ == sending_req_head 
-                || status_ == sending_req_data) {
-                    send(null_buffers(), 0, ec);
-            } else if (status_ == recving_resp_head 
-                || status_ == opened 
-                || status_ == recving_resp_data) {
-                    receive(null_buffers(), 0, ec);
-            } else if (status_ == closing) {
-                ec = not_open;
+            post_reqeust(request, false, ec);
+            if (!ec) {
+                resume(requests_.size() > 1, ec);
             }
             return ec;
+        }
+
+        error_code HttpClient::reopen(
+            error_code & ec)
+        {
+            assert(requests_.size() == 1);
+            HttpRequest request = requests_[0];
+            close(ec);
+            return open(request, ec);
         }
 
         bool HttpClient::is_open(
             error_code & ec)
         {
-            if (status_ == opened) {
+            if (status_ == ready) {
                 ec = error_code();
                 return true;
-            } else if (status_ == closed) {
-                ec = not_open;
-                return false;
             }
-            resume(ec);
+            resume(false, ec);
             return !ec;
         }
 
         void HttpClient::async_open(
-            Url const & url, 
-            HttpRequestHead::MethodEnum method, 
-            response_type const & resp)
-        {
-            LOG_F(Logger::kLevelDebug, "[async_open] (id = %u, addr = %s, url = %s)" 
-                % id_ % addr_.to_string() % url.path_all());
-
-            if (status_ != closed && status_ != established) {
-                get_io_service().post(
-                    boost::bind(resp, busy_work));
-                return;
-            }
-            HttpRequestHead & head = request_.head();
-            head.method = method;
-            head.path = url.path_all();
-            head.host.reset(url.host() + ":" + url.svc_or("80"));
-            if (request_.data().size())
-                request_.head().content_length.reset(request_.data().size());
-            async_start(resp);
-        }
-
-        void HttpClient::async_open(
-            HttpRequestHead const & head, 
-            response_type const & resp)
-        {
-            LOG_F(Logger::kLevelDebug, "[async_open] (id = %u, addr = %s, url = %s)" 
-                % id_ % addr_.to_string() % head.path);
-
-            if (status_ != closed && status_ != established) {
-                get_io_service().post(
-                    boost::bind(resp, busy_work));
-                return;
-            }
-            request_.head() = head;
-            if (request_.data().size())
-                request_.head().content_length.reset(request_.data().size());
-            async_start(resp);
-        }
-
-        void HttpClient::async_open(
             HttpRequest const & request, 
             response_type const & resp)
         {
-            LOG_F(Logger::kLevelDebug, "[async_open] (id = %u, addr = %s, url = %s)" 
-                % id_ % addr_.to_string() % request.head().path);
+            LOG_F(Logger::kLevelDebug, "[async_open] (id = %u, url = %s)" 
+                % id_ % request.head().path);
 
-            if (status_ != closed && status_ != established) {
+            error_code ec;
+            post_reqeust(request, false, resp, ec);
+            if (ec) {
                 get_io_service().post(
-                    boost::bind(resp, busy_work));
+                    boost::bind(resp, ec));
                 return;
             }
-            request_ = request;
-            if (request_.data().size())
-                request_.head().content_length.reset(request_.data().size());
-            async_start(resp);
+            async_resume();
         }
 
-        error_code HttpClient::read_finish(
-            error_code & ec, 
-            boost::uint64_t bytes_transferred)
+        void HttpClient::async_reopen(
+            response_type const & resp)
         {
-            LOG_F(Logger::kLevelDebug1, "[read_finish] close (id = %u, status = %s, ec = %s)" 
-                % id_ % status_str[status_] % ec.message());
-
-            assert(status_ == opened);
-            if (!ec && status_ == opened) {
-                stat_.response_data_time = stat_.elapse();
-                status_ = established;
-            }
-            if (status_ == established 
-                && response_.head().connection
-                && response_.head().connection.get() == http_field::Connection::close) {
-                    LOG_F(Logger::kLevelDebug, "[read_finish] close (id = %u, status = %s)" 
-                        % id_ % status_str[status_]);
-                    close(ec);
-            } else if (ec && ec != boost::asio::error::would_block) {
-                error_code ec2;
-                LOG_F(Logger::kLevelDebug, "[read_finish] close (id = %u, status = %s)" 
-                    % id_ % status_str[status_]);
-                close(ec2);
-            }
-            return ec;
-        }
-
-        void HttpClient::close()
-        {
-            if (is_async_) {
-                HttpSocket::cancel();
-            } else {
-                HttpSocket::close();
-                status_ = closed;
-            }
-        }
-
-        error_code HttpClient::close(
-            error_code & ec)
-        {
-            if (is_async_) {
-                HttpSocket::cancel(ec);
-            } else {
-                HttpSocket::close(ec);
-                status_ = closed;
-            }
-            return ec;
-        }
-
-        error_code HttpClient::fetch(
-            framework::string::Url const & url, 
-            HttpRequestHead::MethodEnum method, 
-            boost::system::error_code & ec)
-        {
-            is_fetch_ = true;
-            return open(url, method, ec);
-        }
-
-        error_code HttpClient::fetch(
-            HttpRequestHead const & head, 
-            boost::system::error_code & ec)
-        {
-            is_fetch_ = true;
-            return open(head, ec);
+            assert(requests_.size() == 1);
+            HttpRequest request = requests_[0];
+            error_code ec;
+            close(ec);
+            return async_open(request, resp);
         }
 
         error_code HttpClient::fetch(
             HttpRequest const & request, 
             boost::system::error_code & ec)
         {
-            is_fetch_ = true;
-            return open(request, ec);
+            LOG_F(Logger::kLevelDebug, "[fetch] (id = %u, url = %s)" 
+                % id_ % request.head().path.c_str());
+
+            post_reqeust(request, true, ec);
+            if (!ec) {
+                resume(requests_.size() > 1, ec);
+            }
+            return ec;
         }
 
         error_code HttpClient::refetch(
-            boost::system::error_code & ec)
+            error_code & ec)
         {
-            is_fetch_ = true;
-            if (status_ != established)
-                status_ = closed;
-            return resume(ec);
+            assert(requests_.size() == 1);
+            HttpRequest request = requests_[0];
+            close(ec);
+            return fetch(request, ec);
         }
 
-        void HttpClient::async_fetch(
-            framework::string::Url const & url, 
-            HttpRequestHead::MethodEnum method, 
-            response_type const & resp)
+        bool HttpClient::is_fetch(
+            error_code & ec)
         {
-            is_fetch_ = true;
-            return async_open(url, method, resp);
-        }
-
-        void HttpClient::async_fetch(
-            HttpRequestHead const & head, 
-            response_type const & resp)
-        {
-            is_fetch_ = true;
-            return async_open(head, resp);
+            resume(false, ec);
+            return !ec;
         }
 
         void HttpClient::async_fetch(
             HttpRequest const & request, 
             response_type const & resp)
         {
-            is_fetch_ = true;
-            return async_open(request, resp);
+            LOG_F(Logger::kLevelDebug, "[async_fetch] (id = %u, url = %s)" 
+                % id_ % request.head().path);
+
+            error_code ec;
+            post_reqeust(request, true, resp, ec);
+            if (ec) {
+                get_io_service().post(
+                    boost::bind(resp, ec));
+                return;
+            }
+            async_resume();
         }
 
         void HttpClient::async_refetch(
             response_type const & resp)
         {
-            is_fetch_ = true;
-            if (status_ != established)
+            assert(requests_.size() == 1);
+            HttpRequest request = requests_[0];
+            error_code ec;
+            close(ec);
+            return async_fetch(request, resp);
+        }
+
+        void HttpClient::close()
+        {
+            error_code ec;
+            if (handle_next(ec))
+                return;
+            HttpSocket::close();
+            status_ = closed;
+            broken_error_.clear();
+            dump("close", ec);
+        }
+
+        error_code HttpClient::close(
+            error_code & ec)
+        {
+            if (handle_next(ec))
+                return ec;
+            HttpSocket::close(ec);
+            status_ = closed;
+            broken_error_.clear();
+            dump("close", ec);
+            return ec;
+        }
+
+        error_code HttpClient::post_reqeust(
+            HttpRequest const & request, 
+            bool is_fetch, 
+            response_type const & resp, 
+            error_code & ec)
+        {
+            if (requests_.size() == 1 && requests_[0].status == finished) {
+                assert(status_ == closed || status_ == broken);
                 status_ = closed;
-            async_start(resp);
+                broken_error_.clear();
+                // 兼容老版本，fetch不需要close的机制，但是只用于非串行请求的情形
+                requests_.clear();
+            } else if (status_ == broken) {
+                ec = broken_error_;
+                return ec;
+            } else if (requests_.empty()) {
+                is_keep_alive_ = (http_filed::Connection::keep_alive 
+                    == request.head().connection.get_value_or(http_filed::Connection::close));
+            } else {
+                if (is_keep_alive_) {
+                    is_keep_alive_ &= (http_filed::Connection::keep_alive 
+                        == request.head().connection.get_value_or(http_filed::Connection::close));
+                } else {
+                    if (http_filed::Connection::keep_alive 
+                        == request.head().connection.get_value_or(http_filed::Connection::close)) {
+                            ec = keepalive_error;
+                    } else {
+                            ec = busy_work;
+                    }
+                    return ec;
+                }
+            }
+            ec.clear();
+            if (resp.empty()) {
+                requests_.push_back(Request(req_id_++, request, is_fetch));
+            } else {
+                requests_.push_back(Request(req_id_++, request, is_fetch, resp));
+            }
+            Request & request2 = requests_.back();
+            if (request2.data().size())
+                request2.head().content_length.reset(request2.data().size());
+            if (status_ == ready)
+                status_ = established;
+            if (status_ == established) {
+                request2.stat.resolve_time = 0;
+                request2.stat.connect_time = 0;
+            }
+            return ec;
         }
 
         error_code HttpClient::resume(
+            bool pending, 
             error_code & ec)
         {
-            LOG_F(Logger::kLevelDebug1, "[resume] (id = %u, status = %s)" 
-                % id_ % status_str[status_]);
+            if (requests_.empty()) {
+                return ec = not_open;
+            }
+            ec = broken_error_;
+            if (status_ == closed || status_ == connectting) {
+                resume_connect(ec);
+            }
+            if (status_ >= established) {
+                if (!pending && requests_[0].status != opened && 
+                    requests_[0].status != finished) {
+                        resume_request(false, ec);
+                }
+                if (num_sent_ > 0 && num_sent_ < requests_.size()) {
+                    error_code ec1 = broken_error_;
+                    if (requests_[num_sent_].status < recv_pending)
+                        resume_request(true, ec1);
+                    if (pending) {
+                        ec = ec1 ? ec1 : boost::asio::error::would_block;
+                    }
+                }
+                // 优化is_open
+                if (num_sent_ == requests_.size() && requests_[0].status >= recving_resp_data) {
+                    status_ = ready;
+                }
+            }
+            return ec;
+        }
 
-            bool from_established = status_ == established;
+        error_code HttpClient::resume_connect(
+            error_code & ec)
+        {
+            ec.clear();
 
             switch (status_) {
                 case closed:
-                    stat_.reset();
-                    LOG_F(Logger::kLevelDebug1, "[resume] connect... (id = %u, status = %s)" 
-                        % id_ % status_str[status_]);
+                    dump("resume_connect1", ec);
+                    status_ = connectting;
                     if (!addr_.host().empty()) {
                         connect(addr_, ec);
-                    } else if (request_.head().host.is_initialized()) {
-                        connect(NetName(request_.head().host.get()), ec);
+                    } else if (requests_[0].head().host.is_initialized()) {
+                        NetName addr(":80");
+                        addr.from_string(requests_[0].head().host.get());
+                        connect(addr, ec);
                     } else {
                         ec = not_bind;
                     }
-                    if (!ec) {
-                        (HttpSocket::Statistics &)stat_ = HttpSocket::stat();
-                        status_ = established;
-                    } else if (ec == boost::asio::error::in_progress) {
-                        ec = boost::asio::error::would_block;
-                        status_ = connectting;
-                        break;
-                    } else if (ec == boost::asio::error::would_block) {
-                        status_ = connectting;
-                        break;
-                    } else {
-                        break;
-                    }
-                case connectting:
-                    if (status_ == connectting) {
-                        LOG_F(Logger::kLevelDebug1, "[resume] connect continue... (id = %u, status = %s)" 
-                            % id_ % status_str[status_]);
-                        if (connect(addr_, ec)) { // 这里的addr_没有意义
-                            if (ec == boost::asio::error::in_progress) {
-                                ec = boost::asio::error::would_block;
-                            }
-                            break;
+                    if (ec) {
+                        if (ec == boost::asio::error::in_progress) {
+                            ec = boost::asio::error::would_block;
                         }
-                        (HttpSocket::Statistics &)stat_ = HttpSocket::stat();
+                        // 如果失败，最后会把状态设置成broken，这里都设置为connectting
+                    } else {
+                        dump("resume_connect", ec);
                         status_ = established;
                     }
-                case established:
-                    if (from_established) {
-                        stat_.reset();
-                        stat_.zero();
+                    break;
+                case connectting:
+                    connect(addr_, ec); // 这里的addr_没有意义
+                    if (ec) {
+                        if (ec == boost::asio::error::in_progress) {
+                            ec = boost::asio::error::would_block;
+                        }
+                    } else {
+                        dump("resume_connect", ec);
+                        status_ = established;
                     }
-                    if (!request_.head().content_length.is_initialized()) {
-                        request_.head().content_length.reset(request_.data().size());
-                    }
-                    if (!request_.head().connection.is_initialized()) {
-                        request_.head().connection.reset(http_field::Connection());
-                    }
-                    status_ = sending_req_head;
+                    break;
+                default:
+                    assert(0);
+            }
+
+            if (ec && ec != boost::asio::error::would_block) {
+                status_ = broken;
+                broken_error_ = ec;
+            }
+
+            return ec;
+        }
+
+        error_code HttpClient::resume_request(
+            bool pending, 
+            error_code & ec)
+        {
+            Request & request = requests_[pending ? num_sent_ : 0];
+            Statistics & stat = request.stat;
+
+            if (ec) {
+                if (!pending)
+                    post_handle_request(request, ec);
+                return ec;
+            }
+
+            switch (request.status) {
+                case send_pending:
+                    dump_request(request, "resume_request", ec);
+                    stat.send_pend_time = stat.elapse();
+                    request.status = sending_req_head;
                 case sending_req_head:
-                    LOG_F(Logger::kLevelDebug1, "[resume] sending_req_head... (id = %u, status = %s)" 
-                        % id_ % status_str[status_]);
-                    write(request_.head(), ec);
+                    write(request.head(), ec);
+                    dump_request(request, "resume_request", ec);
                     if (ec) {
                         break;
                     }
-                    stat_.request_head_time = stat_.elapse();
-                    status_ = sending_req_data;
+                    stat.request_head_time = stat.elapse();
+                    request.status = sending_req_data;
                 case sending_req_data:
-                    if (request_.data().size()) {
-                        LOG_F(Logger::kLevelDebug1, "[resume] sending_req_data... (id = %u, status = %s)" 
-                            % id_ % status_str[status_]);
-                        boost::asio::write(*this, request_.data(), boost::asio::transfer_all(), ec);
+                    if (request.data().size()) {
+                        boost::asio::write(*this, request.data(), boost::asio::transfer_all(), ec);
+                        dump_request(request, "resume_request", ec);
                         if (ec) {
                             break;
                         }
                     }
-                    stat_.request_data_time = stat_.elapse();
-                    status_ = recving_resp_head;
+                    stat.request_data_time = stat.elapse();
+                    ++num_sent_;
+                    request.status = recv_pending;
+                    if (pending) {
+                        break;
+                    }
+                case recv_pending:
+                    dump_request(request, "resume_request", ec);
+                    stat.recv_pend_time = stat.elapse();
+                    request.status = recving_resp_head;
                 case recving_resp_head:
-                    LOG_F(Logger::kLevelDebug1, "[resume] recving_resp_head... (id = %u, status = %s)" 
-                        % id_ % status_str[status_]);
                     read(response_.head(), ec);
+                    dump_request(request, "resume_request", ec);
                     if (ec) {
                         if (ec != boost::asio::error::would_block) {
                             // 临时用上response_.data()，把已有的数据拿过来看看
@@ -530,33 +462,29 @@ namespace util
                         }
                         break;
                     }
-                    stat_.response_head_time = stat_.elapse();
-                    if (handle_redirect(ec)) {
-                        error_code ec2;
-                        close(ec2);
-                        return resume(ec);
+                    stat.response_head_time = stat.elapse();
+                    if (handle_redirect(request, ec)) {
+                        close_socket(ec);
+                        return resume(false, ec);
                     }
-                    if (is_fetch_) {
+                    if (request.is_fetch) {
+                        request.status = recving_resp_data;
                         response_.clear_data();
-                        status_ = recving_resp_data;
                     } else {
-                        status_ = opened;
-                        break;
-                    }
-                case opened:
-                    if (is_fetch_) {
-                    } else {
-                        ec = already_open;
+                        request.status = opened;
                         break;
                     }
                 case recving_resp_data:
-                    if (is_fetch_) {
+                    if (request.is_fetch) {
                         if (response_.head().content_length.is_initialized()) {
-                            if (response_.head().content_length.get() > 0) {
-                                    LOG_F(Logger::kLevelDebug1, "[resume] recving_resp_head... (id = %u, status = %s)" 
-                                        % id_ % status_str[status_]);
-                                boost::asio::read(*this, response_.data(), 
-                                    boost::asio::transfer_at_least(response_.head().content_length.get() - response_.data().size()), ec);
+                            boost::uint64_t content_length = 
+                                response_.head().content_length.get() - response_.data().size();
+                            if (content_length > 0) {
+                                content_length = boost::asio::read(
+                                    *this, response_.data().prepare(content_length), 
+                                    boost::asio::transfer_at_least(content_length), ec);
+                                response_.data().commit(content_length);
+                                dump_request(request, "resume_request", ec);
                             }
                             if (ec) {
                                 break;
@@ -564,14 +492,15 @@ namespace util
                         } else {
                             boost::asio::read(*this, response_.data(), 
                                 boost::asio::transfer_all(), ec);
+                            dump_request(request, "resume_request", ec);
                             if (ec == boost::asio::error::eof) {
                                 ec = error_code();
                             } else {
                                 break;
                             }
                         }
-                        stat_.response_data_time = stat_.elapse();
-                        status_ = established;
+                        stat.response_data_time = stat.elapse();
+                        request.status = finished;
                     } else {
                         ec = already_open;
                         break;
@@ -580,39 +509,103 @@ namespace util
                     break;
             }
 
-            LOG_F(Logger::kLevelDebug1, "[resume] exiting... (id = %u, status = %s, ec = %s)" 
-                % id_ % status_str[status_] % ec.message());
-
-            if (ec != boost::asio::error::would_block) {
-                post_handle(ec);
-                LOG_F(Logger::kLevelDebug, "[resume] finish (id = %u, status = %s, ec = %s)" 
-                    % id_ % status_str[status_] % ec.message());
+            if (!pending && ec != boost::asio::error::would_block) {
+                post_handle_request(request, ec);
             }
 
             return ec;
         }
 
-        void HttpClient::async_start(
-            response_type const & resp)
+        void HttpClient::async_resume()
         {
-            LOG_F(Logger::kLevelDebug1, "[async_start] (id = %u, status = %s)" 
-                % id_ % status_str[status_]);
-
-            is_async_ = true;
-            resp_ = resp;
-            handle_async(error_code());
+            if (requests_.empty()) {
+                return;
+            }
+            if (status_ == closed) {
+                handle_async_connect(error_code());
+                return;
+            }
+            if (status_ >= established) {
+                if (requests_[0].status == send_pending || requests_[0].status == recv_pending)
+                    handle_async_reqeust(false, broken_error_);
+                if (num_sent_ > 0 && num_sent_ < requests_.size() 
+                    && requests_[num_sent_].status == send_pending) {
+                        handle_async_reqeust(true, broken_error_);
+                }
+            }
         }
 
-        void HttpClient::handle_async(
+        void HttpClient::handle_async_connect(
             error_code const & ec)
         {
             LOG_SECTION();
 
-            LOG_F(Logger::kLevelDebug1, "[handle_async] (id = %u, status = %s, ec = %s)" 
-                % id_ % status_str[status_] % ec.message());
+            dump("handle_async_connect", ec);
 
             if (ec) {
-                if (status_ == recving_resp_head) {
+                status_ = broken;
+                broken_error_ = ec;
+                async_resume();
+                return;
+            }
+
+            switch (status_) {
+                case closed:
+                    status_ = connectting;
+                    if (!addr_.host().empty()) {
+                        async_connect(addr_, 
+                            boost::bind(&HttpClient::handle_async_connect, this, _1));
+                    } else if (requests_[0].head().host.is_initialized()) {
+                        NetName addr(":80");
+                        addr.from_string(requests_[0].head().host.get());
+                        async_connect(addr, 
+                            boost::bind(&HttpClient::handle_async_connect, this, _1));
+                    } else {
+                        error_code ec1 = not_bind;
+                        status_ = broken;
+                        broken_error_ = ec1;
+                        handle_async_reqeust(false, ec1);
+                    }
+                    break;
+                case connectting:
+                    status_ = established;
+                    async_resume();
+                    break;
+                case established:
+                case ready:
+                case broken:
+                    assert(0);
+                    break;
+            }
+        }
+
+        template <typename Stream>
+        static error_code const & commit_stream(
+            Stream & stream, 
+            error_code const & ec, 
+            size_t bytes_transferred)
+        {
+            stream.commit(bytes_transferred);
+            return ec;
+        }
+
+        void HttpClient::handle_async_reqeust(
+            bool pending, 
+            error_code const & ec)
+        {
+            LOG_SECTION();
+
+            Request & request = requests_[pending ? num_sent_ : 0];
+            Statistics & stat = request.stat;
+
+            dump_request(request, "handle_async_reqeust", ec);
+
+            if (pending && num_sent_ == 0) {
+                pending = false;
+            }
+
+            if (ec) {
+                if (request.status == recving_resp_head) {
                     error_code ec1;
                     response_.clear_data();
                     bool block = !get_non_block(ec1);
@@ -630,110 +623,95 @@ namespace util
                             boost::asio::buffer_cast<unsigned char const *>(response_.data().data()), response_.data().size());
                     }
                 }
-                if (!is_fetch_ 
+                if (!request.is_fetch 
                     || ec != boost::asio::error::eof
-                    || status_ != recving_resp_data 
+                    || request.status != recving_resp_data 
                     || response_.head().content_length.is_initialized()) {
-                        error_code ec1 = ec;
-                        post_handle(ec1);
-                        response(ec1);
+                        if (!pending) {
+                            error_code ec1 = ec;
+                            post_handle_request(request, ec1);
+                            response_request(request, ec1);
+                        }
                         return;
                 }
             }
 
-            bool from_established = status_ == established;
-
-            switch (status_) {
-                case closed:
-                    stat_.reset();
-                    status_ = connectting;
-                    if (!addr_.host().empty()) {
-                        async_connect(addr_, 
-                            boost::bind(&HttpClient::handle_async, this, _1));
-                    } else if (request_.head().host.is_initialized()) {
-                        NetName addr(":80");
-                        addr.from_string(request_.head().host.get());
-                        async_connect(addr, 
-                            boost::bind(&HttpClient::handle_async, this, _1));
-                    } else {
-                        error_code ec1 = not_bind;
-                        post_handle(ec1);
-                        response(ec1);
-                    }
-                    break;
-                case connectting:
-                    (HttpSocket::Statistics &)stat_ = HttpSocket::stat();
-                    status_ = established;
-                case established:
-                    if (from_established) {
-                        stat_.reset();
-                        stat_.zero();
-                    }
-                    status_ = sending_req_head;
-                    async_write(request_.head(), 
-                        boost::bind(&HttpClient::handle_async, this, _1));
+            switch (request.status) {
+                case send_pending:
+                    stat.send_pend_time = stat.elapse();
+                    request.status = sending_req_head;
+                    async_write(request.head(), 
+                        boost::bind(&HttpClient::handle_async_reqeust, this, pending, _1));
                     break;
                 case sending_req_head:
-                    stat_.request_head_time = stat_.elapse();
-                    status_ = sending_req_data;
-                    if (request_.data().size()) {
-                        boost::asio::async_write(*this, request_.data(), 
-                            boost::bind(&HttpClient::handle_async, this, _1));
+                    stat.request_head_time = stat.elapse();
+                    request.status = sending_req_data;
+                    if (request.data().size()) {
+                        boost::asio::async_write(*this, request.data(), 
+                            boost::bind(&HttpClient::handle_async_reqeust, this, pending, _1));
                         break;
                     }
                 case sending_req_data:
-                    stat_.request_data_time = stat_.elapse();
-                    status_ = recving_resp_head;
-                    async_read(response_.head(), 
-                        boost::bind(&HttpClient::handle_async, this, _1));
-                    break;
-                case recving_resp_head:
-                    stat_.response_head_time = stat_.elapse();
-                    {
-                        error_code ec1;
-                        if (handle_redirect(ec1)) {
-                            is_async_ = false;
-                            error_code ec2;
-                            close(ec2);
-                            return handle_async(ec1);
+                    stat.request_data_time = stat.elapse();
+                    if (++num_sent_ < requests_.size()) {
+                        assert(requests_[num_sent_].status == send_pending);
+                        if (requests_[num_sent_].is_async) {
+                            handle_async_reqeust(true, error_code());
                         }
                     }
-                    if (is_fetch_) {
-                        status_ = recving_resp_data;
+                    if (pending) {
+                        request.status = recv_pending;
+                        break;
+                    }
+                case recv_pending:
+                    stat.recv_pend_time = stat.elapse();
+                    request.status = recving_resp_head;
+                    async_read(response_.head(), 
+                        boost::bind(&HttpClient::handle_async_reqeust, this, pending, _1));
+                    break;
+                case recving_resp_head:
+                    stat.response_head_time = stat.elapse();
+                    {
+                        error_code ec1;
+                        if (handle_redirect(request, ec1)) {
+                            error_code ec2;
+                            close_socket(ec2);
+                            return async_resume();
+                        }
+                    }
+                    if (request.is_fetch) {
+                        request.status = recving_resp_data;
                         response_.clear_data();
                         if (response_.head().content_length.is_initialized()) {
-                            if (response_.head().content_length.get() > 0) {
-                                boost::asio::async_read(*this, response_.data(), 
-                                    boost::asio::transfer_at_least(response_.head().content_length.get()), 
-                                    boost::bind(&HttpClient::handle_async, this, _1));
+                            boost::uint64_t content_length = response_.head().content_length.get();
+                            if (content_length > 0) {
+                                boost::asio::async_read(*this, response_.data().prepare(content_length), 
+                                    boost::asio::transfer_at_least(content_length), 
+                                    boost::bind(&HttpClient::handle_async_reqeust, this, pending, boost::bind(commit_stream<boost::asio::streambuf>, boost::ref(response_.data()), _1, _2)));
                                 break;
                             // } else { no break;
                             }
                         } else {
                             boost::asio::async_read(*this, response_.data(), 
                                 boost::asio::transfer_all(), 
-                                boost::bind(&HttpClient::handle_async, this, _1));
+                                boost::bind(&HttpClient::handle_async_reqeust, this, pending, _1));
                             break;
                         }
                     } else {
-                        status_ = opened;
-                        {
-                            error_code ec1;
-                            post_handle(ec1);
-                            response(ec1);
-                        }
+                        request.status = opened;
+                        error_code ec1;
+                        post_handle_request(request, ec1);
+                        response_request(request, ec1);
                         break;
                     }
                 case recving_resp_data:
-                    stat_.response_data_time = stat_.elapse();
-                    assert(is_fetch_);
-                    if (is_fetch_) {
-                        status_ = established;
-                        {
-                            error_code ec1;
-                            post_handle(ec1);
-                            response(ec1);
-                        }
+                    stat.response_data_time = stat.elapse();
+                    assert(request.is_fetch);
+                    if (request.is_fetch) {
+                        request.status = finished;
+                        error_code ec1;
+                        post_handle_request(request, ec1);
+                        response_request(request, ec1);
                     }
                     break;
                 default:
@@ -741,19 +719,8 @@ namespace util
             }
         }
 
-        void HttpClient::response(
-            error_code const & ec)
-        {
-            LOG_F(Logger::kLevelDebug, "[response] (id = %u, status = %s, ec = %s)" 
-                % id_ % status_str[status_] % ec.message());
-
-            get_io_service().post(
-                boost::bind(resp_, ec));
-
-            resp_ = response_type();
-        }
-
         bool HttpClient::handle_redirect(
+            Request & request, 
             error_code & ec)
         {
             size_t const redirect_codes[] = {
@@ -768,66 +735,172 @@ namespace util
             if (iter == redirect_codes + sizeof(redirect_codes) / sizeof(redirect_codes[0])) {
                 return false;
             }
+            if (requests_.size() > 1) {
+                ec = redirect_error;
+                return false;
+            }
             if (!response_.head().location.is_initialized()) {
                 ec = format_error;
                 return false;
             }
             Url location(response_.head().location.get());
             if (!location.host().empty()) {
-                request_.head().host.reset(location.host_svc());
+                request.head().host.reset(location.host_svc());
             }
             if (!location.path().empty()) {
-                request_.head().path = location.path_all();
+                request.head().path = location.path_all();
             }
+            // 重定向之后不能keep alive
+            request.head().connection = http_filed::Connection::close;
             return true;
         }
 
-        void HttpClient::post_handle(
+        error_code HttpClient::read_finish(
+            error_code & ec, 
+            boost::uint64_t bytes_transferred)
+        {
+            Request & request = requests_[0];
+            dump_request(request, "read_finish", ec);
+            assert(request.status == opened);
+            {
+                error_code ec1;
+                handle_next(ec1);
+            }
+            return ec;
+        }
+
+        void HttpClient::post_handle_request(
+            Request & request, 
             error_code & ec)
         {
-            is_async_ = false;
-            is_fetch_ = false;
+            dump_request(request, "post_handle_request", ec);
 
-            if (status_ == established 
-                && response_.head().connection
-                && response_.head().connection.get() == http_field::Connection::close) {
-                    close(ec);
-                    LOG_F(Logger::kLevelDebug, "[post_handle] connection closed (id = %u, status = %s, ec = %s)" 
-                        % id_ % status_str[status_] % ec.message());
-            } else if (ec) {
-                stat_.last_error = ec;
-                switch (status_) {
-                    case closed:
-                    case connectting:
-                        (HttpSocket::Statistics &)stat_ = HttpSocket::stat();
-                        stat_.last_error = ec;
+            if (ec) {
+                Statistics stat = request.stat;
+                stat.last_error = ec;
+                switch (request.status) {
+                    case send_pending:
+                        stat.send_pend_time = stat.elapse();
                         break;
                     case sending_req_head:
-                        stat_.request_head_time = stat_.elapse();
+                        stat.request_head_time = stat.elapse();
                         break;
                     case sending_req_data:
-                        stat_.request_data_time = stat_.elapse();
+                        stat.request_data_time = stat.elapse();
+                        break;
+                    case recv_pending:
+                        stat.recv_pend_time = stat.elapse();
                         break;
                     case recving_resp_head:
-                        stat_.response_head_time = stat_.elapse();
+                        stat.response_head_time = stat.elapse();
+                        break;
+                    case opened:
                         break;
                     case recving_resp_data:
-                        stat_.response_data_time = stat_.elapse();
+                        stat.response_data_time = stat.elapse();
                         break;
                     default:
                         assert(0);
                         break;
                 }
-                error_code ec2;
-                close(ec2);
+                // 假装发生了请求，因为后面会统一减一次num_sent_
+                if (request.status < recv_pending)
+                    ++num_sent_;
+                if (status_ != broken) {
+                    status_ = broken;
+                    close_socket(broken_error_);
+                    broken_error_ = ec;
+                    dump("post_handle_request", ec);
+                }
+                request.status = finished;
             }
 
             if (!ec && (response_.head().err_code < ok 
                 || response_.head().err_code >= multiple_choices)) {
                     ec = http_error::errors(response_.head().err_code);
-                    LOG_F(Logger::kLevelDebug, "[post_handle] http error (id = %u, status = %s, ec = %s)" 
-                        % id_ % status_str[status_] % ec.message());
+                    dump_request(request, "post_handle_request", ec);
             }
+
+            if ((status_ == established || status_ == ready)
+                && request.status >= opened 
+                && response_.head().connection
+                && response_.head().connection.get() == http_filed::Connection::close) {
+                    if (request.status > opened) {
+                        close_socket(broken_error_);
+                        status_ = broken;
+                        broken_error_ = keepalive_error;
+                        dump("post_handle_request", ec);
+                    }
+                    is_keep_alive_ = false;
+            }
+        }
+
+        void HttpClient::response_request(
+            Request & request, 
+            error_code const & ec)
+        {
+            dump_request(request, "response_request", ec);
+
+            response_type resp;
+            resp.swap(request.resp);
+            get_io_service().post(
+                boost::bind(resp, ec));
+        }
+
+        bool HttpClient::handle_next(
+            error_code & ec)
+        {
+            if (requests_.empty()) {
+                return false;
+            }
+            dump_request(requests_[0], "handle_next", ec);
+            if (requests_[0].status == opened) {
+                requests_[0].stat.response_data_time = requests_[0].stat.elapse();
+                requests_[0].status = finished;
+                // close_socket if not keep_alive
+                error_code ec1;
+                post_handle_request(requests_[0], ec1);
+            }
+            if (requests_[0].status != finished) {
+                error_code ec1 = boost::asio::error::operation_aborted;
+                post_handle_request(requests_[0], ec1);
+            }
+            assert(requests_[0].status == finished);
+            requests_.pop_front();
+            --num_sent_;
+            if (requests_.empty()) {
+                return false;
+            }
+            Request & request = requests_.front();
+            if (status_ == ready)
+                status_ = established;
+            if (request.is_async) {
+                async_resume();
+            }
+            return true;
+        }
+
+        void HttpClient::dump(
+            char const * function, 
+            boost::system::error_code const & ec)
+        {
+            LOG_F(Logger::kLevelDebug1, "[%s] (id = %u, status = %s, ec = %s)" 
+                % function % id_ % con_status_str[status_] % ec.message());
+        }
+
+        void HttpClient::dump_request(
+            Request const & request, 
+            char const * function, 
+            boost::system::error_code const & ec)
+        {
+            LOG_F(Logger::kLevelDebug1, "[%s] (id = %u, req_id = %u, req_status = %s, ec = %s)" 
+                % function % id_ % request.id % req_status_str[request.status] % ec.message());
+        }
+
+        void HttpClient::close_socket(
+            error_code & ec)
+        {
+            HttpSocket::close(ec);
         }
 
     } // namespace protocol

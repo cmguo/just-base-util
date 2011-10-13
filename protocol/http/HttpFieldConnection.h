@@ -31,10 +31,11 @@ namespace util
                 {
                 }
 
-                bool operator==(
+                friend bool operator==(
+                    Connection const & l, 
                     Connection const & r)
                 {
-                    return type_ == r.type_;
+                    return l.type_ == r.type_;
                 }
 
                 std::string to_string() const

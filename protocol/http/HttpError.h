@@ -18,6 +18,8 @@ namespace util
                 not_open,                   //   4  http连接未打开
                 busy_work,                  //   5  http有任务正在进行
                 format_error,               //   6  http头格式错误
+                redirect_error,             //   7  http不能重定向
+                keepalive_error,             //  7  http不能复用连接
 
                 continue_                       = 100,   // Continue
                 witching_protocols              = 101,   // witching Protocols
@@ -91,6 +93,10 @@ namespace util
                             return "HTTP client is busy working";
                         case http_error::format_error:
                             return "HTTP packet format error";
+                        case http_error::redirect_error:
+                            return "HTTP redirect error";
+                        case http_error::keepalive_error:
+                            return "HTTP keepalive error";
 
                         case http_error::continue_:
                             return "Http: Continue";
