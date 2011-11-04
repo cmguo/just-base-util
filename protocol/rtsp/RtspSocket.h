@@ -19,7 +19,7 @@ namespace util
 
         class RtspPacket;
 
-        namespace detail
+        namespace rtsp_detail
         {
 
             template <typename Handler>
@@ -181,7 +181,7 @@ namespace util
                 Handler const & handler)
             {
                 boost::asio::async_read_until((super &)*this, rcv_buf_, "\r\n\r\n", 
-                    detail::receive_handler<Handler>(head, rcv_buf_, handler));
+                    rtsp_detail::receive_handler<Handler>(head, rcv_buf_, handler));
             }
 
         public:
