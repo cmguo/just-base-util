@@ -140,6 +140,7 @@ namespace util
                 %id_ % state_str[state_] % ec.message() % bytes_transferred.to_string());
 
             if (watch_state_ == broken) {
+                on_finish();
                 delete this;
                 return;
             }
@@ -319,6 +320,7 @@ namespace util
         void HttpProxy::on_broken_pipe()
         {
             error_code ec;
+            on_error(ec);
             cancel(ec);
         }
 
