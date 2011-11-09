@@ -122,7 +122,7 @@ namespace util
             if (th_grp_.size()) {
                 th_grp_.join_all();
                 io_svc_.reset();
-            } else if () {
+            } else {
                 io_svc_.run();
                 io_svc_.reset();
             }
@@ -132,13 +132,14 @@ namespace util
         void Daemon::stop(
             bool wait)
         {
-            LOG_S(Logger::kLevelDebug, "[stop] beg");
             delete io_work_;
             io_work_ = NULL;
             io_svc_.post(
                 boost::bind(&detail::ModuleRegistry::shutdown, module_registry_));
-            if (wait)
+            if (wait) {
+                LOG_S(Logger::kLevelDebug, "[stop] beg");
                 run();
+            }
         }
 
         void Daemon::post_stop()
