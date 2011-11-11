@@ -92,7 +92,7 @@ namespace util
                         using namespace framework::string;
 
                         if (b_ >= 0) {
-                            if (s_end()) {
+                            if (has_end()) {
                                 return format(b_) + "-" + format(e_);
                             } else {
                                 return format(b_) + "-";
