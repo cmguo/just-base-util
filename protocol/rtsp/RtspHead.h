@@ -71,6 +71,7 @@ namespace util
             boost::optional<std::string> public_;
             boost::optional<rtsp_field::Range> range;
             boost::optional<std::string> rtp_info;
+            boost::optional<std::string> transport;
             std::vector<std::string> pragma;
 
         private:
