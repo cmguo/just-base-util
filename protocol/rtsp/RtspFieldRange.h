@@ -37,7 +37,7 @@ namespace util
                 void add_range(
                     float b)
                 {
-                    units_.push_back(Unit(b, b - 1));
+                    units_.push_back(Unit(b, b - 1.0));
                 }
 
                 void add_range(
@@ -55,6 +55,7 @@ namespace util
             public:
                 struct Unit
                 {
+                public:
                     Unit()
                         : b_(0)
                         , e_(0)
@@ -69,12 +70,29 @@ namespace util
                     {
                     }
 
+                public:
+                    float begin() const
+                    {
+                        return b_;
+                    }
+
+                    float end() const
+                    {
+                        return e_;
+                    }
+
+                    bool has_end() const
+                    {
+                         return e_ >= b_;
+                    }
+
+                public:
                     std::string to_string() const
                     {
                         using namespace framework::string;
 
                         if (b_ >= 0) {
-                            if (e_ >= b_) {
+                            if (s_end()) {
                                 return format(b_) + "-" + format(e_);
                             } else {
                                 return format(b_) + "-";
@@ -96,6 +114,7 @@ namespace util
                             ec = parse2(str, b_);
                         } else if (p == str.size() - 1) {
                             ec = parse2(str.substr(0, p), b_);
+                            e_ = b_ - 1.0;
                         } else {
                             ec = parse2(str.substr(0, p), b_);
                             if (!ec)
@@ -104,6 +123,7 @@ namespace util
                         return ec;
                     }
 
+                private:
                     float b_;
                     float e_;
                 };
