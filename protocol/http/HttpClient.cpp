@@ -266,11 +266,11 @@ namespace util
             response_type const & resp, 
             error_code & ec)
         {
-            if (requests_.size() == 1 && requests_[0].status == finished) {
+            if (requests_.size() == 1 && requests_[0].is_fetch && requests_[0].status == finished) {
+                // 兼容老版本，fetch不需要close的机制，但是只用于非串行请求的情形
                 assert(status_ == closed || status_ == broken);
                 status_ = closed;
                 broken_error_.clear();
-                // 兼容老版本，fetch不需要close的机制，但是只用于非串行请求的情形
                 requests_.clear();
             } else if (status_ == broken) {
                 ec = broken_error_;
@@ -335,8 +335,9 @@ namespace util
                     }
                 }
                 // 优化is_open
-                if (num_sent_ == requests_.size() && requests_[0].status >= recving_resp_data) {
-                    status_ = ready;
+                if (status_ == established && num_sent_ == requests_.size() 
+                    && requests_[0].status >= recving_resp_data) {
+                        status_ = ready;
                 }
             }
             return ec;
@@ -386,6 +387,7 @@ namespace util
             }
 
             if (ec && ec != boost::asio::error::would_block) {
+                dump("resume_connect2", ec);
                 status_ = broken;
                 broken_error_ = ec;
             }
