@@ -228,7 +228,7 @@ namespace util
                             boost::bind(&HttpProxy::handle_watch, this, _1));
                     }
                     local_process(
-                        boost::bind(&HttpProxy::handle_async, this, _1, Size()));
+                        boost::bind(&HttpProxy::handle_async, this, _1, _2));
                     break;
                 case local_processing:
                     if (is_local()) {
