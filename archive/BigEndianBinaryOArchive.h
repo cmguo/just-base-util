@@ -7,6 +7,7 @@
 #include "util/serialization/Array.h"
 
 #include <framework/system/BytesOrder.h>
+#include <framework/system/NumberBits24.h>
 
 #include <boost/type_traits/is_same.hpp>
 #include <boost/utility/enable_if.hpp>
@@ -53,53 +54,6 @@ namespace util
     namespace archive
     {
 
-        /**
-        转换字节顺序的模板，主机顺序->网络顺序
-
-        为了让编译器自动绑定相应的转换函数
-        注意：没有实现8个字节数据的字节顺序转换
-        */ 
-        template <typename T, int size = sizeof(T)>
-        struct htob
-        {
-            static void apply(
-                T &)
-            {
-            }
-        };
-
-        /// 2个字节数据的字节顺序转换
-        template <typename T>
-        struct htob<T, 2>
-        {
-            static void apply(
-                T & t)
-            {
-                t = (T)framework::system::BytesOrder::host_to_big_endian_short(t);
-            }
-        };
-
-        /// 4个字节数据的字节顺序转换
-        template <typename T>
-        struct htob<T, 4>
-        {
-            static void apply(
-                T & t)
-            {
-                t = (T)framework::system::BytesOrder::host_to_big_endian_long(t);
-            }
-        };
-
-        template <typename T>
-        struct htob<T, 8>
-        {
-            static void apply(
-                T & t)
-            {
-                t = (T)framework::system::BytesOrder::host_to_big_endian_longlong(t);
-            }
-        };
-
         /// 网络字节顺序序列化类
         template <
             typename _Elem = char, 
@@ -130,9 +84,8 @@ namespace util
                 T const & t)
             {
                 // 先转换字节顺序
-                T t1 = t;
-                htob<T>::apply(t1);
-                this->save_binary((char const *)&t1, sizeof(T));
+                T t1 = (T)framework::system::BytesOrder::host_to_big_endian(t1);
+                this->save_binary((char const *)t1.bytes() + 1, 3);
             }
 
             using StreamOArchive<BigEndianBinaryOArchive>::save;

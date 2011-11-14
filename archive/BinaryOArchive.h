@@ -6,6 +6,8 @@
 #include "util/archive/StreamOArchive.h"
 #include "util/serialization/Array.h"
 
+#include <framework/system/NumberBits24.h>
+
 #include <boost/type_traits/is_fundamental.hpp>
 #include <boost/utility/enable_if.hpp>
 
@@ -47,6 +49,12 @@ namespace util
                 T const & t)
             {
                 save_binary((_Elem const *)&t, sizeof(T));
+            }
+
+            void save(
+                framework::system::UInt24 const & t)
+            {
+                save_binary((_Elem const *)t.data(), 3);
             }
 
             using StreamOArchive<BinaryOArchive<_Elem, _Traits>, _Elem, _Traits>::save;
