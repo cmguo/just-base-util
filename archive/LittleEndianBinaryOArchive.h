@@ -89,10 +89,10 @@ namespace util
             }
 
             void save(
-                 const & t)
+                framework::system::UInt24 const & t)
             {
                 // ÏÈ×ª»»×Ö½ÚË³Ğò
-                T t1 = framework::system::BytesOrder::host_to_little_endian(t);
+                framework::system::UInt24 t1 = framework::system::BytesOrder::host_to_little_endian(t);
                 this->save_binary((_Elem const *)&t1.bytes(), 3);
             }
 

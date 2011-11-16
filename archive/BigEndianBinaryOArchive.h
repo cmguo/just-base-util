@@ -84,7 +84,15 @@ namespace util
                 T const & t)
             {
                 // 先转换字节顺序
-                T t1 = (T)framework::system::BytesOrder::host_to_big_endian(t1);
+                T t1 = (T)framework::system::BytesOrder::host_to_big_endian(t);
+                this->save_binary((char const *)&t1, sizeof(T));
+            }
+
+            void save(
+                framework::system::UInt24 const & t)
+            {
+                // 先转换字节顺序
+                framework::system::UInt24 t1 = (T)framework::system::BytesOrder::host_to_big_endian(t);
                 this->save_binary((char const *)t1.bytes() + 1, 3);
             }
 
