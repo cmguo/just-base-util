@@ -67,11 +67,13 @@ namespace util
                     if (size == 0)
                         break;
                     if (this_size == buffer_size(bdst)) {
+                        bsrc = bsrc + this_size;
                         if (++idst == edst)
                             break;
                         bdst = buffer(*idst);
                     }
                     if (this_size == buffer_size(bsrc)) {
+                        bdst = bdst + this_size;
                         if (++isrc == esrc)
                             break;
                         bsrc = buffer(*isrc);
