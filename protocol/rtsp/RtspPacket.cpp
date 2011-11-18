@@ -72,6 +72,7 @@ namespace util
             "RECORD", 
             "PAUSE", 
             "TEARDOWN", 
+            "invalid_method"
         };
 
         bool RtspRequestHead::get_line(

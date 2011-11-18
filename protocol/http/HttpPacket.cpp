@@ -65,6 +65,7 @@ namespace util
             "POST", 
             "PUT", 
             "HEAD", 
+            "invalid_method"
         };
 
         bool HttpRequestHead::get_line(
