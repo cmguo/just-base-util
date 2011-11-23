@@ -92,7 +92,7 @@ namespace util
             void load(
                 framework::system::UInt24 & t)
             {
-                framework::system::UInt24 T1;
+                framework::system::UInt24 t1;
                 this->load_binary((_Elem *)&t1.bytes(), 3);
                 // Ö´ĞĞ×Ö½ÚË³Ğò×ª»»
                 if (this->state())
