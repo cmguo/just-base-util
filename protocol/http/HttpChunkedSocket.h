@@ -62,6 +62,9 @@ namespace util
             }
 
         public:
+            struct eof {};
+
+        public:
             // 重写receive，async_receive，read_some，async_read_some
             template <typename MutableBufferSequence>
             std::size_t receive(
@@ -232,44 +235,75 @@ namespace util
             {
                 using namespace boost::asio;
 
+                std::size_t bytes_send = 0;
+                std::size_t bytes_left = buffers::buffer_size(buffers);
+                while (true) {
+                    if (snd_buf_.size()) {
+                        // 剩余的Chunk头部或者尾部数据
+                        std::size_t len = socket_.send(snd_buf_.data(), flags, ec);
+                        snd_buf_.consume(len);
+                        if (snd_buf_.size()) {
+                            break;
+                        }
+                    }
+                    if (snd_left_ == 0) {
+                        // 刚刚发送了尾部，重组新的Chunk
+                        if (bytes_left == 0)
+                            break;
+                        snd_left_ = bytes_left;
+                        std::size_t len1 = snd_left_;
+                        char * hex_buf = buffer_cast<char *>(snd_buf_.prepare(10));
+                        char * p = hex_buf + 10;
+                        *--p = '\n';
+                        *--p = '\r';
+                        while (len1) {
+                            --p;
+                            *p = hex_chr[len1 & 0x0000000f];
+                            len1 >>= 4;
+                        }
+                        snd_buf_.commit(10);
+                        snd_buf_.consume(p - hex_buf);
+                    } else {
+                        // 发送完头部，发送剩余数据
+                        std::size_t len = socket_.send(buffers::sub_buffers(buffers, bytes_send, snd_left_));
+                        bytes_send += len;
+                        bytes_left -= len;
+                        snd_left_ -= len;
+                        if (snd_left_)
+                            break;
+                        // 发送完数据，构建尾部
+                        char * crlf = buffer_cast<char *>(snd_buf_.prepare(2));
+                        *crlf++ = '\r';
+                        *crlf++ = '\n';
+                        snd_buf_.commit(2);
+                    }
+                }
+                return bytes_send;
+            }
+
+            std::size_t send(
+                const eof &, 
+                boost::asio::socket_base::message_flags flags, 
+                boost::system::error_code & ec)
+            {
+                assert(snd_left_ == 0);
+                if (snd_buf_.size() == 0) {
+                    char * crlf = buffer_cast<char *>(snd_buf_.prepare(5));
+                    *crlf++ = '0';
+                    *crlf++ = '\r';
+                    *crlf++ = '\n';
+                    *crlf++ = '\r';
+                    *crlf++ = '\n';
+                    snd_buf_.commit(5);
+                }
                 if (snd_buf_.size()) {
                     std::size_t len = socket_.send(snd_buf_.data(), flags, ec);
                     snd_buf_.consume(len);
-                    if (snd_buf_.size()) {
-                        return 0;
+                    if (snd_buf_.size() == 0) {
+                        // 如果再继续send eof，就会失败
+                        snd_left_ = (size_t)-1;
                     }
                 }
-                std::size_t bytes_send = 0;
-                if (snd_left_) {
-                    bytes_send = socket_.send(buffers::sub_buffers(buffers, 0, snd_left_));
-                    snd_left_ -= bytes_send;
-                    if (snd_left_) {
-                        return bytes_send;
-                    }
-                }
-                snd_left_ = buffers::buffer_size(buffers) - bytes_send;
-                if (snd_left_ == 0)
-                    return 0;
-                std::size_t len1 = snd_left_;
-                char * hex_buf = buffer_cast<char *>(snd_buf_.prepare(10));
-                char * p = hex_buf + 10;
-                *--p = '\n';
-                *--p = '\r';
-                while (len1) {
-                    --p;
-                    *p = hex_chr[len1 & 0x0000000f];
-                    len1 >>= 4;
-                }
-                snd_buf_.commit(10);
-                snd_buf_.consume(p - hex_buf);
-                len1 = socket_.send(snd_buf_.data(), flags, ec);
-                snd_buf_.consume(len1);
-                if (snd_buf_.size() == 0) {
-                    len1 = socket_.send(buffers::sub_buffers(buffers, bytes_send), flags, ec);
-                    bytes_send += len1;
-                    snd_left_ -= len1;
-                }
-                return bytes_send;
             }
 
             template <typename ConstBufferSequence>
