@@ -286,6 +286,8 @@ namespace util
                 boost::asio::socket_base::message_flags flags, 
                 boost::system::error_code & ec)
             {
+                using namespace boost::asio;
+
                 assert(snd_left_ == 0);
                 if (snd_buf_.size() == 0) {
                     char * crlf = buffer_cast<char *>(snd_buf_.prepare(5));
