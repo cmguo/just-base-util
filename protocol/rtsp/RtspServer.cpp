@@ -106,6 +106,7 @@ namespace util
                 return;
             }
 
+            response_.head().err_msg = "OK";
             response_.head()["CSeq"] = request_.head()["CSeq"];
             response_.head().content_length.reset(response_.data().size());
 

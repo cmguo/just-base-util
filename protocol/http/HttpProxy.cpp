@@ -253,6 +253,8 @@ namespace util
                         if (!response_.head().connection.is_initialized()) {
                             response_.head().connection.reset(http_field::Connection());
                         }
+                        if (response_.head().err_msg.empty())
+                            response_.head().err_msg = "OK";
                     }
                     state_ = sending_response_head;
                     http_to_client_.async_write(response_.head(), 
