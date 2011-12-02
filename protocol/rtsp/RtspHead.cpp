@@ -46,7 +46,7 @@ namespace util
                 & make_nvp("Content-Length", t.content_length)
                 & make_nvp("Location", t.location)
                 & make_nvp("Range", t.range)
-                & make_nvp("Rtp-Info", t.rtp_info)
+                & make_nvp("RTP-Info", t.rtp_info)
                 & make_nvp("Transport", t.transport)
                 & make_nvp("Pragma", t.pragma)
                 ;
