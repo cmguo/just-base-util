@@ -52,7 +52,7 @@ namespace util
                 boost::system::error_code from_string(
                     std::string const & str);
 
-            private:
+            public:
                 struct Unit
                 {
                 public:
