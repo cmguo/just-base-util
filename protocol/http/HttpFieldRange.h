@@ -55,6 +55,7 @@ namespace util
             private:
                 struct Unit
                 {
+                public:
                     Unit()
                         : b_(0)
                         , e_(0)
@@ -69,12 +70,29 @@ namespace util
                     {
                     }
 
+                public:
+                    boost::int64_t begin() const
+                    {
+                        return b_;
+                    }
+
+                    iboost::int64_t end() const
+                    {
+                        return e_;
+                    }
+
+                    bool has_end() const
+                    {
+                         return e_ > b_;
+                    }
+                    
+                public:
                     std::string to_string() const
                     {
                         using namespace framework::string;
 
                         if (b_ >= 0) {
-                            if (e_ > b_) {
+                            if (has_end()) {
                                 return format(b_) + "-" + format(e_ - 1);
                             } else {
                                 return format(b_) + "-";
