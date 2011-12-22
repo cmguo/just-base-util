@@ -129,6 +129,20 @@ namespace util
                     boost::int64_t e_;
                 };
 
+            public:
+                Unit & operator[](
+                    size_t index)
+                {
+                    return units_[index];
+                }
+
+                Unit const & operator[](
+                    size_t index) const
+                {
+                    return units_[index];
+                }
+
+            private:
                 std::vector<Unit> units_;
             };
 
