@@ -76,7 +76,7 @@ namespace util
                         return b_;
                     }
 
-                    iboost::int64_t end() const
+                    boost::int64_t end() const
                     {
                         return e_;
                     }
