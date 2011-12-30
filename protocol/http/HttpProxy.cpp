@@ -150,6 +150,24 @@ namespace util
                     error_code ec1;
                     http_to_client_.cancel(ec1);
                 }
+                if (state_ == receiving_request_head) {
+                    error_code ec1;
+                    response_.clear_data();
+                    bool block = !http_to_client_.get_non_block(ec1);
+                    if (block)
+                        http_to_client_.set_non_block(true, ec1);
+                    boost::asio::read(http_to_client_, response_.data(), boost::asio::transfer_at_least(4096), ec1);
+                    if (block)
+                        http_to_client_.set_non_block(false, ec1);
+                    if (response_.data().size() > 4096) {
+                        LOG_HEX(Logger::kLevelDebug, 
+                            boost::asio::buffer_cast<unsigned char const *>(response_.data().data()), 4096);
+                        LOG_STR(Logger::kLevelDebug, (format(response_.data().size() - 4096) + " bytes remain").c_str());
+                    } else {
+                        LOG_HEX(Logger::kLevelDebug, 
+                            boost::asio::buffer_cast<unsigned char const *>(response_.data().data()), response_.data().size());
+                    }
+                }
                 on_error(ec);
                 switch (state_) {
                     case receiving_request_head:
@@ -283,7 +301,7 @@ namespace util
                             handle_async(ec, Size());
                         } else {
                             error_code ec;
-                            http_to_client_.cancel(ec);
+                            http_to_client_.boost::asio::ip::tcp::socket::cancel(ec);
                         }
                     }
                     break;
