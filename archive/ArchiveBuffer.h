@@ -100,6 +100,10 @@ namespace util
         protected:
             virtual int_type underflow()
             {
+                if (this->gptr() < this->pptr()) {
+                    this->setg(buf_, this->gptr(), this->pptr());
+                    return traits_type::to_int_type(*this->gptr());
+                }
                 return traits_type::eof();
             }
 
