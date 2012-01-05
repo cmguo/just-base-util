@@ -8,6 +8,7 @@
 
 #include <framework/system/BytesOrder.h>
 #include <framework/system/NumberBits24.h>
+#include <framework/system/VariableNumber.h>
 
 #include <boost/type_traits/is_same.hpp>
 #include <boost/utility/enable_if.hpp>
@@ -85,7 +86,7 @@ namespace util
             {
                 // 先转换字节顺序
                 T t1 = (T)framework::system::BytesOrder::host_to_big_endian(t);
-                this->save_binary((char const *)&t1, sizeof(T));
+                this->save_binary((_Elem const *)&t1, sizeof(T));
             }
 
             void save(
@@ -93,26 +94,35 @@ namespace util
             {
                 // 先转换字节顺序
                 framework::system::UInt24 t1 = framework::system::BytesOrder::host_to_big_endian(t);
-                this->save_binary((char const *)t1.bytes() + 1, 3);
+                this->save_binary((_Elem const *)t1.bytes() + 1, 3);
+            }
+
+            template <typename T>
+            void save(
+                framework::system::VariableNumber<T> const & t)
+            {
+                // 先转换字节顺序
+                framework::system::VariableNumber<T> t1 = framework::system::BytesOrder::host_to_big_endian(t.encode());
+                this->save_binary((_Elem const *)t1.bytes() + sizeof(T) - t1.size(), t1.size());
             }
 
             using StreamOArchive<BigEndianBinaryOArchive>::save;
 
             /// 判断某个类型是否可以优化数组的序列化
-            /// 只有char类型能够直接序列化数组，不需要转换字节顺序
+            /// 只有_Elem类型能够直接序列化数组，不需要转换字节顺序
             template<class T>
             struct use_array_optimization
                 : boost::integral_constant<bool, sizeof(T) == 1>
             {
             };
 
-            // 序列化数组，直接二进制批量写入，是针对char数组的优化实现
+            // 序列化数组，直接二进制批量写入，是针对_Elem数组的优化实现
             template<class T>
             void save_array(
-                framework::container::Array<char> const & a, 
+                framework::container::Array<T> const & a, 
                 typename boost::enable_if<use_array_optimization<T> >::type * = NULL)
             {
-                this->save_binary((char *)a.address(), a.count());
+                this->save_binary((_Elem *)a.address(), a.count());
             }
         };
 

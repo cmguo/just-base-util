@@ -8,6 +8,7 @@
 
 #include <framework/system/BytesOrder.h>
 #include <framework/system/NumberBits24.h>
+#include <framework/system/VariableNumber.h>
 
 #include <boost/type_traits/is_same.hpp>
 #include <boost/utility/enable_if.hpp>
@@ -96,6 +97,20 @@ namespace util
                 // 执行字节顺序转换
                 if (this->state()) return;
                 t = framework::system::BytesOrder::big_endian_to_host(t1);
+            }
+
+            template<class T>
+            void load(
+                framework::system::VariableNumber<T> & t)
+            {
+                boost::uint8_t byte = 0;
+                this->load_binary((_Elem *)&byte, sizeof(byte));
+                if (this->state()) return;
+                framework::system::VariableNumber<T> t1(byte);
+                this->load_binary((_Elem *)t1.bytes() + sizeof(T) + 1 - t1.size(), t1.size() - 1);
+                // 执行字节顺序转换
+                if (this->state()) return;
+                t = framework::system::BytesOrder::big_endian_to_host(t1).decode();
             }
 
             /// 判断某个类型是否可以优化数组的读
