@@ -3,6 +3,8 @@
 #ifndef _UTIL_SERIALIZATION_NUMBER_BITS_24_H_
 #define _UTIL_SERIALIZATION_NUMBER_BITS_24_H_
 
+#include "util/serialization/Serialization.h"
+
 #include <framework/system/NumberBits24.h>
 
 namespace util
