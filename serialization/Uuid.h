@@ -13,18 +13,17 @@ namespace util
 {
     namespace serialization
     {
-        using namespace framework::string;
 
         template <typename Archive>
-        void serialize(Archive & ar, Uuid & t)
+        void serialize(Archive & ar, framework::string::Uuid & t)
         {
             util::serialization::split_free(ar, t);
         }
 
         template <typename Archive>
-        void load(Archive & ar, Uuid & t)
+        void load(Archive & ar, framework::string::Uuid & t)
         {
-            UUID uuid;
+            framework::string::UUID uuid;
             ar & SERIALIZATION_NVP_1(uuid, Data1)
                 & SERIALIZATION_NVP_1(uuid, Data2)
                 & SERIALIZATION_NVP_1(uuid, Data3)
@@ -35,7 +34,7 @@ namespace util
         };
 
         template <typename Archive>
-        void save(Archive & ar, Uuid const & t)
+        void save(Archive & ar, framework::string::Uuid const & t)
         {
             framework::string::UUID const & uuid = t.data();
             ar & SERIALIZATION_NVP_1(uuid, Data1)
