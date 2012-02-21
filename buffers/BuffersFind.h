@@ -3,7 +3,7 @@
 #ifndef _UTIL_BUFFERS_BUFFERS_FIND_H_
 #define _UTIL_BUFFERS_BUFFERS_FIND_H_
 
-#include "util/buffers/BufferSize.h"
+#include "util/buffers/BuffersSize.h"
 #include "util/buffers/SubBuffers.h"
 #include "util/buffers/BuffersPosition.h"
 #include "util/buffers/BuffersCompare.h"
@@ -224,7 +224,7 @@ namespace util
                 : char_iter_(beg, end, first_char(find))
                 , reset_postion_(false)
                 , limit2_(find.begin(), find.end())
-                , size_find_(buffer_size(find))
+                , size_find_(buffers_size(find))
             {
                 CharIterator end1;
                 while (char_iter_ != end1 && char_iter_.template compare_continue<Buffer2>(limit2_, size_find_) != 0)
