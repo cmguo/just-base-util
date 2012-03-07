@@ -1,7 +1,7 @@
-// BufferSize.h
+// BuffersSize.h
 
-#ifndef _UTIL_BUFFERS_BUFFER_SIZE_H_
-#define _UTIL_BUFFERS_BUFFER_SIZE_H_
+#ifndef _UTIL_BUFFERS_BUFFERS_SIZE_H_
+#define _UTIL_BUFFERS_BUFFERS_SIZE_H_
 
 #include <boost/asio/buffer.hpp>
 
@@ -27,4 +27,4 @@ namespace util
     } // namespace buffers
 } // namespace util
 
-#endif // _UTIL_BUFFERS_BUFFER_SIZE_H_
+#endif // _UTIL_BUFFERS_BUFFERS_SIZE_H_

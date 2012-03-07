@@ -1,7 +1,7 @@
-// BufferCopy.h
+// BuffersCopy.h
 
-#ifndef _UTIL_BUFFERS_BUFFER_COPY_H_
-#define _UTIL_BUFFERS_BUFFER_COPY_H_
+#ifndef _UTIL_BUFFERS_BUFFERS_COPY_H_
+#define _UTIL_BUFFERS_BUFFERS_COPY_H_
 
 #include <boost/asio/buffer.hpp>
 
@@ -86,4 +86,4 @@ namespace util
     } // namespace buffers
 } // namespace util
 
-#endif // _UTIL_BUFFERS_CYCLE_STREAM_BUFFERS_H_
+#endif // _UTIL_BUFFERS_BUFFERS_COPY_H_
