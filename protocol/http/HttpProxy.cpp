@@ -218,7 +218,6 @@ namespace util
                         http_to_server_->async_connect(request_.head().host.get(), 
                             boost::bind(&HttpProxy::handle_async, this, _1, Size()));
                     } else {
-                        response_.head().connection = request_.head().connection;
                         state_ = transferring_request_data;
                         transfer_request_data(
                             boost::bind(&HttpProxy::handle_async, this, _1, _2));
@@ -245,6 +244,8 @@ namespace util
                         http_to_client_.async_read_some(boost::asio::null_buffers(), 
                             boost::bind(&HttpProxy::handle_watch, this, _1));
                     }
+                    response_.head() = HttpResponseHead();
+                    response_.head().connection = request_.head().connection;
                     local_process(
                         boost::bind(&HttpProxy::handle_async, this, _1, _2));
                     break;
@@ -252,8 +253,11 @@ namespace util
                     if (is_local()) {
                         state_ = receiving_response_head;
                         on_receive_response_head(response_.head());
-                        if (!response_.head().content_length.is_initialized() && bytes_transferred.is_size_t()) {
-                            response_.head().content_length.reset(bytes_transferred.get_size_t());
+                        if (!response_.head().content_length.is_initialized()) {
+                            if (bytes_transferred.is_size_t())
+                                response_.head().content_length.reset(bytes_transferred.get_size_t());
+                            else
+                                response_.head().connection.reset(http_field::Connection());
                         }
                         if (!response_.head().connection.is_initialized()) {
                             response_.head().connection.reset(http_field::Connection());
