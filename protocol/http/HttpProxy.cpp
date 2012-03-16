@@ -146,10 +146,6 @@ namespace util
             }
 
             if (ec) {
-                if (watch_state_ == watching) {
-                    error_code ec1;
-                    http_to_client_.cancel(ec1);
-                }
                 if (state_ == receiving_request_head) {
                     error_code ec1;
                     response_.clear_data();
@@ -174,13 +170,20 @@ namespace util
                     case transferring_request_data:
                     case sending_response_head:
                     case transferring_response_data:
+                        if (watch_state_ == watching) {
+                            error_code ec1;
+                            http_to_client_.cancel(ec1);
+                        }
                         on_finish();
                         state_ = exiting;
                         break;
+                    case local_processing:
+                        if (is_local() && !response_.head().content_length.is_initialized() && bytes_transferred.is_size_t()) {
+                            response_.head().content_length.reset(bytes_transferred.get_size_t());
+                        }
                     case preparing:
                     case connectting:
                     case sending_request_head:
-                    case local_processing:
                     case receiving_response_head:
                         state_ = sending_response_head;
                         response_error(ec, boost::bind(&HttpProxy::handle_async, this, _1, _2));
@@ -195,6 +198,7 @@ namespace util
             switch (state_) {
                 case stopped:
                     state_ = receiving_request_head;
+                    response_.head() = HttpResponseHead();
                     http_to_client_.async_read(request_.head(), 
                         boost::bind(&HttpProxy::handle_async, this, _1, _2));
                     break;
@@ -244,7 +248,6 @@ namespace util
                         http_to_client_.async_read_some(boost::asio::null_buffers(), 
                             boost::bind(&HttpProxy::handle_watch, this, _1));
                     }
-                    response_.head() = HttpResponseHead();
                     response_.head().connection = request_.head().connection;
                     local_process(
                         boost::bind(&HttpProxy::handle_async, this, _1, _2));
@@ -353,19 +356,21 @@ namespace util
             response_type const & resp)
         {
             HttpResponseHead & head = response_.head();
-            head = HttpResponseHead(); // clear
+            error_code ec1;
             if (ec.category() == http_error::get_category()) {
-                head.err_code = ec.value();
+                ec1 = ec;
             } else if (ec.category() == boost::asio::error::get_system_category()
                 || ec.category() == boost::asio::error::get_netdb_category()
                 || ec.category() == boost::asio::error::get_addrinfo_category()
                 || ec.category() == boost::asio::error::get_misc_category()) {
-                response_.head().err_code = http_error::service_unavailable;
+                ec1 = http_error::service_unavailable;
             } else {
-                head.err_code = http_error::internal_server_error;
+                ec1 = http_error::internal_server_error;
             }
-            head.err_msg = ec.message();
-            head.content_length.reset(0);
+            head.err_code = ec1.value();
+            head.err_msg = ec1.message();
+            if (!head.content_length.is_initialized())
+                head.content_length.reset(0);
             response_.head().connection = http_field::Connection::close;
             http_to_client_.async_write(response_.head(), 
                 boost::bind(resp, _1, _2));
