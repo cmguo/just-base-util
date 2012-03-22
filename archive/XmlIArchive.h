@@ -202,7 +202,7 @@ namespace util
             void load_end(
                 std::string const & name)
             {
-                Value::TypeEnum t = value_stack_.back().type;
+                int t = value_stack_.back().type;
                 value_stack_.pop_back();
                 if (t == Value::t_set || t == Value::t_set2) {
                     value_stack_.pop_back();
@@ -259,7 +259,8 @@ namespace util
             std::vector<Value> value_stack_;
         };
 
-        template <typename T, typename Archive>
+        template <typename T>
+        template <typename Archive>
         void AbnormalCollection<T>::serialize(
             Archive & ar)
         {
