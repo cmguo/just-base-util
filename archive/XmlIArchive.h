@@ -16,6 +16,22 @@ namespace util
     namespace archive
     {
 
+        template<class T>
+        struct AbnormalCollection
+        {
+            AbnormalCollection(
+                T & t)
+                : t(t)
+            {
+            }
+
+            template <typename Archive>
+            void serialize(
+                Archive & ar);
+                
+            T & t;
+        };
+
         template <
             typename _Elem = char, 
             typename _Traits = std::char_traits<_Elem>
@@ -91,11 +107,28 @@ namespace util
 
             using StreamIArchive<XmlIArchive<_Elem, _Traits>, _Elem, _Traits>::load;
 
+            void start_abnormal_collection()
+            {
+                Value & vp = value_stack_.back();
+                Value v;
+                v.type = Value::t_set2;
+                v.attr = vp.elem->Value();
+                value_stack_.push_back(v);
+                vp.elem = NULL;
+            }
+
+            template<class T>
+            AbnormalCollection<T> const abnormal_collection(
+                T & t)
+            {
+                return AbnormalCollection<T>(t);
+            }
+
             void load_start(
                 std::string const & name)
             {
                 Value & vp = value_stack_.back();
-                assert(vp.type == Value::t_elem || vp.type == Value::t_set);
+                assert(vp.type == Value::t_elem || vp.type == Value::t_set || vp.type == Value::t_set2);
                 Value v;
                 if (vp.type == Value::t_elem) {
                     TiXmlElement * elem = vp.elem->FirstChildElement(name.c_str());
@@ -111,17 +144,28 @@ namespace util
                     }
                     if (v.type == Value::t_none) {
                         if (name == "count") {
-                            size_t c = 0;
-                            for (TiXmlNode * node = vp.elem->FirstChild(); 
-                                node; 
-                                node = node->NextSibling(), ++c);
+                            Value v2;
+                            v2.type = Value::t_set;
+                            value_stack_.push_back(v2);
                             v.type = Value::t_count;
-                            v.count = c;
-                        } else {
-                            v.type = Value::t_none;
+                            v.count = 0;
+                            for (TiXmlNode * node = vp.elem->FirstChild(); 
+                                node; node = node->NextSibling(), ++v.count);
+                        }
+                    } else {
+                        if (name == "count") {
+                            Value v2;
+                            v2.type = Value::t_set;
+                            v2.item = elem;
+                            value_stack_.push_back(v2);
+                            v.type = Value::t_count;
+                            v.count = 0;
+                            for (TiXmlNode * node = elem->NextSibling(); 
+                                node; 
+                                node = node->NextSibling(), ++v.count);
                         }
                     }
-                } else {
+                } else if (vp.type == Value::t_set) {
                     assert(name == "item");
                     v.type = Value::t_elem;
                     Value & vpp = *(&vp - 1);
@@ -130,6 +174,23 @@ namespace util
                         v.elem = vp.item->ToElement();
                     if (v.elem == NULL) {
                         v.type = Value::t_none;
+                    }
+                } else { // vp.type == Value::t_set2
+                    Value & vpp = *(&vp - 1);
+                    Value & vppp = *(&vpp - 1);
+                    if (name == "count") {
+                        v.type = Value::t_count;
+                        v.count = 0;
+                        for (TiXmlNode * node = vppp.elem->FirstChild(vp.attr); 
+                            node; 
+                            node = node->NextSibling(vp.attr), ++v.count);
+                    } else {
+                        assert(name == "item");
+                        vpp.item = vppp.elem->IterateChildren(vp.attr, vpp.item);
+                        if (vpp.item) {
+                            v.type = Value::t_elem;
+                            v.elem = vpp.item->ToElement();
+                        }
                     }
                 }
                 if (v.type == Value::t_none) {
@@ -141,15 +202,10 @@ namespace util
             void load_end(
                 std::string const & name)
             {
-                Value & v = value_stack_.back();
-                if (v.type == Value::t_count) {
-                    v.type = Value::t_set;
-                    v.item = NULL;
-                } else {
+                Value::TypeEnum t = value_stack_.back().type;
+                value_stack_.pop_back();
+                if (t == Value::t_set || t == Value::t_set2) {
                     value_stack_.pop_back();
-                    if (v.type == Value::t_set) {
-                        value_stack_.pop_back();
-                    }
                 }
             }
 
@@ -189,6 +245,7 @@ namespace util
                     t_elem, 
                     t_attr, 
                     t_set, 
+                    t_set2, 
                     t_count, 
                     t_item, 
                 } type;
@@ -201,6 +258,14 @@ namespace util
             };
             std::vector<Value> value_stack_;
         };
+
+        template <typename T, typename Archive>
+        void AbnormalCollection<T>::serialize(
+            Archive & ar)
+        {
+            ar.start_abnormal_collection();
+            ar & t;
+        }
 
     } // namespace archive
 } // namespace util
