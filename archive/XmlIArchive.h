@@ -110,11 +110,11 @@ namespace util
             void start_abnormal_collection()
             {
                 Value & vp = value_stack_.back();
+                vp.elem = NULL;
                 Value v;
                 v.type = Value::t_set2;
                 v.attr = vp.elem->Value();
                 value_stack_.push_back(v);
-                vp.elem = NULL;
             }
 
             template<class T>
@@ -144,25 +144,26 @@ namespace util
                     }
                     if (v.type == Value::t_none) {
                         if (name == "count") {
-                            Value v2;
-                            v2.type = Value::t_set;
-                            value_stack_.push_back(v2);
                             v.type = Value::t_count;
                             v.count = 0;
                             for (TiXmlNode * node = vp.elem->FirstChild(); 
-                                node; node = node->NextSibling(), ++v.count);
+                                node; 
+                                node = node->NextSibling(), ++v.count);
+                            Value v2;
+                            v2.type = Value::t_set;
+                            value_stack_.push_back(v2);
                         }
                     } else {
                         if (name == "count") {
-                            Value v2;
-                            v2.type = Value::t_set;
-                            v2.item = elem;
-                            value_stack_.push_back(v2);
                             v.type = Value::t_count;
                             v.count = 0;
                             for (TiXmlNode * node = elem->NextSibling(); 
                                 node; 
                                 node = node->NextSibling(), ++v.count);
+                            Value v2;
+                            v2.type = Value::t_set;
+                            v2.item = elem; // 从count节点的下一个开始
+                            value_stack_.push_back(v2);
                         }
                     }
                 } else if (vp.type == Value::t_set) {
