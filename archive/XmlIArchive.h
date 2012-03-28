@@ -110,10 +110,10 @@ namespace util
             void start_abnormal_collection()
             {
                 Value & vp = value_stack_.back();
-                vp.elem = NULL;
                 Value v;
                 v.type = Value::t_set2;
                 v.attr = vp.elem->Value();
+                vp.elem = NULL;
                 value_stack_.push_back(v);
             }
 
