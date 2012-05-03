@@ -42,7 +42,7 @@ namespace util
             {
                 std::basic_streambuf<_Elem, _Traits> * tmp = buf_;
                 buf_ = b;
-                clear();
+                this->clear();
                 return tmp;
             }
 
