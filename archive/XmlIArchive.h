@@ -214,7 +214,7 @@ namespace util
             void load_xml()
             {
                 std::string str;
-                std::basic_istream<_Elem, _Traits> is(&this->buf_);
+                std::basic_istream<_Elem, _Traits> is(this->buf_);
                 std::istream_iterator<char, _Elem, _Traits> beg(is);
                 std::istream_iterator<char, _Elem, _Traits> end;
                 is >> std::noskipws;
