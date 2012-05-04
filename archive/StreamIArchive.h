@@ -37,12 +37,16 @@ namespace util
                 return buf_;
             }
 
+            std::basic_streambuf<_Elem, _Traits> & streambuf()
+            {
+                return *buf_;
+            }
+
             std::basic_streambuf<_Elem, _Traits> * rdbuf(
-            	  std::basic_streambuf<_Elem, _Traits> * b)
+                  std::basic_streambuf<_Elem, _Traits> * b)
             {
                 std::basic_streambuf<_Elem, _Traits> * tmp = buf_;
                 buf_ = b;
-                this->clear();
                 return tmp;
             }
 
