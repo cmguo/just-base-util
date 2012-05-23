@@ -467,6 +467,8 @@ namespace util
                     stat.response_head_time = stat.elapse();
                     if (handle_redirect(request, ec)) {
                         close_socket(ec);
+                        status_ = closed;
+                        request.status = send_pending;
                         return resume(false, ec);
                     }
                     if (request.is_fetch) {
@@ -678,6 +680,8 @@ namespace util
                         if (handle_redirect(request, ec1)) {
                             error_code ec2;
                             close_socket(ec2);
+                            status_ = closed;
+                            request.status = send_pending;
                             return async_resume();
                         }
                     }
