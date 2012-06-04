@@ -97,7 +97,7 @@ namespace util
                 // 执行字节顺序转换
                 if (this->state())
                     return;
-                t = framework::system::BytesOrder::little_endian_to_host(t1);
+                t = framework::system::BytesOrder::little_endian_to_host((boost::uint32_t)t1);
             }
 
             /// 判断某个类型是否可以优化数组的读

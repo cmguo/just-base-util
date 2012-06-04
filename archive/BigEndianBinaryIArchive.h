@@ -96,7 +96,7 @@ namespace util
                 this->load_binary((_Elem *)t1.bytes() + 1, 3);
                 // 执行字节顺序转换
                 if (this->state()) return;
-                t = framework::system::BytesOrder::big_endian_to_host(t1);
+                t = framework::system::BytesOrder::big_endian_to_host((boost::uint32_t)t1);
             }
 
             template<class T>
@@ -112,6 +112,8 @@ namespace util
                 if (this->state()) return;
                 t = framework::system::BytesOrder::big_endian_to_host(t1).decode();
             }
+
+            using StreamIArchive<BigEndianBinaryIArchive<_Elem, _Traits>, _Elem, _Traits>::load;
 
             /// 判断某个类型是否可以优化数组的读
             /// 只有char类型能够直接读数组，不需要转换字节顺序

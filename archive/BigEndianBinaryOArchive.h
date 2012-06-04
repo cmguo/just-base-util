@@ -93,7 +93,7 @@ namespace util
                 framework::system::UInt24 const & t)
             {
                 // 先转换字节顺序
-                framework::system::UInt24 t1 = framework::system::BytesOrder::host_to_big_endian(t);
+                framework::system::UInt24 t1 = framework::system::BytesOrder::host_to_big_endian((boost::uint32_t)t);
                 this->save_binary((_Elem const *)t1.bytes() + 1, 3);
             }
 
@@ -106,8 +106,8 @@ namespace util
                 this->save_binary((_Elem const *)t1.bytes() + sizeof(T) - t1.size(), t1.size());
             }
 
-            using StreamOArchive<BigEndianBinaryOArchive>::save;
-
+            using StreamOArchive<BigEndianBinaryOArchive<_Elem, _Traits>, _Elem, _Traits>::save;
+            
             /// 判断某个类型是否可以优化数组的序列化
             /// 只有_Elem类型能够直接序列化数组，不需要转换字节顺序
             template<class T>
