@@ -7,6 +7,8 @@
 
 #include <framework/string/Parse.h>
 
+#include <boost/optional.hpp>
+
 #include <iterator>
 
 #include <tinyxml/tinyxml.h>
@@ -81,7 +83,7 @@ namespace util
                 }
             }
 
-            /// 从流中读出变标准库字符串
+            /// 从流中读出标准库字符串
             void load(
                 std::string & t)
             {
@@ -102,6 +104,20 @@ namespace util
                     this->state(2);
                 } else {
                     t = value;
+                }
+            }
+
+            /// 从流中读出可选值
+            template<class T>
+            void load(
+                boost::optional<T> & t)
+            {
+                Value & v = value_stack_.back();
+                if (v.type == Value::t_none) {
+                    t.reset(T());
+                    (*this) >> t.get();
+                } else {
+                    t.reset();
                 }
             }
 
