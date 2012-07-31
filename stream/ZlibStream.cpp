@@ -2,7 +2,7 @@
 
 #include "util/Util.h"
 #include "util/stream/ZlibStream.h"
-#include "util/stream/zlib/zlib.h"
+#include "zlib/zlib.h"
 
 namespace util
 {
