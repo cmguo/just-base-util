@@ -214,6 +214,7 @@ namespace util
                     skipped_bytes_ += this_size;
                     this_size = normalize(limit, end);
                 }
+                assert(size == 0);
             }
 
             void increment_bytes(
@@ -233,6 +234,7 @@ namespace util
                     skipped_bytes_ += this_size;
                     this_size = normalize(limit);
                 }
+                assert(size == 0);
             }
 
             void increment_buffer(
