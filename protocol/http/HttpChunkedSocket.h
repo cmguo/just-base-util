@@ -72,7 +72,7 @@ namespace util
             buf.commit(5);
         }
 
-        bool recv_crlf(
+        static bool recv_crlf(
             boost::asio::streambuf & buf, 
             std::size_t & len)
         {
