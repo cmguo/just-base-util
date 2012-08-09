@@ -3,13 +3,14 @@
 #ifndef _UTIL_PROTOCOL_HTTP_CHUNKED_SOCKET_H_
 #define _UTIL_PROTOCOL_HTTP_CHUNKED_SOCKET_H_
 
-#include "util/buffers/BufferSize.h"
+#include "util/buffers/BuffersSize.h"
 #include "util/buffers/SubBuffers.h"
 
 #include <framework/network/AsioHandlerHelper.h>
 
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/socket_base.hpp>
+#include <boost/asio/detail/bind_handler.hpp>
 #include <boost/bind.hpp>
 #include <boost/ref.hpp>
 
@@ -253,15 +254,17 @@ namespace util
                 typedef void result_type;
 
                 recv_handler(
-                    Source & source, 
+                    Socket & socket, 
                     std::size_t & rcv_left, 
                     boost::asio::streambuf & rcv_buf_, 
                     MutableBufferSequence const & buffers, 
+                    boost::asio::socket_base::message_flags flags, 
                     ReadHandler handler)
-                    : socket_(source)
+                    : socket_(socket)
                     , rcv_left_(rcv_left)
                     , rcv_buf_(rcv_buf_)
                     , buffers_(buffers)
+                    , flags_(flags)
                     , handler_(handler)
                     , bytes_recv_(0)
                     , bytes_left_(buffers::buffers_size(buffers))
@@ -277,7 +280,7 @@ namespace util
                         if (rcv_left_ == 0) { 
                             if (bytes_left_ == 0) {
                                 socket_.get_io_service().post(
-                                    boost::bind(handler_, boost::system::error_code(), bytes_recv_));
+                                    boost::asio::detail::bind_handler(handler_, boost::system::error_code(), bytes_recv_));
                                 delete this;
                                 return;
                             }
@@ -352,7 +355,7 @@ namespace util
                 PASS_DOWN_ASIO_HANDLER_FUNCTION(recv_handler, handler_)
 
             private:
-                Source & socket_;
+                Socket & socket_;
                 std::size_t & rcv_left_;
                 boost::asio::streambuf & rcv_buf_;
                 MutableBufferSequence buffers_;
@@ -376,8 +379,8 @@ namespace util
                 boost::asio::socket_base::message_flags flags, 
                 ReadHandler handler)
             {
-                (new recv_handler<ConstBufferSequence, WriteHandler>(
-                    socket_, snd_left_, snd_buf_, buffers, flags, handler))->start();
+                (new recv_handler<MutableBufferSequence, ReadHandler>(
+                    socket_, rcv_left_, rcv_buf_, buffers, flags, handler))->start();
             }
 
             template <typename MutableBufferSequence>
@@ -399,7 +402,7 @@ namespace util
             }
 
             template <typename MutableBufferSequence, typename ReadHandler>
-            void async_receive(
+            void async_read_some(
                 const MutableBufferSequence& buffers,
                 ReadHandler handler)
             {
@@ -436,7 +439,7 @@ namespace util
                 boost::system::error_code & ec)
             {
                 std::size_t bytes_send = 0;
-                std::size_t bytes_left = buffers::buffer_size(buffers);
+                std::size_t bytes_left = buffers::buffers_size(buffers);
                 while (true) {
                     if (snd_buf_.size()) {
                         // 剩余的Chunk头部或者尾部数据
@@ -524,7 +527,7 @@ namespace util
                     , flags_(flags)
                     , handler_(handler)
                     , bytes_send_(0)
-                    , bytes_left_(buffers::buffer_size(buffers))
+                    , bytes_left_(buffers::buffers_size(buffers))
                 {
                 }
 
@@ -537,7 +540,7 @@ namespace util
                         if (snd_left_ == 0) { 
                             if (bytes_left_ == 0) {
                                 socket_.get_io_service().post(
-                                    boost::bind(handler_, boost::system::error_code(), bytes_send_));
+                                    boost::asio::detail::bind_handler(handler_, boost::system::error_code(), bytes_send_));
                                 delete this;
                                 return;
                             }
