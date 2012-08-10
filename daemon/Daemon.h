@@ -83,6 +83,10 @@ namespace util
             bool is_started() const;
 
         public:
+            static Daemon & from_io_svc(
+                boost::asio::io_service & io_svc);
+
+        public:
             boost::asio::io_service & io_svc()
             {
                 return io_svc_;
@@ -130,6 +134,13 @@ namespace util
 
             template <typename Module>
             friend bool has_module(
+                Daemon & daemon);
+
+        private:
+            static void register_daemon(
+                Daemon & daemon);
+
+            static void unregister_daemon(
                 Daemon & daemon);
 
         private:
@@ -200,6 +211,28 @@ namespace util
             Daemon & daemon)
         {
             return daemon.module_registry_->has_module<Module>();
+        }
+
+        template <typename Module>
+        Module & use_module(
+            boost::asio::io_service & io_svc)
+        {
+            return use_module<Module>(Daemon::from_io_svc(io_svc));
+        }
+
+        template <typename Module>
+        void add_module(
+            boost::asio::io_service & io_svc, 
+            Module * module)
+        {
+            add_module<Module>(Daemon::from_io_svc(io_svc), module);
+        }
+
+        template <typename Module>
+        bool has_module(
+            boost::asio::io_service & io_svc)
+        {
+            return has_module<Module>(Daemon::from_io_svc(io_svc));
         }
 
     } // namespace daemon

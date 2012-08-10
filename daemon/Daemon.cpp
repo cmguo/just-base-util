@@ -17,11 +17,40 @@ namespace util
     namespace daemon
     {
 
+        static inline std::vector<Daemon *> & daemon_set()
+        {
+            static std::vector<Daemon *> vec;
+            return vec;
+        }
+        
+        void Daemon::register_daemon(
+            Daemon & daemon)
+        {
+            daemon_set().push_back(&daemon);
+        }
+
+        void Daemon::unregister_daemon(
+            Daemon & daemon)
+        {
+            daemon_set().erase(std::find(daemon_set().begin(), daemon_set().end(), &daemon));
+        }
+
+        Daemon & Daemon::from_io_svc(
+            boost::asio::io_service & io_svc)
+        {
+            Daemon * d = (Daemon *)&io_svc;
+            d = (Daemon * )((char *)d - ((char *)&d->io_svc_ - (char *)d));
+            if (std::find(daemon_set().begin(), daemon_set().end(), d) == daemon_set().end())
+                d = NULL;
+            return *d;
+        }
+
         Daemon::Daemon()
             : io_work_(NULL)
             , module_registry_(new detail::ModuleRegistry(*this))
         {
             //logger_.load_config(config_);
+            register_daemon(*this);
         }
 
         Daemon::Daemon(
@@ -30,11 +59,13 @@ namespace util
             , config_(conf)
             , module_registry_(new detail::ModuleRegistry(*this))
         {
+            register_daemon(*this);
             //logger_.load_config(config_);
         }
 
         Daemon::~Daemon()
         {
+            unregister_daemon(*this);
             quick_stop();
             delete module_registry_;
         }
