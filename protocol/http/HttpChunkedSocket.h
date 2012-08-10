@@ -631,31 +631,7 @@ namespace util
                     handler_(ec, bytes_transferred);
                 }
 
-                inline friend void* asio_handler_allocate(
-                    std::size_t size,
-                    eof_send_handler * this_handler)
-                {
-                    return boost_asio_handler_alloc_helpers::allocate(
-                        size, &this_handler->handler_);
-                }
-
-                inline friend void asio_handler_deallocate(
-                    void * pointer, 
-                    std::size_t size,
-                    eof_send_handler * this_handler)
-                {
-                    boost_asio_handler_alloc_helpers::deallocate(
-                        pointer, size, &this_handler->handler_);
-                }
-
-                template <typename Function>
-                inline friend void asio_handler_invoke(
-                    const Function & function,
-                    eof_send_handler * this_handler)
-                {
-                    boost_asio_handler_invoke_helpers::invoke(
-                        function, &this_handler->handler_);
-                }
+                PASS_DOWN_ASIO_HANDLER_FUNCTION(eof_send_handler, handler_)
 
             private:
                 boost::asio::streambuf & snd_buf_;

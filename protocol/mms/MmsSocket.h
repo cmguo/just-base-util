@@ -6,6 +6,7 @@
 #include "util/protocol/mms/MmsHead.h"
 
 #include <framework/network/TcpSocket.h>
+#include <framework/network/AsioHandlerHelper.h>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/streambuf.hpp>
@@ -52,39 +53,13 @@ namespace util
                     }
                 }
 
-            //private:
+                PASS_DOWN_ASIO_HANDLER_FUNCTION(receive_handler, handler_)
+
+            private:
                 MmsHead & head_;
                 boost::asio::streambuf & rcv_buf_;
                 Handler handler_;
             };
-
-            template <typename Handler>
-            inline void* asio_handler_allocate(
-                std::size_t size,
-                receive_handler<Handler> * this_handler)
-            {
-                return boost_asio_handler_alloc_helpers::allocate(
-                    size, &this_handler->handler_);
-            }
-
-            template <typename Handler>
-            inline void asio_handler_deallocate(
-                void * pointer, 
-                std::size_t size,
-                receive_handler<Handler> * this_handler)
-            {
-                boost_asio_handler_alloc_helpers::deallocate(
-                    pointer, size, &this_handler->handler_);
-            }
-
-            template <typename Function, typename Handler>
-            inline void asio_handler_invoke(
-                const Function & function,
-                receive_handler<Handler> * this_handler)
-            {
-                boost_asio_handler_invoke_helpers::invoke(
-                    function, &this_handler->handler_);
-            }
 
         } // namespace detail
 
