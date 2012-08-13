@@ -535,8 +535,8 @@ namespace util
                             }
                             snd_left_ = bytes_left_;
                             make_chunk_head(snd_buf_, snd_left_);
-                            socket_.async_send(buffers::sub_buffers(buffers_, bytes_send_, snd_left_), flags_, 
-                                 boost::bind(boost::ref(*this), _1, _2));
+                            socket_.async_send(snd_buf_.data(), flags_,
+                                boost::bind(boost::ref(*this), _1, _2));
                         } else {
                             socket_.async_send(buffers::sub_buffers(buffers_, bytes_send_, snd_left_), flags_,
                                  boost::bind(boost::ref(*this), _1, _2));
