@@ -46,6 +46,8 @@ namespace util
                 & make_nvp("Content-Length", t.content_length)
                 & make_nvp("Location", t.location)
                 & make_nvp("Range", t.range)
+                & make_nvp("RTP-Info", t.rtp_info)
+                & make_nvp("Transport", t.transport)
                 & make_nvp("Pragma", t.pragma)
                 ;
         }
@@ -104,16 +106,15 @@ namespace util
                 if (sub_level_ == 0) {
                     state(2);
                 } else if (sub_level_ == 1) {
-                    if (iterator_ != fields_.end()) {
-                        if (iterator_->second.empty()) {
+                    if (iterator_ == fields_.end() 
+                        || iterator_->second.size()) {
+                        state(2);
+                    } else if (iterator_->second.size() == 1) {
+                        error_code ec = parse2(iterator_->second.front(), t);
+                        if (ec)
                             state(2);
-                        } else if (iterator_->second.size() == 1) {
-                            error_code ec = parse2(iterator_->second.front(), t);
-                            if (ec)
-                                state(2);
-                        } else {
-                            state(2);
-                        }
+                    } else {
+                        state(2);
                     }
                 } else if (sub_level_ == 2) {
                     if (iterator_ != fields_.end()) {
@@ -140,14 +141,13 @@ namespace util
                 if (sub_level_ == 0) {
                     state(2);
                 } else if (sub_level_ == 1) {
-                    if (iterator_ != fields_.end()) {
-                        if (iterator_->second.empty()) {
-                            state(2);
-                        } else if (iterator_->second.size() == 1) {
-                            t = iterator_->second.front();
-                        } else {
-                            state(2);
-                        }
+                    if (iterator_ == fields_.end() 
+                        || iterator_->second.empty()) {
+                        state(2);
+                    } else if (iterator_->second.size() == 1) {
+                        t = iterator_->second.front();
+                    } else {
+                        state(2);
                     }
                 } else if (sub_level_ == 2) {
                     if (iterator_ != fields_.end()) {
@@ -170,20 +170,19 @@ namespace util
                 if (sub_level_ == 0) {
                     state(2);
                 } else if (sub_level_ == 1) {
-                    if (iterator_ != fields_.end()) {
-                        if (iterator_->second.empty()) {
-                            t.reset();
-                        } else if (iterator_->second.size() == 1) {
-                            T t1;
-                            error_code ec = parse2(iterator_->second.front(), t1);
-                            if (ec) {
-                                state(2);
-                            } else {
-                                t.reset(t1);
-                            }
-                        } else {
+                    if (iterator_ == fields_.end() 
+                        || iterator_->second.empty()) {
+                        t.reset();
+                    } else if (iterator_->second.size() == 1) {
+                        T t1;
+                        error_code ec = parse2(iterator_->second.front(), t1);
+                        if (ec) {
                             state(2);
+                        } else {
+                            t.reset(t1);
                         }
+                    } else {
+                        state(2);
                     }
                 } else {
                     state(2);

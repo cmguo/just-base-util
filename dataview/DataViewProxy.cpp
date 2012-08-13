@@ -113,7 +113,7 @@ namespace util
             response_head.version = 0x101;
             response_head.err_msg = "OK";
             response_head.set_field("Content-Length", boost::lexical_cast<std::string>(contentLength_));
-            response_head.connection = util::protocol::http_filed::Connection::keep_alive;
+            response_head.connection = util::protocol::http_field::Connection::keep_alive;
 
             boost::system::error_code ec;
             response_head.get_content(std::cout, ec);

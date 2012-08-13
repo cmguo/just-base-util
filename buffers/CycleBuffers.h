@@ -80,7 +80,7 @@ namespace util
 
             bool at_end;
             typename Buffer::pos_type pos;
-            StlBuffer<Buffer, Witch> first;
+            StlBuffer<Witch, typename Buffer::char_type, typename Buffer::traits_type> first;
             Buffer_Iterator begin_remainder;
         };
 
@@ -266,6 +266,8 @@ namespace util
             typedef Buffers buffers_type;
 
             typedef CycleBuffers cycle_buffers_type;
+
+            typedef StlStream<Elem, Traits> stream_type;
 
             typedef boost::asio::mutable_buffer value_type;
 
@@ -633,7 +635,7 @@ namespace util
                         check();
                         return traits_type::to_int_type(*this->gptr());
                     } else {
-                        assert(0);
+                        //assert(0);
                         return traits_type::eof();
                     }
                 } else {

@@ -56,7 +56,7 @@ namespace util
 
         private:
             std::string response_buffer_;
-            local_process_response_type resp_;
+            response_type resp_;
             size_t contentLength_;
         };
 

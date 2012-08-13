@@ -5,6 +5,8 @@
 
 #include "util/stream/detail/transfer_buffers.h"
 
+#include <framework/network/AsioHandlerHelper.h>
+
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/eval_if.hpp>
 #include <boost/mpl/identity.hpp>
@@ -260,8 +262,10 @@ namespace util
                         handler_->handler_read(ec, bytes_transferred);
                     }
 
-                //private:
-                        transfer_handler_ptr handler_;
+                    PASS_DOWN_ASIO_HANDLER_FUNCTION(read_handler_t, handler_->handler_)
+
+                private:
+                    transfer_handler_ptr handler_;
                 };
 
                 struct write_handler_t
@@ -279,7 +283,9 @@ namespace util
                         handler_->handler_write(ec, bytes_transferred);
                     }
 
-                //private:
+                    PASS_DOWN_ASIO_HANDLER_FUNCTION(write_handler_t, handler_->handler_)
+
+                private:
                     transfer_handler_ptr handler_;
                 };
 
@@ -363,73 +369,6 @@ namespace util
                 size_t ref_count_;
             };
 
-            template <typename AsyncReadStream, typename AsyncWriteStream, 
-                typename MutableBufferSequence,
-                typename CompletionCondition, typename TransferHandler>
-                inline void* asio_handler_allocate(std::size_t size,
-                typename transfer_handler<AsyncReadStream, AsyncWriteStream, MutableBufferSequence,
-                CompletionCondition, TransferHandler>::read_handler_t * this_handler)
-            {
-                return boost_asio_handler_alloc_helpers::allocate(
-                    size, &this_handler->handler_->handler_);
-            }
-
-            template <typename AsyncReadStream, typename AsyncWriteStream, 
-                typename MutableBufferSequence,
-                typename CompletionCondition, typename TransferHandler>
-                inline void asio_handler_deallocate(void* pointer, std::size_t size,
-                typename transfer_handler<AsyncReadStream, AsyncWriteStream, MutableBufferSequence,
-                CompletionCondition, TransferHandler>::read_handler_t * this_handler)
-            {
-                boost_asio_handler_alloc_helpers::deallocate(
-                    pointer, size, &this_handler->handler_->handler_);
-            }
-
-            template <typename Function, typename AsyncReadStream, 
-                typename AsyncWriteStream, 
-                typename MutableBufferSequence, typename CompletionCondition,
-                typename TransferHandler>
-                inline void asio_handler_invoke(const Function& function,
-                typename transfer_handler<AsyncReadStream, AsyncWriteStream, MutableBufferSequence,
-                CompletionCondition, TransferHandler>::read_handler_t * this_handler)
-            {
-                boost_asio_handler_invoke_helpers::invoke(
-                    function, &this_handler->handler_->handler_);
-            }
-
-            template <typename AsyncReadStream, typename AsyncWriteStream, 
-                typename MutableBufferSequence,
-                typename CompletionCondition, typename TransferHandler>
-                inline void* asio_handler_allocate(std::size_t size,
-                typename transfer_handler<AsyncReadStream, AsyncWriteStream, MutableBufferSequence,
-                CompletionCondition, TransferHandler>::write_handler_t * this_handler)
-            {
-                return boost_asio_handler_alloc_helpers::allocate(
-                    size, &this_handler->handler_->handler_);
-            }
-
-            template <typename AsyncReadStream, typename AsyncWriteStream, 
-                typename MutableBufferSequence,
-                typename CompletionCondition, typename TransferHandler>
-                inline void asio_handler_deallocate(void* pointer, std::size_t size,
-                typename transfer_handler<AsyncReadStream, AsyncWriteStream, MutableBufferSequence,
-                CompletionCondition, TransferHandler>::write_handler_t * this_handler)
-            {
-                boost_asio_handler_alloc_helpers::deallocate(
-                    pointer, size, &this_handler->handler_->handler_);
-            }
-
-            template <typename Function, typename AsyncReadStream, 
-                typename AsyncWriteStream, 
-                typename MutableBufferSequence, typename CompletionCondition,
-                typename TransferHandler>
-                inline void asio_handler_invoke(const Function& function,
-                typename transfer_handler<AsyncReadStream, AsyncWriteStream, MutableBufferSequence,
-                CompletionCondition, TransferHandler>::write_handler * this_handler)
-            {
-                boost_asio_handler_invoke_helpers::invoke(
-                    function, &this_handler->handler_->handler_);
-            }
         } // namespace detail
 
         template <

@@ -6,6 +6,7 @@
 #include "util/protocol/rtsp/RtspHead.h"
 
 #include <framework/network/TcpSocket.h>
+#include <framework/network/AsioHandlerHelper.h>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/streambuf.hpp>
@@ -19,7 +20,7 @@ namespace util
 
         class RtspPacket;
 
-        namespace detail
+        namespace rtsp_detail
         {
 
             template <typename Handler>
@@ -30,7 +31,7 @@ namespace util
                     boost::asio::streambuf & buf, 
                     Handler handler)
                     : head_(head)
-                    , buf_(buf)
+                    , rcv_buf_(buf)
                     , handler_(handler)
                 {
                 }
@@ -40,52 +41,26 @@ namespace util
                     size_t bytes_transferred)
                 {
                     if (!ec) {
-                        size_t old_size = buf_.size();
-                        std::istream is(&buf_);
+                        size_t old_size = rcv_buf_.size();
+                        std::istream is(&rcv_buf_);
                         boost::system::error_code ec1;
                         head_.set_content(is, ec1);
                         if (ec1)
-                            handler_(ec1, old_size - buf_.size());
+                            handler_(ec1, old_size - rcv_buf_.size());
                         else
-                            handler_(ec, old_size - buf_.size());
+                            handler_(ec, old_size - rcv_buf_.size());
                     } else {
                         handler_(ec, 0);
                     }
                 }
 
-            //private:
+                PASS_DOWN_ASIO_HANDLER_FUNCTION(receive_handler, handler_)
+
+            private:
                 RtspHead & head_;
-                boost::asio::streambuf & buf_;
+                boost::asio::streambuf & rcv_buf_;
                 Handler handler_;
             };
-
-            template <typename Handler>
-            inline void* asio_handler_allocate(
-                std::size_t size,
-                receive_handler<Handler> * this_handler)
-            {
-                return boost_asio_handler_alloc_helpers::allocate(
-                    size, &this_handler->handler_);
-            }
-
-            template <typename Handler>
-            inline void asio_handler_deallocate(
-                void * pointer, 
-                std::size_t size,
-                receive_handler<Handler> * this_handler)
-            {
-                boost_asio_handler_alloc_helpers::deallocate(
-                    pointer, size, &this_handler->handler_);
-            }
-
-            template <typename Function, typename Handler>
-            inline void asio_handler_invoke(
-                const Function & function,
-                receive_handler<Handler> * this_handler)
-            {
-                boost_asio_handler_invoke_helpers::invoke(
-                    function, &this_handler->handler_);
-            }
 
         } // namespace detail
 
@@ -106,14 +81,16 @@ namespace util
         public:
             void close()
             {
-                buf_.reset();
+                snd_buf_.reset();
+                rcv_buf_.reset();
                 super::close();
             }
 
             boost::system::error_code close(
                 boost::system::error_code & ec)
             {
-                buf_.reset();
+                snd_buf_.reset();
+                rcv_buf_.reset();
                 return super::close(ec);
             }
 
@@ -121,22 +98,22 @@ namespace util
             size_t write(
                 RtspHead & head)
             {
-                if (buf_.size() == 0) {
-                    std::ostream os(&buf_);
+                if (snd_buf_.size() == 0) {
+                    std::ostream os(&snd_buf_);
                     head.get_content(os);
                 }
-                return boost::asio::write((super &)*this, buf_);
+                return boost::asio::write((super &)*this, snd_buf_);
             }
 
             size_t write(
                 RtspHead & head, 
                 boost::system::error_code & ec)
             {
-                if (buf_.size() == 0) {
-                    std::ostream os(&buf_);
+                if (snd_buf_.size() == 0) {
+                    std::ostream os(&snd_buf_);
                     head.get_content(os);
                 }
-                return boost::asio::write((super &)*this, buf_, boost::asio::transfer_all(), ec);
+                return boost::asio::write((super &)*this, snd_buf_, boost::asio::transfer_all(), ec);
             }
 
             template <typename Handler>
@@ -144,31 +121,31 @@ namespace util
                 RtspHead & head, 
                 Handler const & handler)
             {
-                std::ostream os(&buf_);
+                std::ostream os(&snd_buf_);
                 head.get_content(os);
-                boost::asio::async_write((super &)*this, buf_, handler);
+                boost::asio::async_write((super &)*this, snd_buf_, handler);
             }
 
             size_t read(
                 RtspHead & head)
             {
-                boost::asio::read_until((super &)*this, buf_, "\r\n\r\n");
-                size_t old_size = buf_.size();
-                std::istream is(&buf_);
+                boost::asio::read_until((super &)*this, rcv_buf_, "\r\n\r\n");
+                size_t old_size = rcv_buf_.size();
+                std::istream is(&rcv_buf_);
                 head.set_content(is);
-                return old_size - buf_.size();
+                return old_size - rcv_buf_.size();
             }
 
             size_t read(
                 RtspHead & head, 
                 boost::system::error_code & ec)
             {
-                boost::asio::read_until((super &)*this, buf_, "\r\n\r\n", ec);
+                boost::asio::read_until((super &)*this, rcv_buf_, "\r\n\r\n", ec);
                 if (!ec) {
-                    size_t old_size = buf_.size();
-                    std::istream is(&buf_);
+                    size_t old_size = rcv_buf_.size();
+                    std::istream is(&rcv_buf_);
                     head.set_content(is);
-                    return old_size - buf_.size();
+                    return old_size - rcv_buf_.size();
                 }
                 return 0;
             }
@@ -178,8 +155,8 @@ namespace util
                 RtspHead & head, 
                 Handler const & handler)
             {
-                boost::asio::async_read_until((super &)*this, buf_, "\r\n\r\n", 
-                    detail::receive_handler<Handler>(head, buf_, handler));
+                boost::asio::async_read_until((super &)*this, rcv_buf_, "\r\n\r\n", 
+                    rtsp_detail::receive_handler<Handler>(head, rcv_buf_, handler));
             }
 
         public:
@@ -190,7 +167,7 @@ namespace util
             {
                 using namespace boost::asio;
 
-                if (buf_.size() > 0) {
+                if (rcv_buf_.size() > 0) {
                     return copy(buffers);
                 } else {
                     return super::receive(buffers);
@@ -203,7 +180,7 @@ namespace util
             {
                 using namespace boost::asio;
 
-                if (buf_.size() > 0) {
+                if (rcv_buf_.size() > 0) {
                     return copy(buffers);
                 } else {
                     return super::receive(buffers, flags);
@@ -218,7 +195,7 @@ namespace util
             {
                 using namespace boost::asio;
 
-                if (buf_.size() > 0) {
+                if (rcv_buf_.size() > 0) {
                     ec = boost::system::error_code();
                     return copy(buffers);
                 } else {
@@ -231,7 +208,7 @@ namespace util
                 const MutableBufferSequence& buffers,
                 ReadHandler handler)
             {
-                if (buf_.size() > 0) {
+                if (rcv_buf_.size() > 0) {
                     std::size_t length = copy(buffers);
                     get_io_service().post(boost::asio::detail::bind_handler(
                         handler, boost::system::error_code(), length));
@@ -246,7 +223,7 @@ namespace util
                 socket_base::message_flags flags, 
                 ReadHandler handler)
             {
-                if (buf_.size() > 0) {
+                if (rcv_buf_.size() > 0) {
                     std::size_t length = copy(buffers);
                     get_io_service().post(boost::asio::detail::bind_handler(
                         handler, boost::system::error_code(), length));
@@ -261,7 +238,7 @@ namespace util
             {
                 using namespace boost::asio;
 
-                if (buf_.size() > 0) {
+                if (rcv_buf_.size() > 0) {
                     return copy(buffers);
                 } else {
                     return super::read_some(buffers);
@@ -275,7 +252,7 @@ namespace util
             {
                 using namespace boost::asio;
 
-                if (buf_.size() > 0) {
+                if (rcv_buf_.size() > 0) {
                     ec = boost::system::error_code();
                     return copy(buffers);
                 } else {
@@ -288,7 +265,7 @@ namespace util
                 const MutableBufferSequence& buffers,
                 ReadHandler handler)
             {
-                if (buf_.size() > 0) {
+                if (rcv_buf_.size() > 0) {
                     std::size_t length = copy(buffers);
                     get_io_service().post(boost::asio::detail::bind_handler(
                         handler, boost::system::error_code(), length));
@@ -306,7 +283,7 @@ namespace util
                 using namespace std; // For memcpy.
                 using namespace boost::asio;
 
-                std::size_t bytes_avail = buf_.size();
+                std::size_t bytes_avail = rcv_buf_.size();
                 std::size_t bytes_copied = 0;
 
                 typename MutableBufferSequence::const_iterator iter = buffers.begin();
@@ -315,12 +292,12 @@ namespace util
                     std::size_t max_length = buffer_size(*iter);
                     std::size_t length = (max_length < bytes_avail)
                         ? max_length : bytes_avail;
-                    memcpy(buffer_cast<void *>(*iter), buffer_cast<char const *>(buf_.data()) + bytes_copied, length);
+                    memcpy(buffer_cast<void *>(*iter), buffer_cast<char const *>(rcv_buf_.data()) + bytes_copied, length);
                     bytes_copied += length;
                     bytes_avail -= length;
                 }
 
-                buf_.consume(bytes_copied);
+                rcv_buf_.consume(bytes_copied);
                 return bytes_copied;
             }
 
@@ -329,7 +306,8 @@ namespace util
 
         private:
             bool non_block_;
-            boost::asio::streambuf buf_;
+            boost::asio::streambuf snd_buf_;
+            boost::asio::streambuf rcv_buf_;
         };
 
     } // namespace protocol

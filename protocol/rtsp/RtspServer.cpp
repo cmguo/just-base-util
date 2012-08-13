@@ -7,6 +7,8 @@
 using namespace util::stream;
 
 #include <framework/logger/Logger.h>
+#include <framework/logger/LoggerFormatRecord.h>
+#include <framework/logger/LoggerSection.h>
 #include <framework/system/LogicError.h>
 #include <framework/string/Url.h>
 using namespace framework::logger;
@@ -24,12 +26,16 @@ namespace util
     namespace protocol
     {
 
+        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("RtspServer", 2);
+
         static size_t const DATA_BUFFER_SIZE = 10240;
 
         RtspServer::RtspServer(
             boost::asio::io_service & io_svc)
             : RtspSocket(io_svc)
         {
+            static size_t gid = 0;
+            id_ = gid++;
         }
 
         RtspServer::~RtspServer()
@@ -47,6 +53,11 @@ namespace util
             error_code const & ec, 
             size_t bytes_transferred)
         {
+            LOG_SECTION();
+
+            LOG_F(Logger::kLevelDebug, "[handle_receive_request_head] id =%u, ec = %s, bytes_transferred = %d" 
+                % id_ % ec % bytes_transferred);
+
             if (ec) {
                 handle_error(ec);
                 return;
@@ -68,11 +79,17 @@ namespace util
             boost::system::error_code const & ec, 
             size_t bytes_transferred)
         {
+            LOG_SECTION();
+
+            LOG_F(Logger::kLevelDebug, "[handle_receive_request_data] id =%u, ec = %s, bytes_transferred = %d" 
+                % id_ % ec % bytes_transferred);
+
             if (ec) {
                 handle_error(ec);
                 return;
             }
 
+            response_.head() = RtspResponseHead();
             local_process(
                 boost::bind(&RtspServer::handle_local_process, this, _1));
         }
@@ -80,11 +97,16 @@ namespace util
         void RtspServer::handle_local_process(
             error_code const & ec)
         {
+            LOG_SECTION();
+
+            LOG_F(Logger::kLevelDebug, "[handle_local_process] id =%u, ec = %s" % id_ % ec);
+
             if (ec) {
                 response_error(ec);
                 return;
             }
 
+            response_.head().err_msg = "OK";
             response_.head()["CSeq"] = request_.head()["CSeq"];
             response_.head().content_length.reset(response_.data().size());
 
@@ -96,6 +118,11 @@ namespace util
             error_code const & ec, 
             size_t bytes_transferred)
         {
+            LOG_SECTION();
+
+            LOG_F(Logger::kLevelDebug, "[handle_send_response_head] id =%u, ec = %s, bytes_transferred = %d" 
+                % id_ % ec % bytes_transferred);
+
             if (ec) {
                 handle_error(ec);
                 return;
@@ -115,6 +142,11 @@ namespace util
             boost::system::error_code const & ec, 
             size_t bytes_transferred)
         {
+            LOG_SECTION();
+
+            LOG_F(Logger::kLevelDebug, "[handle_send_response_data] id =%u, ec = %s, bytes_transferred = %d" 
+                % id_ % ec % bytes_transferred);
+
             if (ec) {
                 handle_error(ec);
                 return;
@@ -132,12 +164,19 @@ namespace util
             boost::system::error_code const & ec, 
             size_t bytes_transferred)
         {
+            LOG_SECTION();
+
+            LOG_F(Logger::kLevelDebug, "[handle_response_error] id =%u, ec = %s, bytes_transferred = %d" 
+                % id_ % ec % bytes_transferred);
+
             delete this;
         }
 
        void RtspServer::handle_error(
             error_code const & ec)
         {
+            LOG_F(Logger::kLevelDebug, "[handle_error] id =%u, ec = %s" % id_ % ec);
+
             on_error(ec);
             delete this;
         }

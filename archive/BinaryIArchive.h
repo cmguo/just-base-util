@@ -6,6 +6,8 @@
 #include "util/archive/StreamIArchive.h"
 #include "util/serialization/Array.h"
 
+#include <framework/system/NumberBits24.h>
+
 #include <boost/type_traits/is_fundamental.hpp>
 #include <boost/utility/enable_if.hpp>
 
@@ -45,6 +47,13 @@ namespace util
                 T & t)
             {
                 load_binary((_Elem *)&t, sizeof(T));
+            }
+
+            void load(
+                framework::system::UInt24 & t)
+            {
+                t = framework::system::UInt24();
+                load_binary((_Elem *)t.data(), 3);
             }
 
             using StreamIArchive<BinaryIArchive<_Elem, _Traits>, _Elem, _Traits>::load;

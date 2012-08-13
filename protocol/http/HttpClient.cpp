@@ -80,6 +80,7 @@ namespace util
                 resume(false, ec);
             HttpSocket::close(ec);
             status_ = closed;
+            broken_error_.clear();
         }
 
         error_code HttpClient::bind_host(
@@ -101,6 +102,10 @@ namespace util
             NetName const & addr, 
             error_code & ec)
         {
+            if (addr == addr_) {
+                ec.clear();
+                return ec;
+            }
             if (status_ != closed) {
                 return ec = already_open;
             }
@@ -110,7 +115,7 @@ namespace util
             addr_ = addr;
             if (addr_.svc().empty())
                 addr_.svc(SERVICE_NAME);
-            ec = succeed;
+            ec.clear();
             return ec;
         }
 
@@ -118,10 +123,10 @@ namespace util
             HttpRequest const & request, 
             error_code & ec)
         {
-            LOG_F(Logger::kLevelDebug, "[open] (id = %u, addr = %s, url = %s)" 
-                % id_ % addr_.to_string() % request.head().path.c_str());
+            LOG_F(Logger::kLevelDebug, "[open] (id = %u, url = %s)" 
+                % id_ % request.head().path.c_str());
 
-            post_reqeust(Request(req_id_++, request, false), ec);
+            post_reqeust(request, false, ec);
             if (!ec) {
                 resume(requests_.size() > 1, ec);
             }
@@ -152,11 +157,11 @@ namespace util
             HttpRequest const & request, 
             response_type const & resp)
         {
-            LOG_F(Logger::kLevelDebug, "[async_open] (id = %u, addr = %s, url = %s)" 
-                % id_ % addr_.to_string() % request.head().path);
+            LOG_F(Logger::kLevelDebug, "[async_open] (id = %u, url = %s)" 
+                % id_ % request.head().path);
 
             error_code ec;
-            post_reqeust(Request(req_id_++, request, false, resp), ec);
+            post_reqeust(request, false, resp, ec);
             if (ec) {
                 get_io_service().post(
                     boost::bind(resp, ec));
@@ -179,10 +184,10 @@ namespace util
             HttpRequest const & request, 
             boost::system::error_code & ec)
         {
-            LOG_F(Logger::kLevelDebug, "[fetch] (id = %u, addr = %s, url = %s)" 
-                % id_ % addr_.to_string() % request.head().path.c_str());
+            LOG_F(Logger::kLevelDebug, "[fetch] (id = %u, url = %s)" 
+                % id_ % request.head().path.c_str());
 
-            post_reqeust(Request(req_id_++, request, true), ec);
+            post_reqeust(request, true, ec);
             if (!ec) {
                 resume(requests_.size() > 1, ec);
             }
@@ -209,8 +214,11 @@ namespace util
             HttpRequest const & request, 
             response_type const & resp)
         {
+            LOG_F(Logger::kLevelDebug, "[async_fetch] (id = %u, url = %s)" 
+                % id_ % request.head().path);
+
             error_code ec;
-            post_reqeust(Request(req_id_++, request, true, resp), ec);
+            post_reqeust(request, true, resp, ec);
             if (ec) {
                 get_io_service().post(
                     boost::bind(resp, ec));
@@ -236,6 +244,8 @@ namespace util
                 return;
             HttpSocket::close();
             status_ = closed;
+            broken_error_.clear();
+            dump("close", ec);
         }
 
         error_code HttpClient::close(
@@ -245,46 +255,59 @@ namespace util
                 return ec;
             HttpSocket::close(ec);
             status_ = closed;
+            broken_error_.clear();
+            dump("close", ec);
             return ec;
         }
 
         error_code HttpClient::post_reqeust(
-            Request const & request, 
+            HttpRequest const & request, 
+            bool is_fetch, 
+            response_type const & resp, 
             error_code & ec)
         {
-            requests_.push_back(request);
-            Request & request2 = requests_.back();
-
-            if (status_ == broken) {
+            if (requests_.size() == 1 && requests_[0].is_fetch && requests_[0].status == finished) {
+                // 兼容老版本，fetch不需要close的机制，但是只用于非串行请求的情形
+                assert(status_ == closed || status_ == broken);
+                status_ = closed;
+                broken_error_.clear();
+                requests_.clear();
+            } else if (status_ == broken) {
                 ec = broken_error_;
                 return ec;
-            } else if (requests_.size() == 1) {
-                if (request2.data().size())
-                    request2.head().content_length.reset(request2.data().size());
-                is_keep_alive_ = (http_filed::Connection::keep_alive 
-                    == request2.head().connection.get_value_or(http_filed::Connection::close));
-                ec.clear();
-                if (status_ == ready)
-                    status_ = established;
-                if (status_ == established) {
-                    request2.stat.resolve_time = 0;
-                    request2.stat.connect_time = 0;
-                }
-                return ec;
+            } else if (requests_.empty()) {
+                is_keep_alive_ = (http_field::Connection::keep_alive 
+                    == request.head().connection.get_value_or(http_field::Connection::close));
             } else {
                 if (is_keep_alive_) {
-                    is_keep_alive_ &= (http_filed::Connection::keep_alive 
-                        == request2.head().connection.get_value_or(http_filed::Connection::close));
-                    ec.clear();
-                    if (status_ == ready)
-                        status_ = established;
-                    request2.stat.resolve_time = 0;
-                    request2.stat.connect_time = 0;
+                    is_keep_alive_ &= (http_field::Connection::keep_alive 
+                        == request.head().connection.get_value_or(http_field::Connection::close));
                 } else {
-                    ec = busy_work;
+                    if (http_field::Connection::keep_alive 
+                        == request.head().connection.get_value_or(http_field::Connection::close)) {
+                            ec = keepalive_error;
+                    } else {
+                            ec = busy_work;
+                    }
+                    return ec;
                 }
-                return ec;
             }
+            ec.clear();
+            if (resp.empty()) {
+                requests_.push_back(Request(req_id_++, request, is_fetch));
+            } else {
+                requests_.push_back(Request(req_id_++, request, is_fetch, resp));
+            }
+            Request & request2 = requests_.back();
+            if (request2.data().size())
+                request2.head().content_length.reset(request2.data().size());
+            if (status_ == ready)
+                status_ = established;
+            if (status_ == established) {
+                request2.stat.resolve_time = 0;
+                request2.stat.connect_time = 0;
+            }
+            return ec;
         }
 
         error_code HttpClient::resume(
@@ -294,13 +317,13 @@ namespace util
             if (requests_.empty()) {
                 return ec = not_open;
             }
+            ec = broken_error_;
             if (status_ == closed || status_ == connectting) {
                 resume_connect(ec);
             }
             if (status_ >= established) {
                 if (!pending && requests_[0].status != opened && 
                     requests_[0].status != finished) {
-                        ec = broken_error_;
                         resume_request(false, ec);
                 }
                 if (num_sent_ > 0 && num_sent_ < requests_.size()) {
@@ -310,10 +333,11 @@ namespace util
                     if (pending) {
                         ec = ec1 ? ec1 : boost::asio::error::would_block;
                     }
-                    // 优化is_open
                 }
-                if (num_sent_ == requests_.size() && requests_[0].status >= recving_resp_data) {
-                    status_ = ready;
+                // 优化is_open
+                if (status_ == established && num_sent_ == requests_.size() 
+                    && requests_[0].status >= recving_resp_data) {
+                        status_ = ready;
                 }
             }
             return ec;
@@ -337,24 +361,24 @@ namespace util
                     } else {
                         ec = not_bind;
                     }
-                    dump("resume_connect2", ec);
                     if (ec) {
                         if (ec == boost::asio::error::in_progress) {
                             ec = boost::asio::error::would_block;
                         }
                         // 如果失败，最后会把状态设置成broken，这里都设置为connectting
                     } else {
+                        dump("resume_connect", ec);
                         status_ = established;
                     }
                     break;
                 case connectting:
                     connect(addr_, ec); // 这里的addr_没有意义
-                    dump("resume_connect3", ec);
                     if (ec) {
                         if (ec == boost::asio::error::in_progress) {
                             ec = boost::asio::error::would_block;
                         }
                     } else {
+                        dump("resume_connect", ec);
                         status_ = established;
                     }
                     break;
@@ -363,6 +387,7 @@ namespace util
             }
 
             if (ec && ec != boost::asio::error::would_block) {
+                dump("resume_connect2", ec);
                 status_ = broken;
                 broken_error_ = ec;
             }
@@ -442,6 +467,8 @@ namespace util
                     stat.response_head_time = stat.elapse();
                     if (handle_redirect(request, ec)) {
                         close_socket(ec);
+                        status_ = closed;
+                        request.status = send_pending;
                         return resume(false, ec);
                     }
                     if (request.is_fetch) {
@@ -549,6 +576,7 @@ namespace util
                     async_resume();
                     break;
                 case established:
+                case ready:
                 case broken:
                     assert(0);
                     break;
@@ -577,7 +605,7 @@ namespace util
             dump_request(request, "handle_async_reqeust", ec);
 
             if (pending && num_sent_ == 0) {
-                pending == false;
+                pending = false;
             }
 
             if (ec) {
@@ -652,6 +680,8 @@ namespace util
                         if (handle_redirect(request, ec1)) {
                             error_code ec2;
                             close_socket(ec2);
+                            status_ = closed;
+                            request.status = send_pending;
                             return async_resume();
                         }
                     }
@@ -684,6 +714,7 @@ namespace util
                     stat.response_data_time = stat.elapse();
                     assert(request.is_fetch);
                     if (request.is_fetch) {
+                        request.status = finished;
                         error_code ec1;
                         post_handle_request(request, ec1);
                         response_request(request, ec1);
@@ -698,10 +729,6 @@ namespace util
             Request & request, 
             error_code & ec)
         {
-            if (requests_.size() > 1) {
-                ec = redirect_error;
-                return false;
-            }
             size_t const redirect_codes[] = {
                 http_error::moved_permanently, 
                 http_error::moved_temporarily, 
@@ -712,6 +739,10 @@ namespace util
                 redirect_codes + sizeof(redirect_codes) / sizeof(redirect_codes[0]), 
                 response_.head().err_code);
             if (iter == redirect_codes + sizeof(redirect_codes) / sizeof(redirect_codes[0])) {
+                return false;
+            }
+            if (requests_.size() > 1) {
+                ec = redirect_error;
                 return false;
             }
             if (!response_.head().location.is_initialized()) {
@@ -726,7 +757,7 @@ namespace util
                 request.head().path = location.path_all();
             }
             // 重定向之后不能keep alive
-            request.head().connection = http_filed::Connection::close;
+            request.head().connection = http_field::Connection::close;
             return true;
         }
 
@@ -735,15 +766,8 @@ namespace util
             boost::uint64_t bytes_transferred)
         {
             Request & request = requests_[0];
-            Statistics & stat = request.stat;
-
             dump_request(request, "read_finish", ec);
-
             assert(request.status == opened);
-            if (request.status == opened) {
-                stat.response_data_time = stat.elapse();
-                request.status = finished;
-            }
             {
                 error_code ec1;
                 handle_next(ec1);
@@ -785,11 +809,16 @@ namespace util
                         assert(0);
                         break;
                 }
+                // 假装发生了请求，因为后面会统一减一次num_sent_
+                if (request.status < recv_pending)
+                    ++num_sent_;
                 if (status_ != broken) {
                     status_ = broken;
+                    close_socket(broken_error_);
                     broken_error_ = ec;
                     dump("post_handle_request", ec);
                 }
+                request.status = finished;
             }
 
             if (!ec && (response_.head().err_code < ok 
@@ -798,19 +827,18 @@ namespace util
                     dump_request(request, "post_handle_request", ec);
             }
 
-            if (status_ == established 
-                && request.status > recving_resp_head 
+            if ((status_ == established || status_ == ready)
+                && request.status >= opened 
                 && response_.head().connection
-                && response_.head().connection.get() == http_filed::Connection::close) {
-                    if (status_ != broken && requests_.size() > 1) {
+                && response_.head().connection.get() == http_field::Connection::close) {
+                    if (request.status > opened) {
+                        close_socket(broken_error_);
                         status_ = broken;
                         broken_error_ = keepalive_error;
                         dump("post_handle_request", ec);
                     }
                     is_keep_alive_ = false;
             }
-
-            request.status = finished;
         }
 
         void HttpClient::response_request(
@@ -830,6 +858,18 @@ namespace util
         {
             if (requests_.empty()) {
                 return false;
+            }
+            dump_request(requests_[0], "handle_next", ec);
+            if (requests_[0].status == opened) {
+                requests_[0].stat.response_data_time = requests_[0].stat.elapse();
+                requests_[0].status = finished;
+                // close_socket if not keep_alive
+                error_code ec1;
+                post_handle_request(requests_[0], ec1);
+            }
+            if (requests_[0].status != finished) {
+                error_code ec1 = boost::asio::error::operation_aborted;
+                post_handle_request(requests_[0], ec1);
             }
             assert(requests_[0].status == finished);
             requests_.pop_front();

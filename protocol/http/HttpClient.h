@@ -419,8 +419,18 @@ namespace util
 
         private:
             boost::system::error_code post_reqeust(
-                Request const & request, 
+                HttpRequest const & request, 
+                bool is_fetch, 
+                response_type const & resp, 
                 boost::system::error_code & ec);
+
+            boost::system::error_code post_reqeust(
+                HttpRequest const & request, 
+                bool is_fetch, 
+                boost::system::error_code & ec)
+            {
+                return post_reqeust(request, is_fetch, response_type(), ec);
+            }
 
             boost::system::error_code resume(
                 bool pending, 

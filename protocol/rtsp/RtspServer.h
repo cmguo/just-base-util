@@ -116,9 +116,10 @@ namespace util
                 boost::system::error_code const & ec);
 
         private:
-            template <typename RtspServer>
+            template <typename RtspServer, typename Manager>
             friend class RtspServerManager;
 
+            size_t id_;
             RtspRequest request_;
             RtspResponse response_;
         };

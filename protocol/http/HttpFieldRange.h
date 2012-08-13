@@ -15,7 +15,7 @@ namespace util
 {
     namespace protocol
     {
-        namespace http_filed
+        namespace http_field
         {
 
             class Range
@@ -52,9 +52,10 @@ namespace util
                 boost::system::error_code from_string(
                     std::string const & str);
 
-            private:
+            public:
                 struct Unit
                 {
+                public:
                     Unit()
                         : b_(0)
                         , e_(0)
@@ -69,12 +70,29 @@ namespace util
                     {
                     }
 
+                public:
+                    boost::int64_t begin() const
+                    {
+                        return b_;
+                    }
+
+                    boost::int64_t end() const
+                    {
+                        return e_;
+                    }
+
+                    bool has_end() const
+                    {
+                         return e_ > b_;
+                    }
+                    
+                public:
                     std::string to_string() const
                     {
                         using namespace framework::string;
 
                         if (b_ >= 0) {
-                            if (e_ > b_) {
+                            if (has_end()) {
                                 return format(b_) + "-" + format(e_ - 1);
                             } else {
                                 return format(b_) + "-";
@@ -111,6 +129,20 @@ namespace util
                     boost::int64_t e_;
                 };
 
+            public:
+                Unit & operator[](
+                    size_t index)
+                {
+                    return units_[index];
+                }
+
+                Unit const & operator[](
+                    size_t index) const
+                {
+                    return units_[index];
+                }
+
+            private:
                 std::vector<Unit> units_;
             };
 
@@ -163,7 +195,7 @@ namespace util
 {
     namespace protocol
     {
-        namespace http_filed
+        namespace http_field
         {
 
             inline std::string Range::to_string() const

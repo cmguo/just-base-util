@@ -7,6 +7,8 @@
 #include "util/serialization/Array.h"
 
 #include <framework/system/BytesOrder.h>
+#include <framework/system/NumberBits24.h>
+#include <framework/system/VariableNumber.h>
 
 #include <boost/type_traits/is_same.hpp>
 #include <boost/utility/enable_if.hpp>
@@ -53,53 +55,6 @@ namespace util
     namespace archive
     {
 
-        /**
-        转换字节顺序的模板，主机顺序->网络顺序
-
-        为了让编译器自动绑定相应的转换函数
-        注意：没有实现8个字节数据的字节顺序转换
-        */ 
-        template <typename T, int size = sizeof(T)>
-        struct htob
-        {
-            static void apply(
-                T &)
-            {
-            }
-        };
-
-        /// 2个字节数据的字节顺序转换
-        template <typename T>
-        struct htob<T, 2>
-        {
-            static void apply(
-                T & t)
-            {
-                t = (T)framework::system::BytesOrder::host_to_big_endian_short(t);
-            }
-        };
-
-        /// 4个字节数据的字节顺序转换
-        template <typename T>
-        struct htob<T, 4>
-        {
-            static void apply(
-                T & t)
-            {
-                t = (T)framework::system::BytesOrder::host_to_big_endian_long(t);
-            }
-        };
-
-        template <typename T>
-        struct htob<T, 8>
-        {
-            static void apply(
-                T & t)
-            {
-                t = (T)framework::system::BytesOrder::host_to_big_endian_longlong(t);
-            }
-        };
-
         /// 网络字节顺序序列化类
         template <
             typename _Elem = char, 
@@ -130,28 +85,44 @@ namespace util
                 T const & t)
             {
                 // 先转换字节顺序
-                T t1 = t;
-                htob<T>::apply(t1);
-                this->save_binary((char const *)&t1, sizeof(T));
+                T t1 = (T)framework::system::BytesOrder::host_to_big_endian(t);
+                this->save_binary((_Elem const *)&t1, sizeof(T));
             }
 
-            using StreamOArchive<BigEndianBinaryOArchive>::save;
+            void save(
+                framework::system::UInt24 const & t)
+            {
+                // 先转换字节顺序
+                framework::system::UInt24 t1 = framework::system::BytesOrder::host_to_big_endian((boost::uint32_t)t);
+                this->save_binary((_Elem const *)t1.bytes() + 1, 3);
+            }
 
+            template <typename T>
+            void save(
+                framework::system::VariableNumber<T> const & t)
+            {
+                // 先转换字节顺序
+                framework::system::VariableNumber<T> t1 = framework::system::BytesOrder::host_to_big_endian(t.encode());
+                this->save_binary((_Elem const *)t1.bytes() + sizeof(T) - t1.size(), t1.size());
+            }
+
+            using StreamOArchive<BigEndianBinaryOArchive<_Elem, _Traits>, _Elem, _Traits>::save;
+            
             /// 判断某个类型是否可以优化数组的序列化
-            /// 只有char类型能够直接序列化数组，不需要转换字节顺序
+            /// 只有_Elem类型能够直接序列化数组，不需要转换字节顺序
             template<class T>
             struct use_array_optimization
                 : boost::integral_constant<bool, sizeof(T) == 1>
             {
             };
 
-            // 序列化数组，直接二进制批量写入，是针对char数组的优化实现
+            // 序列化数组，直接二进制批量写入，是针对_Elem数组的优化实现
             template<class T>
             void save_array(
-                framework::container::Array<char> const & a, 
+                framework::container::Array<T> const & a, 
                 typename boost::enable_if<use_array_optimization<T> >::type * = NULL)
             {
-                this->save_binary((char *)a.address(), a.count());
+                this->save_binary((_Elem *)a.address(), a.count());
             }
         };
 

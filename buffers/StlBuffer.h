@@ -94,55 +94,30 @@ namespace util
             typedef detail::_write type;
         };
 
-        class StlBufferAccees
-        {
-            template <
-                class _Buffer, 
-                class _Witch
-            >
-            friend class StlBuffer;
-
-            template <
-                class _Buffer, 
-                class _Witch
-            >
-            static void set_buffer(
-               _Buffer & buf, 
-               typename _Buffer::char_type * beg, 
-               typename _Buffer::char_type * cur, 
-               typename _Buffer::char_type * end, 
-               _Witch const & witch)
-            {
-                buf.set_buffer(beg, cur, end, witch);
-            }
-
-            template <
-                class _Buffer, 
-                class _Witch
-            >
-            static void get_buffer(
-                _Buffer & buf, 
-                typename _Buffer::char_type *& beg, 
-                typename _Buffer::char_type *& cur, 
-                typename _Buffer::char_type *& end, 
-                _Witch const & witch)
-            {
-                buf.get_buffer(beg, cur, end, witch);
-            }
-        };
+        template <
+            class _Witch, 
+            typename _Elem = char, 
+            typename _Traits = std::char_traits<_Elem>
+        >
+        class StlBuffer;
 
         template <
-            typename Elem = char, 
-            typename Traits = std::char_traits<Elem>
+            typename _Elem = char, 
+            typename _Traits = std::char_traits<_Elem>
         >
         class StlStream
-            : public std::basic_streambuf<Elem, Traits>
+            : public std::basic_streambuf<_Elem, _Traits>
         {
         public:
-            typedef typename std::basic_streambuf<Elem, Traits>::char_type char_type;
+            typedef typename std::basic_streambuf<_Elem, _Traits>::char_type char_type;
 
         private:
-            friend class StlBufferAccees;
+            //template <
+            //    class _Witch
+            //>
+            //friend class StlBuffer<StlStream, _Witch>;
+            friend class StlBuffer<detail::_read, _Elem, _Traits>;
+            friend class StlBuffer<detail::_write, _Elem, _Traits>;
 
             void set_buffer(
                 char_type * beg, 
@@ -188,29 +163,29 @@ namespace util
         };
 
         template <
-            class _Buffer, 
-            class _Witch
+            class _Witch, 
+            typename _Elem, 
+            typename _Traits
         >
         class StlBuffer
             : public _Witch
         {
         public:
-            typedef _Buffer buffer_type;
-            typedef typename _Buffer::char_type char_type;
-            typedef typename _Buffer::traits_type traits_type;
+            typedef _Elem char_type;
+            typedef _Traits traits_type;
             typedef typename WitchVoidPointer<_Witch>::type pointer_type;
 
             StlBuffer(
-                _Buffer & stl_buf)
+                StlStream<_Elem, _Traits> & stl_buf)
                 : stl_buf_(stl_buf)
                 , end_(NULL)
             {
                 char_type * p = NULL;
-                StlBufferAccees::set_buffer(stl_buf_, p, p, p, *this);
+                stl_buf_.set_buffer(p, p, p, *this);
             }
 
             StlBuffer(
-                _Buffer & stl_buf, 
+                StlStream<_Elem, _Traits> & stl_buf, 
                 StlBuffer const & other)
                 : stl_buf_(stl_buf)
                 , end_(other.end_)
@@ -218,26 +193,26 @@ namespace util
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(other.stl_buf_, beg, cur, end, other);
-                StlBufferAccees::set_buffer(stl_buf_, beg, cur, end, *this);
+                other.stl_buf_.get_buffer(beg, cur, end, other);
+                stl_buf_.set_buffer(beg, cur, end, *this);
             }
 
-            friend class StlBuffer<_Buffer, typename SwitchWitch<_Witch>::type>;
+            friend class StlBuffer<typename SwitchWitch<_Witch>::type, _Elem, _Traits>;
 
             StlBuffer(
-                _Buffer & stl_buf, 
-                StlBuffer<_Buffer, typename SwitchWitch<_Witch>::type> & other)
+                StlStream<_Elem, _Traits> & stl_buf, 
+                StlBuffer<typename SwitchWitch<_Witch>::type, _Elem, _Traits> & other)
                 : stl_buf_(stl_buf)
                 , end_(other.end_)
             {
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(other.stl_buf_, beg, cur, end, other);
+                other.stl_buf_.get_buffer(beg, cur, end, other);
                 end_ = other.end_;
-                StlBufferAccees::set_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.set_buffer(beg, cur, end, *this);
                 end = cur;
-                StlBufferAccees::set_buffer(other.stl_buf_, beg, cur, end, other);
+                other.stl_buf_.set_buffer(beg, cur, end, other);
             }
 
             StlBuffer & operator=(
@@ -246,34 +221,19 @@ namespace util
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(other.stl_buf_, beg, cur, end, other);
-                StlBufferAccees::set_buffer(stl_buf_, beg, cur, end, *this);
+                other.stl_buf_.get_buffer(beg, cur, end, other);
+                stl_buf_.set_buffer(beg, cur, end, *this);
                 end_ = other.end_;
                 return *this;
             }
-/*
-            StlBuffer & operator=(
-                StlBuffer<_Buffer, typename SwitchWitch<_Witch>::type> & other)
-            {
-                char_type * beg = 0;
-                char_type * cur = 0;
-                char_type * end = 0;
-                StlBufferAccees::get_buffer(other.stl_buf_, beg, cur, end, other);
-                end = other.end_;
-                StlBufferAccees::set_buffer(stl_buf_, beg, cur, end, *this);
-                end_ = other.end_;
-                end = cur;
-                StlBufferAccees::set_buffer(other.stl_buf_, beg, cur, end, other);
-                return *this;
-            }
-*/
+
             void operator=(
                 boost::asio::mutable_buffer const & buf)
             {
                 char_type * beg = boost::asio::buffer_cast<char_type *>(buf);
                 char_type * cur = beg;
                 char_type * end = beg + boost::asio::buffer_size(buf);
-                StlBufferAccees::set_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.set_buffer(beg, cur, end, *this);
                 end_ = end;
             }
 
@@ -283,7 +243,7 @@ namespace util
                 char_type * beg = (char_type *)boost::asio::buffer_cast<char_type const *>(buf);
                 char_type * cur = beg;
                 char_type * end = beg + boost::asio::buffer_size(buf);
-                StlBufferAccees::set_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.set_buffer(beg, cur, end, *this);
                 end_ = end;
             }
 
@@ -293,10 +253,10 @@ namespace util
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.get_buffer(beg, cur, end, *this);
                 cur += n;
                 assert(cur <= end);
-                StlBufferAccees::set_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.set_buffer(beg, cur, end, *this);
             }
 
             std::size_t drop_back()
@@ -304,10 +264,10 @@ namespace util
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.get_buffer(beg, cur, end, *this);
                 std::size_t n = cur - beg;
                 beg = cur;
-                StlBufferAccees::set_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.set_buffer(beg, cur, end, *this);
                 return n;
             }
 
@@ -317,11 +277,11 @@ namespace util
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.get_buffer(beg, cur, end, *this);
                 end += n;
                 if (end > end_)
                     end_ = end;
-                StlBufferAccees::set_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.set_buffer(beg, cur, end, *this);
             }
            
             void limit_size(
@@ -330,10 +290,10 @@ namespace util
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.get_buffer(beg, cur, end, *this);
                 if (cur + n < end)
                     end = cur + n;
-                StlBufferAccees::set_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.set_buffer(beg, cur, end, *this);
             }
 
             char_type * ptr() const
@@ -341,7 +301,7 @@ namespace util
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.get_buffer(beg, cur, end, *this);
                 (void)beg;
                 (void)end;
                 return cur;
@@ -352,7 +312,7 @@ namespace util
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.get_buffer(beg, cur, end, *this);
                 (void)end;
                 return cur - beg;
             }
@@ -362,7 +322,7 @@ namespace util
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.get_buffer(beg, cur, end, *this);
                 (void)beg;
                 return end - cur;
             }
@@ -372,45 +332,46 @@ namespace util
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.get_buffer(beg, cur, end, *this);
                 (void)cur;
                 return end - beg;
             }
 
             std::size_t split(
-                boost::asio::mutable_buffer const & buf, 
-                StlBuffer<_Buffer, typename SwitchWitch<_Witch>::type> & other)
+                //boost::asio::mutable_buffer const & buf, 
+                boost::asio::const_buffer const & buf, 
+                StlBuffer<typename SwitchWitch<_Witch>::type, _Elem, _Traits> & other)
             {
-                char_type * buf_beg = boost::asio::buffer_cast<char_type *>(buf);
+                char_type * buf_beg = (char_type *)boost::asio::buffer_cast<char_type const *>(buf);
                 char_type * buf_end = buf_beg + boost::asio::buffer_size(buf);
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.get_buffer(beg, cur, end, *this);
                 assert(buf_beg <= beg && end <= buf_end);
                 std::size_t off = beg - buf_beg;
                 beg = buf_beg;
                 end = cur;
-                StlBufferAccees::set_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.set_buffer(beg, cur, end, *this);
                 end_ = end;
                 beg = cur;
                 end = buf_end;
-                StlBufferAccees::set_buffer(other.stl_buf_, beg, cur, end, other);
+                other.stl_buf_.set_buffer(beg, cur, end, other);
                 other.end_ = end;
                 return off;
             }
 
             bool before(
-                StlBuffer<_Buffer, typename SwitchWitch<_Witch>::type> const & other) const
+                StlBuffer<typename SwitchWitch<_Witch>::type, _Elem, _Traits> const & other) const
             {
                 char_type * beg1 = 0;
                 char_type * cur1 = 0;
                 char_type * end1 = 0;
-                StlBufferAccees::get_buffer(stl_buf_, beg1, cur1, end1, *this);
+                stl_buf_.get_buffer(beg1, cur1, end1, *this);
                 char_type * beg2 = 0;
                 char_type * cur2 = 0;
                 char_type * end2 = 0;
-                StlBufferAccees::get_buffer(other.stl_buf_, beg2, cur2, end2, other);
+                other.stl_buf_.get_buffer(beg2, cur2, end2, other);
                 (void)cur1;
                 (void)cur2;
                 assert(beg1 == end2 || beg2 == end1);
@@ -424,11 +385,11 @@ namespace util
                 char_type * l_beg = 0;
                 char_type * l_cur = 0;
                 char_type * l_end = 0;
-                StlBufferAccees::get_buffer(l.stl_buf_, l_beg, l_cur, l_end, l);
+                l.stl_buf_.get_buffer(l_beg, l_cur, l_end, l);
                 char_type * r_beg = 0;
                 char_type * r_cur = 0;
                 char_type * r_end = 0;
-                StlBufferAccees::get_buffer(r.stl_buf_, r_beg, r_cur, r_end, r);
+                r.stl_buf_.get_buffer(r_beg, r_cur, r_end, r);
                 return l_cur == r_cur && l_end == r_end;
             }
             
@@ -437,13 +398,13 @@ namespace util
                 char_type * beg = 0;
                 char_type * cur = 0;
                 char_type * end = 0;
-                StlBufferAccees::get_buffer(stl_buf_, beg, cur, end, *this);
+                stl_buf_.get_buffer(beg, cur, end, *this);
                 (void)beg;
                 return typename WitchBuffer<_Witch>::type(cur, end - cur);
             }
 
         private:
-            _Buffer & stl_buf_;
+            StlStream<_Elem, _Traits> & stl_buf_;
             char_type * end_;
         };
 
@@ -457,21 +418,23 @@ namespace boost
         namespace detail
         {
             template <
-                class _Buffer, 
-                class _Witch
+                class _Witch, 
+                typename _Elem, 
+                typename _Traits
             >
             inline typename util::buffers::WitchVoidPointer<_Witch>::type buffer_cast_helper(
-                util::buffers::StlBuffer<_Buffer, _Witch> const & b)
+                util::buffers::StlBuffer<_Witch, _Elem, _Traits> const & b)
             {
                 return b.ptr();
             }
 
             template <
-                class _Buffer, 
-                class _Witch
+                class _Witch, 
+                typename _Elem, 
+                typename _Traits
             >
             inline std::size_t buffer_size_helper(
-                util::buffers::StlBuffer<_Buffer, _Witch> const & b)
+                util::buffers::StlBuffer<_Witch, _Elem, _Traits> const & b)
             {
                 return b.size();
             }
@@ -479,42 +442,46 @@ namespace boost
 
         template <
             typename PointerToPodType, 
-            class _Buffer, 
-            class _Witch
+            class _Witch, 
+            typename _Elem, 
+            typename _Traits
         >
         inline PointerToPodType buffer_cast(
-            util::buffers::StlBuffer<_Buffer, _Witch> const & b)
+            util::buffers::StlBuffer<_Witch, _Elem, _Traits> const & b)
         {
             return static_cast<PointerToPodType>(detail::buffer_cast_helper(b));
         }
 
         template <
-            class _Buffer, 
-            class _Witch
+            class _Witch, 
+            typename _Elem, 
+            typename _Traits
         >
         inline std::size_t buffer_size(
-            util::buffers::StlBuffer<_Buffer, _Witch> const & b)
+            util::buffers::StlBuffer<_Witch, _Elem, _Traits>const & b)
         {
             return detail::buffer_size_helper(b);
         }
 
         template <
-            class _Buffer, 
-            class _Witch
+            class _Witch, 
+            typename _Elem, 
+            typename _Traits
         >
         inline typename util::buffers::WitchBuffers<_Witch>::type buffer(
-            const util::buffers::StlBuffer<_Buffer, _Witch> & b)
+            const util::buffers::StlBuffer<_Witch, _Elem, _Traits> & b)
         {
             return typename util::buffers::WitchBuffers<_Witch>::type(
                 detail::buffer_cast_helper(b), buffer_size_helper(b));
         }
 
         template <
-            class _Buffer, 
-            class _Witch
+            class _Witch, 
+            typename _Elem, 
+            typename _Traits
         >
         inline typename util::buffers::WitchBuffers<_Witch>::type buffer(
-            const util::buffers::StlBuffer<_Buffer, _Witch> & b, 
+            const util::buffers::StlBuffer<_Witch, _Elem, _Traits> & b, 
             std::size_t max_size_in_bytes)
         {
             return typename util::buffers::WitchBuffers<_Witch>::type(

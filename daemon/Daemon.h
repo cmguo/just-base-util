@@ -49,17 +49,31 @@ namespace util
                 int argc, 
                 char const * argv[]);
 
+            /* 
+             * concurrency == 0 不执行io_service::run，需要外部再调用run（同一线程），外面可以在io_service::run线程内部调用stop(false)停止，在io_service::run线程外部需要调用post_stop()停止
+             * concurrency != 0 创建相应数目的线程，来执行io_service::run，外面可以调用stop(true)停止，等待io_service结束
+             * start 完成后，函数返回
+             * start 如果失败，会等到行io_service结束，不需要再执行stop
+             */
             boost::system::error_code start(
                 size_t concurrency = 0);
+
+            void run();
 
             typedef boost::function<
                 void (boost::system::error_code const &)
             > start_call_back_type;
 
+            /* 
+             * start 完成后，执行callback，然后继续等待io_service结束
+             * 外面可以在线程内部调用stop(false)停止，在线程外部需要调用post_stop()停止
+             * start 如果失败，会等到行io_service结束，不需要再执行stop
+             */
             boost::system::error_code start(
                 start_call_back_type const & start_call_back);
 
-            void stop();
+            void stop(
+                bool wait = true);
 
             void post_stop();
 
@@ -67,6 +81,10 @@ namespace util
 
         public:
             bool is_started() const;
+
+        public:
+            static Daemon & from_io_svc(
+                boost::asio::io_service & io_svc);
 
         public:
             boost::asio::io_service & io_svc()
@@ -116,6 +134,13 @@ namespace util
 
             template <typename Module>
             friend bool has_module(
+                Daemon & daemon);
+
+        private:
+            static void register_daemon(
+                Daemon & daemon);
+
+            static void unregister_daemon(
                 Daemon & daemon);
 
         private:
@@ -186,6 +211,28 @@ namespace util
             Daemon & daemon)
         {
             return daemon.module_registry_->has_module<Module>();
+        }
+
+        template <typename Module>
+        Module & use_module(
+            boost::asio::io_service & io_svc)
+        {
+            return use_module<Module>(Daemon::from_io_svc(io_svc));
+        }
+
+        template <typename Module>
+        void add_module(
+            boost::asio::io_service & io_svc, 
+            Module * module)
+        {
+            add_module<Module>(Daemon::from_io_svc(io_svc), module);
+        }
+
+        template <typename Module>
+        bool has_module(
+            boost::asio::io_service & io_svc)
+        {
+            return has_module<Module>(Daemon::from_io_svc(io_svc));
         }
 
     } // namespace daemon

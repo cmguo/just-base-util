@@ -28,13 +28,26 @@ namespace util
 
             StreamIArchive(
                 std::basic_streambuf<_Elem, _Traits> & buf)
-                : buf_(buf)
+                : buf_(&buf)
             {
+            }
+
+            std::basic_streambuf<_Elem, _Traits> * rdbuf()
+            {
+                return buf_;
             }
 
             std::basic_streambuf<_Elem, _Traits> & streambuf()
             {
-                return buf_;
+                return *buf_;
+            }
+
+            std::basic_streambuf<_Elem, _Traits> * rdbuf(
+                  std::basic_streambuf<_Elem, _Traits> * b)
+            {
+                std::basic_streambuf<_Elem, _Traits> * tmp = buf_;
+                buf_ = b;
+                return tmp;
             }
 
             StreamIArchive & seekg(
@@ -42,7 +55,7 @@ namespace util
                 std::ios_base::seekdir dir)
             {
                 if (!this->state() 
-                    && buf_.pubseekoff(off, dir, std::ios_base::in) == pos_type(-1))
+                    && buf_->pubseekoff(off, dir, std::ios_base::in) == pos_type(-1))
                         this->state(3);
                 return (*this);
             }
@@ -52,7 +65,7 @@ namespace util
                 std::ios_base::seekdir dir)
             {
                 if (!this->state() 
-                    && buf_.pubseekpos(pos, std::ios_base::in) == pos_type(-1))
+                    && buf_->pubseekpos(pos, std::ios_base::in) == pos_type(-1))
                     this->state(3);
                 return (*this);
             }
@@ -60,7 +73,7 @@ namespace util
             pos_type tellg() const
             {
                 if (!this->state())
-                    return (buf_.pubseekoff(0, std::ios_base::cur, std::ios_base::in));
+                    return (buf_->pubseekoff(0, std::ios_base::cur, std::ios_base::in));
                 else
                     return (pos_type(-1));
             }
@@ -72,13 +85,13 @@ namespace util
             {
                 if (this->state())
                     return;
-                if (buf_.sgetn(p, (std::streamsize)n) 
+                if (buf_->sgetn(p, (std::streamsize)n) 
                     != (std::streamsize)n)
                     this->state(1);
             }
 
         protected:
-            std::basic_streambuf<_Elem, _Traits> & buf_;
+            std::basic_streambuf<_Elem, _Traits> * buf_;
         };
 
     } // namespace archive
