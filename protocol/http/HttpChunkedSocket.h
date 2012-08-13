@@ -88,7 +88,7 @@ namespace util
                 char const * hex_buf = buffer_cast<char const *>(buf.data()) + buf.size() - 1;
                 if (*hex_buf == '\n') {
                     hex_buf = buffer_cast<char const *>(buf.data());
-                    if (hex_buf == 0) {
+                    if (*hex_buf == 0) {
                         len = 0;
                         ++hex_buf;
                         while (true) {
@@ -104,9 +104,9 @@ namespace util
                             len = (len << 4) | h;
                             ++hex_buf;
                         }
+                        buf.reset();
                         if (len == 0) {
                             // 类型2表示最后的trailer
-                            buf.reset();
                             buf.sputc((char)2);
                             len = 2;
                             return false;
@@ -154,23 +154,12 @@ namespace util
             }
 
         public:
-            void close()
+            void reset()
             {
                 snd_left_ = 0;
                 snd_buf_.reset();
                 rcv_left_ = 0;
                 rcv_buf_.reset();
-                socket_.close();
-            }
-
-            boost::system::error_code close(
-                boost::system::error_code & ec)
-            {
-                snd_left_ = 0;
-                snd_buf_.reset();
-                rcv_left_ = 0;
-                rcv_buf_.reset();
-                return socket_.close(ec);
             }
 
         public:
@@ -284,12 +273,11 @@ namespace util
                                 delete this;
                                 return;
                             }
-                            rcv_left_ = bytes_left_;
                             recv_crlf(rcv_buf_, rcv_left_);
-                            socket_.async_receive(buffers::sub_buffers(buffers_, bytes_recv_, bytes_left_), flags_, 
+                            socket_.async_receive(rcv_buf_.prepare(rcv_left_), flags_, 
                                 boost::bind(boost::ref(*this), _1, _2));
                         } else {
-                            socket_.async_receive(buffers::sub_buffers(buffers_, bytes_recv_, bytes_left_), flags_, 
+                            socket_.async_receive(buffers::sub_buffers(buffers_, bytes_recv_, rcv_left_), flags_, 
                                 boost::bind(boost::ref(*this), _1, _2));
                         }
                     }
@@ -319,6 +307,7 @@ namespace util
                             return;
                         }
                         if (rcv_left_ == std::size_t(-1)) {
+                            rcv_left_ = 0; // 重置为初始状态，为后续的接受做准备
                             handler_(boost::asio::error::eof, bytes_recv_);
                             delete this;
                             return;
@@ -334,7 +323,7 @@ namespace util
                             socket_.async_receive(rcv_buf_.prepare(rcv_left_), flags_, 
                                 boost::bind(boost::ref(*this), _1, _2));
                         } else {
-                            socket_.async_receive(buffers::sub_buffers(buffers_, bytes_recv_, bytes_left_), flags_, 
+                            socket_.async_receive(buffers::sub_buffers(buffers_, bytes_recv_, rcv_left_), flags_, 
                                 boost::bind(boost::ref(*this), _1, _2));
                         }
                     } else {
@@ -535,7 +524,7 @@ namespace util
                 {
                     if (snd_buf_.size()) {
                         socket_.async_send(snd_buf_.data(), flags_,
-                            boost::bind(boost::ref(*this)));
+                            boost::bind(boost::ref(*this), _1, _2));
                     } else {
                         if (snd_left_ == 0) { 
                             if (bytes_left_ == 0) {
@@ -546,10 +535,10 @@ namespace util
                             }
                             snd_left_ = bytes_left_;
                             make_chunk_head(snd_buf_, snd_left_);
-                            socket_.async_send(buffers::sub_buffers(buffers_, bytes_send_, bytes_left_), flags_, 
+                            socket_.async_send(buffers::sub_buffers(buffers_, bytes_send_, snd_left_), flags_, 
                                  boost::bind(boost::ref(*this), _1, _2));
                         } else {
-                            socket_.async_send(buffers::sub_buffers(buffers_, bytes_send_, bytes_left_), flags_,
+                            socket_.async_send(buffers::sub_buffers(buffers_, bytes_send_, snd_left_), flags_,
                                  boost::bind(boost::ref(*this), _1, _2));
                         }
                     }
@@ -579,7 +568,7 @@ namespace util
                             socket_.async_send(snd_buf_.data(), flags_,
                                 boost::bind(boost::ref(*this), _1, _2));
                         } else {
-                            socket_.async_send(buffers::sub_buffers(buffers_, bytes_send_, bytes_left_), flags_,
+                            socket_.async_send(buffers::sub_buffers(buffers_, bytes_send_, snd_left_), flags_,
                                 boost::bind(boost::ref(*this), _1, _2));
                         }
                     } else {
