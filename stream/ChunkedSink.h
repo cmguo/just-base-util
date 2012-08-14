@@ -6,6 +6,7 @@
 #include "util/stream/Sink.h"
 
 #include <boost/asio/streambuf.hpp>
+#include <boost/asio/write.hpp>
 
 namespace util
 {
@@ -25,7 +26,7 @@ namespace util
             }
 
         public:
-            void close()
+            void reset()
             {
                 snd_left_ = 0;
                 snd_buf_.reset();
@@ -84,4 +85,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_STREAM_CHUNKED_H_
+#endif // _UTIL_STREAM_CHUNKED_SINK_H_

@@ -1,4 +1,4 @@
-// Sink.cpp
+// Socket.cpp
 
 #include "util/Util.h"
 #include "util/stream/Socket.h"

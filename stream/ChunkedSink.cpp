@@ -100,18 +100,11 @@ namespace util
         std::size_t ChunkedSink::write_eof(
             boost::system::error_code & ec)
         {
-            assert(snd_left_ == 0);
+            assert(snd_left_ == 0 && snd_buf_.size() == 0);
             if (snd_buf_.size() == 0) {
                 make_chunk_eof(snd_buf_);
             }
-            if (snd_buf_.size()) {
-                std::size_t len = sink_.write_some(snd_buf_.data(), ec);
-                snd_buf_.consume(len);
-                if (snd_buf_.size() == 0) {
-                    // 如果再继续send eof，就会失败
-                    snd_left_ = (size_t)-1;
-                }
-            }
+            boost::asio::write(sink_, snd_buf_, boost::asio::transfer_all(), ec);
             return 0;
         }
 

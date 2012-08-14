@@ -1,11 +1,12 @@
 // ChunkedSource.h
 
-#ifndef _UTIL_STREAM_CHUNKED_SINK_H_
-#define _UTIL_STREAM_CHUNKED_SINK_H_
+#ifndef _UTIL_STREAM_CHUNKED_SOURCE_H_
+#define _UTIL_STREAM_CHUNKED_SOURCE_H_
 
 #include "util/stream/Source.h"
 
 #include <boost/asio/streambuf.hpp>
+#include <boost/asio/read.hpp>
 
 namespace util
 {
@@ -25,7 +26,7 @@ namespace util
             }
 
         public:
-            void close()
+            void reset()
             {
                 rcv_left_ = 0;
                 rcv_buf_.reset();
@@ -66,12 +67,13 @@ namespace util
         void ChunkedSource::async_read_eof(
             WriteHandler handler)
         {
-            assert(rcv_left_ == 0);
-            boost::asio::async_read(source_, rcv_buf_, 
+            boost::asio::streambuf buf;
+            boost::asio::async_read(*this, buf, 
+                boost::asio::transfer_all(), 
                 handler);
         }
 
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_STREAM_CHUNKED_H_
+#endif // _UTIL_STREAM_CHUNKED_SOURCE_H_

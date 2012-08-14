@@ -258,5 +258,12 @@ namespace util
                 source_, rcv_left_, rcv_buf_, buffers, handler))->start();
         }
 
+        std::size_t ChunkedSource::read_eof(
+            boost::system::error_code & ec)
+        {
+            boost::asio::streambuf buf;
+            return boost::asio::read(*this, buf, boost::asio::transfer_all(), ec);
+        }
+
     } // namespace protocol
 } // namespace util
