@@ -439,7 +439,6 @@ namespace util
                 : buffers_(buffers)
                 , write_(*this)
                 , read_(*this)
-                , size_(0)
             {
                 capacity_ = 0;
                 typedef typename Buffers::const_iterator const_iterator;
@@ -472,7 +471,6 @@ namespace util
                 , write_(*this, other.write_)
                 , read_(*this, other.read_)
                 , capacity_(other.capacity_)
-                , size_(other.size_)
             {
                 write_.begin_remainder = buffers_.begin();
                 read_.begin_remainder = buffers_.begin();
@@ -649,7 +647,7 @@ namespace util
             {
                 if (!traits_type::eq_int_type(c, traits_type::eof()))
                 {
-                    assert(this->gptr() != this->pptr());
+                    //assert(this->gptr() == this->pptr());
                     normalize(write_, read_);
                     assert(this->gptr() != this->pptr());
                     *this->pptr() = traits_type::to_char_type(c);
@@ -738,16 +736,7 @@ namespace util
             {
                 assert(write_.position() - read_.position() <= capacity_);
                 if (read_.begin_remainder == write_.begin_remainder) {
-                    assert(this->eback() == boost::asio::buffer_cast<Elem const *>(*read_.begin_remainder) 
-                        || this->pbase() == boost::asio::buffer_cast<Elem const *>(*write_.begin_remainder));
-                    assert(this->egptr() == boost::asio::buffer_cast<Elem const *>(*write_.begin_remainder) + boost::asio::buffer_size(*read_.begin_remainder) 
-                        || this->epptr() == boost::asio::buffer_cast<Elem const *>(*write_.begin_remainder) + boost::asio::buffer_size(*read_.begin_remainder));
                     assert(this->egptr() == this->pbase() || this->epptr() == this->eback());
-                } else {
-                    assert(this->eback() == boost::asio::buffer_cast<Elem const *>(*read_.begin_remainder)
-                        && this->egptr() == boost::asio::buffer_cast<Elem const *>(*read_.begin_remainder) + boost::asio::buffer_size(*read_.begin_remainder));
-                    assert(this->pbase() == boost::asio::buffer_cast<Elem const *>(*write_.begin_remainder)
-                        && this->epptr() == boost::asio::buffer_cast<Elem const *>(*write_.begin_remainder) + boost::asio::buffer_size(*read_.begin_remainder));
                 }
             }
 
@@ -756,7 +745,6 @@ namespace util
             write_buffer_status write_;
             read_buffer_status read_;
             size_t capacity_;
-            size_t size_;
         };
 
     } // namespace buffer
