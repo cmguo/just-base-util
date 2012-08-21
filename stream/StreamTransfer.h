@@ -95,44 +95,44 @@ namespace util
             size_t low_level = 0, 
             size_t high_level = size_t(-1))
         {
-            size_t total_buffer_size = buffers.capacity();
-            if (high_level > total_buffer_size)
-                high_level = total_buffer_size;
+            size_t capacity = buffers.capacity();
+            if (high_level > capacity)
+                high_level = capacity;
             transfer_size total_transferred(0, 0);
             bool read_end = false;
-            while (!read_end) {
-                size_t level = buffers.in_avail();
-                if (level < low_level) {
-                    // 没达到低水平线，继续输入
+            bool write_end = false;
+            size_t level = buffers.in_avail();
+            ec.clear();
+            while (true) {
+                if (level < high_level || (write_end && level < capacity)) {
                     std::size_t bytes_transferred = r.read_some(buffers.prepare(), ec);
                     total_transferred.first += bytes_transferred;
+                    level += bytes_transferred;
                     buffers.commit(bytes_transferred);
-                    if (completion_condition(true, ec, total_transferred))
+                    if (completion_condition(true, ec, total_transferred)) {
                         read_end = true;
-                } else if (level >= high_level) {
-                    // 达到高水平线，继续输出
+                        high_level = 0; // to stop later read
+                        if (write_end)
+                            break;
+                    }
+                } else if (write_end) {
+                    break;
+                }
+                if (level > low_level || (read_end && level > 0)) {
                     std::size_t bytes_transferred = w.write_some(buffers.data(), ec);
                     total_transferred.second += bytes_transferred;
+                    level -= bytes_transferred;
                     buffers.consume(bytes_transferred);
-                    if (completion_condition(false, ec, total_transferred))
-                        return total_transferred;
-                } else {
-                    // 介于两者之间，应该是抢先，现在的实现是输入优先
-                    std::size_t bytes_transferred = r.read_some(buffers.prepare(), ec);
-                    total_transferred.first += bytes_transferred;
-                    buffers.commit(bytes_transferred);
-                    if (completion_condition(true, ec, total_transferred))
-                        read_end = true;
+                    if (completion_condition(false, ec, total_transferred)) {
+                        write_end = true;
+                        low_level = capacity; // to stop later write
+                        if (read_end)
+                            break;
+                    }
+                } else if (read_end) {
+                    break;
                 }
             }
-            while (total_transferred.second < total_transferred.first) {
-                std::size_t bytes_transferred = w.write_some(buffers.data(), ec);
-                total_transferred.second += bytes_transferred;
-                buffers.consume(bytes_transferred);
-                if (completion_condition(false, ec, total_transferred))
-                    return total_transferred;
-            }
-            ec = boost::system::error_code();
             return total_transferred;
         }
 
@@ -339,6 +339,8 @@ namespace util
                     , completion_condition_(completion_condition)
                     , handler_(handler)
                     , strand_(read_stream.get_io_service())
+                    , capacity_(buffers.capacity())
+                    , level_(buffers.in_avail())
                     , low_level_(low_level)
                     , high_level_(high_level)
                     , total_transferred_(0, 0)
@@ -348,9 +350,8 @@ namespace util
                     , writing_(false)
                     , ref_count_(0)
                 {
-                    size_t total_buffer_size = buffers_.capacity();
-                    if (high_level_ > total_buffer_size)
-                        high_level_ = total_buffer_size;
+                    if (high_level_ > capacity_)
+                        high_level_ = capacity_;
                 }
 
                 friend void intrusive_ptr_add_ref(transfer_cycle_buffer_handler * p)
@@ -363,11 +364,6 @@ namespace util
                     if (--p->ref_count_ == 0) {
                         delete p;
                     }
-                }
-
-                size_t level() const
-                {
-                    return total_transferred_.first - total_transferred_.second;
                 }
 
                 struct read_handler_t
@@ -424,17 +420,21 @@ namespace util
                     std::size_t bytes_transferred)
                 {
                     total_transferred_.first += bytes_transferred;
+                    level_ += bytes_transferred;
                     buffers_.commit(bytes_transferred);
+                    reading_ = false;
                     if (completion_condition_(true, ec, total_transferred_)) {
                         read_end_ = true;
-                        reading_ = false;
-                    } else if (level() < high_level_ && !write_end_) {
+                        if (write_end_) {
+                            handler_(ec, total_transferred_);
+                        }
+                    } else if (level_ < high_level_ || (write_end_ && level_ < capacity_)) {
                         reading_ = true;
                         read_stream_.async_read_some(buffers_.prepare(), get_read_handler());
-                    } else {
-                        reading_ = false;
+                    } else if (write_end_) {
+                        handler_(ec, total_transferred_);
                     }
-                    if (!writing_) {
+                    if (!writing_ && !write_end_) {
                         handler_write(boost::system::error_code(), 0);
                     }
                 }
@@ -443,23 +443,20 @@ namespace util
                     const boost::system::error_code & ec,
                     std::size_t bytes_transferred)
                 {
-                    if (write_end_)
-                        return;
                     total_transferred_.second += bytes_transferred;
+                    level_ -= bytes_transferred;
                     buffers_.consume(bytes_transferred);
+                    writing_ = false;
                     if (completion_condition_(false, ec, total_transferred_)) {
-                        writing_ = false;
                         write_end_ = true;
-                        handler_(ec, total_transferred_);
-                    } else if (level() > low_level_ || (read_end_ && level() > 0)) {
+                        if (read_end_) {
+                            handler_(ec, total_transferred_);
+                        }
+                    } else if (level_ > low_level_ || (read_end_ && level_ > 0)) {
                         writing_ = true;
                         write_stream_.async_write_some(buffers_.data(), get_write_handler());
                     } else if (read_end_) {
-                        writing_ = false;
-                        write_end_ = true;
                         handler_(ec, total_transferred_);
-                    } else {
-                        writing_ = false;
                     }
                     if (!reading_ && !read_end_) {
                         handler_read(boost::system::error_code(), 0);
@@ -486,6 +483,8 @@ namespace util
                 CompletionCondition completion_condition_;
                 TransferHandler handler_;
                 boost::asio::strand strand_;
+                size_t capacity_;
+                size_t level_;
                 size_t low_level_;
                 size_t high_level_;
                 transfer_size total_transferred_;
