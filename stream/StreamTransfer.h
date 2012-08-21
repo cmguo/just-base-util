@@ -504,11 +504,24 @@ namespace util
             >
             class transfer_handler
                 : public transfer_cycle_buffer_handler<
-                    AsyncReadStream, AsyncWriteStream, MutableBufferSequence, char, std::char_traits<char>, CompletionCondition, TransferHandler>
+                    AsyncReadStream, 
+                    AsyncWriteStream, 
+                    MutableBufferSequence, 
+                    char, 
+                    std::char_traits<char>, 
+                    CompletionCondition, 
+                    TransferHandler>
             {
             public:
                 typedef transfer_cycle_buffer_handler<
-                    AsyncReadStream, AsyncWriteStream, MutableBufferSequence, char, std::char_traits<char>, CompletionCondition, TransferHandler> super;
+                    AsyncReadStream, 
+                    AsyncWriteStream, 
+                    MutableBufferSequence, 
+                    char, 
+                    std::char_traits<char>, 
+                    CompletionCondition, 
+                    TransferHandler
+                > super;
 
                 transfer_handler(
                     AsyncReadStream & read_stream, 
@@ -536,10 +549,25 @@ namespace util
                 typename TransferHandler
             >
             class transfer_buffer_handler
-                : public BasicTransferBuffers<Elem, Allocator, Traits>::cycle_buffers_type
+                : public transfer_cycle_buffer_handler<
+                    AsyncReadStream, 
+                    AsyncWriteStream, 
+                    typename BasicTransferBuffers<Elem, Allocator, Traits>::buffers_type, 
+                    Elem, 
+                    Traits, 
+                    CompletionCondition, 
+                    TransferHandler>
             {
             public:
-                typedef typename BasicTransferBuffers<Elem, Allocator, Traits>::cycle_buffers_type super;
+                typedef transfer_cycle_buffer_handler<
+                    AsyncReadStream, 
+                    AsyncWriteStream, 
+                    typename BasicTransferBuffers<Elem, Allocator, Traits>::buffers_type, 
+                    Elem, 
+                    Traits, 
+                    CompletionCondition, 
+                    TransferHandler
+                > super;
 
                 transfer_buffer_handler(
                     AsyncReadStream & read_stream, 
