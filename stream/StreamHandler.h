@@ -6,6 +6,7 @@
 #include <framework/network/AsioHandlerHelper.h>
 
 #include <boost/asio/buffer.hpp>
+#include <boost/asio/detail/bind_handler.hpp>
 
 #include <utility>
 
@@ -72,24 +73,13 @@ namespace util
 
         private:
             template <typename Handler>
-            static void * colon(
-                Handler const & handler)
-            {
-                void * ptr = 
-                    boost::asio::asio_handler_allocate(sizeof(handler), &handler);
-                if (ptr)
-                    new (ptr) Handler(handler);
-                return ptr;
-            }
-
-            template <typename Handler>
             static void invoker(
                 void * handler, 
                 boost::system::error_code const & ec, 
                 size_t bytes_transferred)
             {
                 Handler & h = *(Handler *)(handler);
-                h(ec, bytes_transferred);
+                boost::asio::asio_handler_invoke(boost::asio::detail::bind_handler(h, ec, bytes_transferred), &h);
             }
 
             template <typename Handler>
