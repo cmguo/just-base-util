@@ -3,7 +3,7 @@
 #ifndef _UTIL_STREAM_STREAM_TRANSFER_H_
 #define _UTIL_STREAM_STREAM_TRANSFER_H_
 
-#include "util/stream/detail/transfer_buffers.h"
+#include "util/stream/TransferBuffers.h"
 
 #include <framework/network/AsioHandlerHelper.h>
 
@@ -81,6 +81,108 @@ namespace util
         template <
             typename SyncReadStream, 
             typename SyncWriteStream, 
+            typename Buffers, 
+            typename Elem, 
+            typename Traits, 
+            typename CompletionCondition
+        >
+        transfer_size transfer(
+            SyncReadStream & r, 
+            SyncWriteStream & w, 
+            util::buffers::CycleBuffers<Buffers, Elem, Traits> & buffers, 
+            CompletionCondition completion_condition, 
+            boost::system::error_code & ec, 
+            size_t low_level = 0, 
+            size_t high_level = size_t(-1))
+        {
+            size_t total_buffer_size = buffers.capacity();
+            if (high_level > total_buffer_size)
+                high_level = total_buffer_size;
+            transfer_size total_transferred(0, 0);
+            bool read_end = false;
+            while (!read_end) {
+                size_t level = buffers.in_avail();
+                if (level < low_level) {
+                    // 没达到低水平线，继续输入
+                    std::size_t bytes_transferred = r.read_some(buffers.prepare(), ec);
+                    total_transferred.first += bytes_transferred;
+                    buffers.commit(bytes_transferred);
+                    if (completion_condition(true, ec, total_transferred))
+                        read_end = true;
+                } else if (level >= high_level) {
+                    // 达到高水平线，继续输出
+                    std::size_t bytes_transferred = w.write_some(buffers.data(), ec);
+                    total_transferred.second += bytes_transferred;
+                    buffers.consume(bytes_transferred);
+                    if (completion_condition(false, ec, total_transferred))
+                        return total_transferred;
+                } else {
+                    // 介于两者之间，应该是抢先，现在的实现是输入优先
+                    std::size_t bytes_transferred = r.read_some(buffers.prepare(), ec);
+                    total_transferred.first += bytes_transferred;
+                    buffers.commit(bytes_transferred);
+                    if (completion_condition(true, ec, total_transferred))
+                        read_end = true;
+                }
+            }
+            while (total_transferred.second < total_transferred.first) {
+                std::size_t bytes_transferred = w.write_some(buffers.data(), ec);
+                total_transferred.second += bytes_transferred;
+                buffers.consume(bytes_transferred);
+                if (completion_condition(false, ec, total_transferred))
+                    return total_transferred;
+            }
+            ec = boost::system::error_code();
+            return total_transferred;
+        }
+
+        template <
+            typename SyncReadStream, 
+            typename SyncWriteStream, 
+            typename Buffers, 
+            typename Elem, 
+            typename Traits, 
+            typename CompletionCondition
+        >
+        transfer_size transfer(
+            SyncReadStream & r, 
+            SyncWriteStream & w, 
+            util::buffers::CycleBuffers<Buffers, Elem, Traits> & buffers, 
+            CompletionCondition completion_condition, 
+            size_t low_level = 0, 
+            size_t high_level = size_t(-1))
+        {
+            boost::system::error_code ec;
+            transfer_size bytes_transferred = 
+                transfer(r, w, buffers, completion_condition, ec, low_level, high_level);
+            boost::asio::detail::throw_error(ec);
+            return bytes_transferred;
+        }
+
+        template <
+            typename SyncReadStream, 
+            typename SyncWriteStream, 
+            typename Buffers, 
+            typename Elem, 
+            typename Traits
+        >
+        transfer_size transfer(
+            SyncReadStream & r, 
+            SyncWriteStream & w, 
+            util::buffers::CycleBuffers<Buffers, Elem, Traits> & buffers, 
+            size_t low_level = 0, 
+            size_t high_level = size_t(-1))
+        {
+            boost::system::error_code ec;
+            transfer_size bytes_transferred = 
+                transfer(r, w, buffers, transfer_all(), ec, low_level, high_level);
+            boost::asio::detail::throw_error(ec);
+            return bytes_transferred;
+        }
+
+        template <
+            typename SyncReadStream, 
+            typename SyncWriteStream, 
             typename MutableBufferSequence, 
             typename CompletionCondition
         >
@@ -93,43 +195,9 @@ namespace util
             size_t low_level = 0, 
             size_t high_level = size_t(-1))
         {
-            detail::transfer_buffers<boost::asio::const_buffer, 
-                boost::asio::mutable_buffer, MutableBufferSequence> tmp(buffers);
-            size_t total_buffer_size = tmp.total_buffer_size();
-            if (high_level > total_buffer_size)
-                high_level = total_buffer_size;
-            transfer_size total_transferred(0, 0);
-            bool read_end = false;
-            while (!read_end) {
-                size_t level = total_transferred.first - total_transferred.second;
-                if (level < low_level) {
-                    // 没达到低水平线，继续输入
-                    std::size_t bytes_transferred = r.read_some(tmp.write_buffers(), ec);
-                    total_transferred.first += bytes_transferred;
-                    if (completion_condition(true, ec, total_transferred))
-                        read_end = true;
-                } else if (level >= high_level) {
-                    // 达到高水平线，继续输出
-                    std::size_t bytes_transferred = w.write_some(tmp.read_buffers(), ec);
-                    total_transferred.second += bytes_transferred;
-                    if (completion_condition(false, ec, total_transferred))
-                        return total_transferred;
-                } else {
-                    // 介于两者之间，应该是抢先，现在的实现是输入优先
-                    std::size_t bytes_transferred = r.read_some(tmp.write_buffers(), ec);
-                    total_transferred.first += bytes_transferred;
-                    if (completion_condition(true, ec, total_transferred))
-                        read_end = true;
-                }
-            }
-            while (total_transferred.second < total_transferred.first) {
-                std::size_t bytes_transferred = w.write_some(tmp.read_buffers(), ec);
-                total_transferred.second += bytes_transferred;
-                if (completion_condition(false, ec, total_transferred))
-                    return total_transferred;
-            }
-            ec = boost::system::error_code();
-            return total_transferred;
+            typedef util::buffers::CycleBuffers<MutableBufferSequence> cycle_buffers_type;
+            cycle_buffers_type tmp(buffers);
+            return transfer(r, w, tmp, completion_condition, ec, low_level, high_level);
         }
 
         template <
@@ -162,26 +230,79 @@ namespace util
             SyncReadStream & r, 
             SyncWriteStream & w, 
             MutableBufferSequence const & buffers, 
-            boost::system::error_code & ec, 
             size_t low_level = 0, 
             size_t high_level = size_t(-1))
         {
-            return transfer(r, w, buffers, transfer_all(), ec, low_level, high_level);
+            boost::system::error_code ec;
+            transfer_size bytes_transferred = 
+                transfer(r, w, buffers, transfer_all(), ec, low_level, high_level);
+            boost::asio::detail::throw_error(ec);
+            return bytes_transferred;
         }
 
         template <
             typename SyncReadStream, 
             typename SyncWriteStream, 
-            typename MutableBufferSequence
+            typename Elem, 
+            typename Allocator, 
+            typename Traits, 
+            typename CompletionCondition
         >
         transfer_size transfer(
             SyncReadStream & r, 
             SyncWriteStream & w, 
-            MutableBufferSequence const & buffers, 
+            BasicTransferBuffers<Elem, Allocator, Traits> & buffers, 
+            CompletionCondition completion_condition, 
+            boost::system::error_code & ec, 
             size_t low_level = 0, 
             size_t high_level = size_t(-1))
         {
-            return transfer(r, w, buffers, transfer_all(), low_level, high_level);
+            typedef BasicTransferBuffers<Elem, Allocator, Traits>::cycle_buffers_type cycle_buffers_type;
+            return transfer(r, w, (cycle_buffers_type &)buffers, completion_condition, ec, low_level, high_level);
+        }
+
+        template <
+            typename SyncReadStream, 
+            typename SyncWriteStream, 
+            typename Elem, 
+            typename Allocator, 
+            typename Traits, 
+            typename CompletionCondition
+        >
+        transfer_size transfer(
+            SyncReadStream & r, 
+            SyncWriteStream & w, 
+            BasicTransferBuffers<Elem, Allocator, Traits> & buffers, 
+            CompletionCondition completion_condition, 
+            size_t low_level = 0, 
+            size_t high_level = size_t(-1))
+        {
+            boost::system::error_code ec;
+            transfer_size bytes_transferred = 
+                transfer(r, w, buffers, completion_condition, ec, low_level, high_level);
+            boost::asio::detail::throw_error(ec);
+            return bytes_transferred;
+        }
+
+        template <
+            typename SyncReadStream, 
+            typename SyncWriteStream, 
+            typename Elem, 
+            typename Allocator, 
+            typename Traits
+        >
+        transfer_size transfer(
+            SyncReadStream & r, 
+            SyncWriteStream & w, 
+            BasicTransferBuffers<Elem, Allocator, Traits> & buffers, 
+            size_t low_level = 0, 
+            size_t high_level = size_t(-1))
+        {
+            boost::system::error_code ec;
+            transfer_size bytes_transferred = 
+                transfer(r, w, buffers, transfer_all(), ec, low_level, high_level);
+            boost::asio::detail::throw_error(ec);
+            return bytes_transferred;
         }
 
         namespace detail
@@ -190,22 +311,24 @@ namespace util
             template <
                 typename AsyncReadStream, 
                 typename AsyncWriteStream, 
-                typename MutableBufferSequence,
+                typename Buffers, 
+                typename Elem, 
+                typename Traits, 
                 typename CompletionCondition, 
                 typename TransferHandler
             >
-            class transfer_handler
+            class transfer_cycle_buffer_handler
             {
             public:
-                typedef util::stream::detail::transfer_buffers<
-                    boost::asio::const_buffer, boost::asio::mutable_buffer, MutableBufferSequence> buffers_type;
+                typedef util::buffers::CycleBuffers<
+                    Buffers, Elem, Traits> cycle_buffers_type;
 
-                typedef boost::intrusive_ptr<transfer_handler> transfer_handler_ptr;
+                typedef boost::intrusive_ptr<transfer_cycle_buffer_handler> transfer_handler_ptr;
 
-                transfer_handler(
+                transfer_cycle_buffer_handler(
                     AsyncReadStream & read_stream, 
                     AsyncWriteStream & write_stream, 
-                    buffers_type const & buffers,
+                    cycle_buffers_type & buffers, 
                     CompletionCondition completion_condition, 
                     TransferHandler handler, 
                     size_t low_level, 
@@ -225,17 +348,17 @@ namespace util
                     , writing_(false)
                     , ref_count_(0)
                 {
-                    size_t total_buffer_size = buffers_.total_buffer_size();
+                    size_t total_buffer_size = buffers_.capacity();
                     if (high_level_ > total_buffer_size)
                         high_level_ = total_buffer_size;
                 }
 
-                friend void intrusive_ptr_add_ref(transfer_handler * p)
+                friend void intrusive_ptr_add_ref(transfer_cycle_buffer_handler * p)
                 {
                     ++p->ref_count_;
                 }
 
-                friend void intrusive_ptr_release(transfer_handler * p)
+                friend void intrusive_ptr_release(transfer_cycle_buffer_handler * p)
                 {
                     if (--p->ref_count_ == 0) {
                         delete p;
@@ -250,7 +373,7 @@ namespace util
                 struct read_handler_t
                 {
                     read_handler_t(
-                        transfer_handler & handler)
+                        transfer_cycle_buffer_handler & handler)
                         : handler_(&handler)
                     {
                     }
@@ -271,7 +394,7 @@ namespace util
                 struct write_handler_t
                 {
                     write_handler_t(
-                        transfer_handler & handler)
+                        transfer_cycle_buffer_handler & handler)
                         : handler_(&handler)
                     {
                     }
@@ -291,8 +414,9 @@ namespace util
 
                 void start()
                 {
-                    reading_ = true;
-                    read_stream_.async_read_some(buffers_.write_buffers(), get_read_handler());
+                    boost::system::error_code ec;
+                    handler_read(ec, 0);
+                    handler_write(ec, 0);
                 }
 
                 void handler_read(
@@ -306,7 +430,7 @@ namespace util
                         reading_ = false;
                     } else if (level() < high_level_ && !write_end_) {
                         reading_ = true;
-                        read_stream_.async_read_some(buffers_.write_buffers(), get_read_handler());
+                        read_stream_.async_read_some(buffers_.prepare(), get_read_handler());
                     } else {
                         reading_ = false;
                     }
@@ -329,7 +453,7 @@ namespace util
                         handler_(ec, total_transferred_);
                     } else if (level() > low_level_ || (read_end_ && level() > 0)) {
                         writing_ = true;
-                        write_stream_.async_write_some(buffers_.read_buffers(), get_write_handler());
+                        write_stream_.async_write_some(buffers_.data(), get_write_handler());
                     } else if (read_end_) {
                         writing_ = false;
                         write_end_ = true;
@@ -352,10 +476,13 @@ namespace util
                     return strand_.wrap(write_handler_t(*this));
                 }
 
-               //private:
+            //private:
+                friend struct read_handler_t;
+                friend struct write_handler_t;
+
                 AsyncReadStream & read_stream_;
                 AsyncWriteStream & write_stream_;
-                buffers_type buffers_;
+                cycle_buffers_type & buffers_;
                 CompletionCondition completion_condition_;
                 TransferHandler handler_;
                 boost::asio::strand strand_;
@@ -367,6 +494,65 @@ namespace util
                 bool write_end_;
                 bool writing_;
                 size_t ref_count_;
+            };
+
+            template <
+                typename AsyncReadStream, 
+                typename AsyncWriteStream, 
+                typename MutableBufferSequence,
+                typename CompletionCondition, 
+                typename TransferHandler
+            >
+            class transfer_handler
+                : public transfer_cycle_buffer_handler<
+                    AsyncReadStream, AsyncWriteStream, MutableBufferSequence, char, std::char_traits<char>, CompletionCondition, TransferHandler>
+            {
+            public:
+                typedef transfer_cycle_buffer_handler<
+                    AsyncReadStream, AsyncWriteStream, MutableBufferSequence, char, std::char_traits<char>, CompletionCondition, TransferHandler> super;
+
+                transfer_handler(
+                    AsyncReadStream & read_stream, 
+                    AsyncWriteStream & write_stream, 
+                    MutableBufferSequence const & buffers,
+                    CompletionCondition completion_condition, 
+                    TransferHandler handler, 
+                    size_t low_level, 
+                    size_t high_level)
+                    : super(read_stream, write_stream, cycle_buffers_, completion_condition, handler, low_level, high_level)
+                    , cycle_buffers_(buffers)
+                {
+                }
+
+                cycle_buffers_type cycle_buffers_;
+            };
+
+            template <
+                typename AsyncReadStream, 
+                typename AsyncWriteStream, 
+                typename Elem, 
+                typename Allocator, 
+                typename Traits, 
+                typename CompletionCondition, 
+                typename TransferHandler
+            >
+            class transfer_buffer_handler
+                : public BasicTransferBuffers<Elem, Allocator, Traits>::cycle_buffers_type
+            {
+            public:
+                typedef typename BasicTransferBuffers<Elem, Allocator, Traits>::cycle_buffers_type super;
+
+                transfer_buffer_handler(
+                    AsyncReadStream & read_stream, 
+                    AsyncWriteStream & write_stream, 
+                    BasicTransferBuffers<Elem, Allocator, Traits> & buffers, 
+                    CompletionCondition completion_condition, 
+                    TransferHandler handler, 
+                    size_t low_level, 
+                    size_t high_level)
+                    : super(read_stream, write_stream, buffers, completion_condition, handler, low_level, high_level)
+                {
+                }
             };
 
         } // namespace detail
@@ -387,12 +573,10 @@ namespace util
             size_t low_level = 0, 
             size_t high_level = size_t(-1))
         {
-            detail::transfer_buffers<boost::asio::const_buffer, 
-                boost::asio::mutable_buffer, MutableBufferSequence> tmp(buffers);
             typedef detail::transfer_handler<AsyncReadStream, AsyncWriteStream, 
                 MutableBufferSequence, CompletionCondition, TransferHandler> transfer_handler_t;
             typename transfer_handler_t::transfer_handler_ptr ptr(new transfer_handler_t(
-                r, w, tmp, completion_condition, handler, low_level, high_level));
+                r, w, buffers, completion_condition, handler, low_level, high_level));
             ptr->start();
         }
 
@@ -406,6 +590,94 @@ namespace util
             AsyncReadStream & r, 
             AsyncWriteStream & w, 
             MutableBufferSequence const & buffers, 
+            TransferHandler handler, 
+            size_t low_level = 0, 
+            size_t high_level = size_t(-1))
+        {
+            return async_transfer(r, w, buffers, transfer_all(), handler, low_level, high_level);
+        }
+
+        template <
+            typename AsyncReadStream, 
+            typename AsyncWriteStream, 
+            typename Elem, 
+            typename Allocator, 
+            typename Traits, 
+            typename CompletionCondition, 
+            typename TransferHandler
+        >
+        void async_transfer(
+            AsyncReadStream & r, 
+            AsyncWriteStream & w, 
+            BasicTransferBuffers<Elem, Allocator, Traits> & buffers, 
+            CompletionCondition completion_condition, 
+            TransferHandler handler, 
+            size_t low_level = 0, 
+            size_t high_level = size_t(-1))
+        {
+            typedef detail::transfer_buffer_handler<AsyncReadStream, AsyncWriteStream, 
+                Elem, Allocator, Traits, CompletionCondition, TransferHandler> transfer_handler_t;
+            typename transfer_handler_t::transfer_handler_ptr ptr(new transfer_handler_t(
+                r, w, buffers, completion_condition, handler, low_level, high_level));
+            ptr->start();
+        }
+
+        template <
+            typename AsyncReadStream, 
+            typename AsyncWriteStream, 
+            typename Elem, 
+            typename Allocator, 
+            typename Traits, 
+            typename TransferHandler
+        >
+        void async_transfer(
+            AsyncReadStream & r, 
+            AsyncWriteStream & w, 
+            BasicTransferBuffers<Elem, Allocator, Traits> & buffers, 
+            TransferHandler handler, 
+            size_t low_level = 0, 
+            size_t high_level = size_t(-1))
+        {
+            return async_transfer(r, w, buffers, transfer_all(), handler, low_level, high_level);
+        }
+
+        template <
+            typename AsyncReadStream, 
+            typename AsyncWriteStream, 
+            typename Buffers, 
+            typename Elem, 
+            typename Traits, 
+            typename CompletionCondition, 
+            typename TransferHandler
+        >
+        void async_transfer(
+            AsyncReadStream & r, 
+            AsyncWriteStream & w, 
+            util::buffers::CycleBuffers<Buffers, Elem, Traits> & buffers, 
+            CompletionCondition completion_condition, 
+            TransferHandler handler, 
+            size_t low_level = 0, 
+            size_t high_level = size_t(-1))
+        {
+            typedef detail::transfer_cycle_buffer_handler<AsyncReadStream, AsyncWriteStream, 
+                Buffers, Elem, Traits, CompletionCondition, TransferHandler> transfer_handler_t;
+            typename transfer_handler_t::transfer_handler_ptr ptr(new transfer_handler_t(
+                r, w, buffers, completion_condition, handler, low_level, high_level));
+            ptr->start();
+        }
+
+        template <
+            typename AsyncReadStream, 
+            typename AsyncWriteStream, 
+            typename Buffers, 
+            typename Elem, 
+            typename Traits, 
+            typename TransferHandler
+        >
+        void async_transfer(
+            AsyncReadStream & r, 
+            AsyncWriteStream & w, 
+            util::buffers::CycleBuffers<Buffers, Elem, Traits> & buffers, 
             TransferHandler handler, 
             size_t low_level = 0, 
             size_t high_level = size_t(-1))
