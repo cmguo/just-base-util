@@ -195,7 +195,7 @@ namespace util
             size_t low_level = 0, 
             size_t high_level = size_t(-1))
         {
-            typedef BasicTransferBuffers<Elem, Allocator, Traits>::cycle_buffers_type cycle_buffers_type;
+            typedef typename BasicTransferBuffers<Elem, Allocator, Traits>::cycle_buffers_type cycle_buffers_type;
             return transfer(r, w, (cycle_buffers_type &)buffers, completion_condition, ec, low_level, high_level);
         }
 
@@ -474,7 +474,7 @@ namespace util
                 {
                 }
 
-                super::cycle_buffers_type cycle_buffers_;
+                typename super::cycle_buffers_type cycle_buffers_;
             };
 
             template <

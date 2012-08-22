@@ -7,6 +7,8 @@
 #include "util/stream/StreamBuffers.h"
 #include "util/stream/StreamHandler.h"
 
+#include <boost/asio/detail/throw_error.hpp>
+
 namespace util
 {
     namespace stream

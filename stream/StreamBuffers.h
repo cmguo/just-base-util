@@ -46,7 +46,7 @@ namespace util
             }
 
             StreamBuffers(
-                StreamBuffers & r)
+                StreamBuffers const & r)
                 : count_(0)
                 , buffers_(NULL)
             {
@@ -78,8 +78,8 @@ namespace util
 
         private:
             friend void swap(
-                StreamBuffers & l, 
-                StreamBuffers & r)
+                StreamBuffers const & l, 
+                StreamBuffers const & r)
             {
                 std::swap(l.count_, r.count_);
                 std::swap(l.buffers_, r.buffers_);
