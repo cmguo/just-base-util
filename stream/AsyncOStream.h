@@ -54,7 +54,8 @@ namespace util
                 if (m_filtering_ostream_->is_complete() && m_filtering_ostream_->size() > 1) {
                     try {
                         m_filtering_ostream_->write(
-                            (const char *)detail::buffer_cast_helper(*m_iter_), detail::buffer_size_helper(*m_iter_));
+                            (const char *)boost::asio::detail::buffer_cast_helper(*m_iter_),
+                            boost::asio::detail::buffer_size_helper(*m_iter_));
                         m_filtering_ostream_->flush();
                     } catch ( ... ) {
                         boost::system::error_code ec = util::stream::error::filter_sink_error;
@@ -97,7 +98,8 @@ namespace util
                     } else {
                         try {
                             m_filtering_ostream_->write(
-                                (const char *)detail::buffer_cast_helper(*m_iter_), detail::buffer_size_helper(*m_iter_));
+                                (const char *)boost::asio::detail::buffer_cast_helper(*m_iter_),
+                                boost::asio::detail::buffer_size_helper(*m_iter_));
                             m_filtering_ostream_->flush();
                         } catch ( ... ) {
                             boost::system::error_code ec = util::stream::error::filter_sink_error;
@@ -180,9 +182,10 @@ namespace util
                     for (const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
                         try {
                             write(
-                                (const char *)detail::buffer_cast_helper(*iter), detail::buffer_size_helper(*iter));
+                                (const char *)boost::asio::detail::buffer_cast_helper(*iter),
+                                boost::asio::detail::buffer_size_helper(*iter));
                             flush();
-                            bytes_transferred += detail::buffer_size_helper(*iter);
+                            bytes_transferred += boost::asio::detail::buffer_size_helper(*iter);
                         } catch ( ... ) {
                             ec = util::stream::error::filter_sink_error;
                             break;
