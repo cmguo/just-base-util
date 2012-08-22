@@ -4,79 +4,17 @@
 #define _UTIL_STREAM_STREAM_TRANSFER_H_
 
 #include "util/stream/TransferBuffers.h"
+#include "util/stream/CompletionCondition.h"
 
 #include <framework/network/AsioHandlerHelper.h>
 
-#include <boost/mpl/if.hpp>
-#include <boost/mpl/eval_if.hpp>
-#include <boost/mpl/identity.hpp>
-#include <boost/type_traits/is_same.hpp>
-#include <boost/intrusive_ptr.hpp>
-#include <boost/non_type.hpp>
-#include <boost/asio/buffer.hpp>
-#include <boost/asio/error.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/asio/detail/throw_error.hpp>
-#include <boost/asio/detail/handler_alloc_helpers.hpp>
-#include <boost/asio/detail/handler_invoke_helpers.hpp>
 
 namespace util
 {
     namespace stream
     {
-
-        typedef std::pair<std::size_t, std::size_t> transfer_size;
-
-        namespace detail
-        {
-            class transfer_all_t
-            {
-            public:
-                typedef bool result_type;
-
-                template <typename Error>
-                bool operator()(
-                    bool is_read, 
-                    const Error& err, 
-                    transfer_size const & bytes_transferred)
-                {
-                    return !!err;
-                }
-            };
-
-            class transfer_at_least_t
-            {
-            public:
-                typedef bool result_type;
-
-                explicit transfer_at_least_t(std::size_t minimum)
-                    : minimum_(minimum)
-                {
-                }
-
-                template <typename Error>
-                bool operator()(bool is_read, const Error& err, transfer_size const & bytes_transferred)
-                {
-                    if (is_read)
-                        return !!err || bytes_transferred.first >= minimum_;
-                    else
-                        return !!err || bytes_transferred.second >= minimum_;
-                }
-
-            private:
-                std::size_t minimum_;
-            };
-        }
-
-        inline detail::transfer_all_t transfer_all()
-        {
-            return detail::transfer_all_t();
-        }
-
-        inline detail::transfer_at_least_t transfer_at_least(std::size_t minimum)
-        {
-            return detail::transfer_at_least_t(minimum);
-        }
 
         template <
             typename SyncReadStream, 
@@ -536,7 +474,7 @@ namespace util
                 {
                 }
 
-                cycle_buffers_type cycle_buffers_;
+                super::cycle_buffers_type cycle_buffers_;
             };
 
             template <
