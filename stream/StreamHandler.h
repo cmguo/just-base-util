@@ -73,6 +73,17 @@ namespace util
 
         private:
             template <typename Handler>
+            static void * colon(
+                Handler const & handler)
+            {
+                void * ptr = 
+                    boost::asio::asio_handler_allocate(sizeof(handler), &handler);
+                if (ptr)
+                    new (ptr) Handler(handler);
+                return ptr;
+            }
+
+            template <typename Handler>
             static void invoker(
                 void * handler, 
                 boost::system::error_code const & ec, 
