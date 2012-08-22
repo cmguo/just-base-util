@@ -19,24 +19,10 @@ namespace util
                 : public framework::network::detail::transfer_all_t
             {
             public:
-                typedef bool result_type;
-
-                transfer_all_t()
+                explicit  transfer_all_t(
+                    bool * b = NULL)
+                    : framework::network::detail::transfer_all_t(b)
                 {
-                }
-
-                template <typename Arg>
-                transfer_all_t(Arg arg)
-                    : framework::network::detail::transfer_all_t(arg)
-                {
-                }
-
-                template <typename Error>
-                bool operator()(
-                    const Error& err, 
-                    std::size_t)
-                {
-                    return canceled() || (!!err);
                 }
 
                 template <typename Error>
@@ -54,16 +40,9 @@ namespace util
             {
             public:
                 explicit transfer_at_least_t(
-                    std::size_t minimum)
-                    : framework::network::detail::transfer_at_least_t(minimum)
-                {
-                }
-
-                template <typename Arg>
-                explicit transfer_at_least_t(
                     std::size_t minimum, 
-                    Arg arg)
-                    : framework::network::detail::transfer_at_least_t(minimum, arg)
+                    bool * b = NULL)
+                    : framework::network::detail::transfer_at_least_t(minimum, b)
                 {
                 }
 
@@ -82,30 +61,17 @@ namespace util
 
         }
 
-        inline detail::transfer_all_t transfer_all()
-        {
-            return detail::transfer_all_t();
-        }
-
-        template <typename Arg>
         inline detail::transfer_all_t transfer_all(
-            Arg arg)
+            bool * b = NULL)
         {
-            return detail::transfer_all_t(arg);
+            return detail::transfer_all_t(b);
         }
 
-        inline detail::transfer_at_least_t transfer_at_least(
-            std::size_t minimum)
-        {
-            return detail::transfer_at_least_t(minimum);
-        }
-
-        template <typename Arg>
         inline detail::transfer_at_least_t transfer_at_least(
             std::size_t minimum, 
-            Arg arg)
+            bool * b = NULL)
         {
-            return detail::transfer_at_least_t(minimum, arg);
+            return detail::transfer_at_least_t(minimum, b);
         }
 
     } // namespace stream
