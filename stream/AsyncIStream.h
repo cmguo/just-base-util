@@ -31,27 +31,6 @@ namespace util
             typedef Ch   char_type;
             typedef void result_type;
 
-        private:
-            struct inner_handler
-            {
-                inner_handler(
-                    typename async_basic_filtering_istream_handler< Ch, DeviceType > & handler)
-                    : m_handler_(handler)
-                {
-                }
-
-                void operator()(
-                    boost::system::error_code const & ec, 
-                    std::size_t bytes_transferred)
-                {
-                    m_handler_.()(ec, bytes_transferred);
-                }
-
-            private:
-                typename async_basic_filtering_istream_handler< Ch, DeviceType > & m_handler_;
-
-            };
-
         public:
             async_basic_filtering_istream_handler(
                 async_basic_filtering_istream< Ch, DeviceType > * filter_stream,
@@ -72,7 +51,7 @@ namespace util
 
                 if (m_filtering_istream_->is_complete() && m_filtering_istream_->size() > 1) {
                     boost::asio::streambuf & recv_buf =
-                        (m_filtering_istream_->component< basic_dummy_filter< char_type > >(m_filtering_istream_->size() - 2))->use_buffer();
+                        (m_filtering_istream_->component<basic_dummy_filter<char_type> >(m_filtering_istream_->size() - 2))->use_buffer();
                     (*m_filtering_istream_->component< DeviceType >(m_filtering_istream_->size() - 1))->async_read_some(
                         recv_buf.prepare(1024), boost::bind(boost::ref(*this), _1, _2));
                 } else {

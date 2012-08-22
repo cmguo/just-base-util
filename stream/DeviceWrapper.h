@@ -7,8 +7,9 @@
 #include <boost/iostreams/detail/ios.hpp>
 #include <boost/iostreams/positioning.hpp>
 
-#include "boost/asio.hpp"
-#include "boost/bind.hpp"
+#include <boost/asio.hpp>
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
 
 #include "util/stream/Dual.h"
 
@@ -17,9 +18,9 @@ namespace util
     namespace stream
     {
 
-        typedef boost::function<void 
+        typedef boost::function< void 
             (boost::system::error_code const &,
-            size_t)> async_response_type;
+            size_t) > async_response_type;
 
         template<typename Ch, typename Mode>
         class basic_async_device
@@ -28,8 +29,8 @@ namespace util
             typedef Ch char_type;
             struct category
                 : public Mode,
-                public device_tag,
-                public closable_tag
+                public boost::iostreams::device_tag,
+                public boost::iostreams::closable_tag
             {};
         public:
             basic_async_device() {}

@@ -64,10 +64,10 @@ namespace util
                         delete this;
                         return;
                     }
-                    streambuf const & send_buf =
+                    streambuf const & send_buf = \
                         (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->get_buffer();
                     // 获取过滤缓冲区发送
-                    (*m_filtering_ostream_->component< DeviceType >(m_filtering_ostream_->size() - 1))->async_write_some(
+                    (*m_filtering_ostream_->component< DeviceType >(m_filtering_ostream_->size() - 1))->async_write_some( \
                         send_buf.data(), boost::bind(boost::ref(*this), _1, _2));
 
                 } else {
@@ -82,7 +82,7 @@ namespace util
                 boost::system::error_code const & ec,
                 size_t bytes_transferred)
             {
-                streambuf & send_buf =
+                boost::asio::streambuf & send_buf =
                     (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->use_buffer();
                 send_buf.commit(bytes_transferred);
                 if (ec) {
@@ -107,10 +107,10 @@ namespace util
                                 boost::asio::detail::bind_handler(m_handler_, ec, m_bytes_transferred_));
                             delete this;
                         }
-                        const streambuf & send_buf =
+                        const boost::asio::streambuf & send_buf =
                             (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->get_buffer();
                         // 获取过滤缓冲区发送
-                        (*m_filtering_ostream_->component< DeviceType >(m_filtering_ostream_->size() - 1))->async_write_some(
+                        (*m_filtering_ostream_->component<DeviceType>(m_filtering_ostream_->size() - 1))->async_write_some(
                             send_buf.data(), boost::bind(boost::ref(*this), _1, _2));
                     }
                 }
