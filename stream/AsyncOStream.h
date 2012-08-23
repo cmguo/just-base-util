@@ -53,7 +53,7 @@ namespace util
                 typedef StreamConstBuffers::const_iterator const_iterator;
 
                 if (m_filtering_ostream_->is_complete() && m_filtering_ostream_->size() > 1) {
-                    (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->set_call_type(
+                    (m_filtering_ostream_->template component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->set_call_type(
                         basic_dummy_filter< char_type >::buffered_call);
                     for (const_iterator iter = m_buffers_.begin(); iter != m_buffers_.end(); ++iter) {
                         try {
@@ -64,18 +64,18 @@ namespace util
                             // 记录过滤中间的错误码
                             m_ec_ = util::stream::error::filter_sink_error;
                             boost::asio::streambuf const & send_buf =
-                                (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->get_buffer();
+                                (m_filtering_ostream_->template component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->get_buffer();
                             // 中间出错，获取已经填充的过滤缓冲区一起发送发送
-                            (*m_filtering_ostream_->component< device_type >(m_filtering_ostream_->size() - 1))->async_write_some(
+                            (*m_filtering_ostream_->template component< device_type >(m_filtering_ostream_->size() - 1))->async_write_some(
                                 send_buf.data(), boost::bind(boost::ref(*this), _1, _2));
                             return;
                         }
                         m_bytes_transferred_ += boost::asio::detail::buffer_size_helper(*iter);
                     }
                     boost::asio::streambuf const & send_buf =
-                        (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->get_buffer();
+                        (m_filtering_ostream_->template component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->get_buffer();
                     // 过滤完毕，获取已经填充的过滤缓冲区一起发送发送
-                    (*m_filtering_ostream_->component< device_type >(m_filtering_ostream_->size() - 1))->async_write_some(
+                    (*m_filtering_ostream_->template component< device_type >(m_filtering_ostream_->size() - 1))->async_write_some(
                         send_buf.data(), boost::bind(boost::ref(*this), _1, _2));
                 } else {
                     boost::system::error_code ec = util::stream::error::chain_is_not_complete;
@@ -90,7 +90,7 @@ namespace util
                 size_t bytes_transferred)
             {
                 boost::asio::streambuf & send_buf =
-                    (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->use_buffer();
+                    (m_filtering_ostream_->template component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->use_buffer();
                 send_buf.commit(bytes_transferred);
 
                 if (ec) { // 发送出错，优先将网络错误码抛出
@@ -139,7 +139,7 @@ namespace util
             virtual ~async_basic_filtering_ostream() {}
 
             template < typename T >
-            void push(T & t,
+            void push(const T & t,
                 typename T::category * = NULL)
             {
                 using namespace boost::iostreams;

@@ -53,11 +53,11 @@ namespace util
                 }
 
                 if (m_filtering_istream_->is_complete() && m_filtering_istream_->size() > 1) {
-                    (m_filtering_istream_->component< basic_dummy_filter< char_type > >(m_filtering_istream_->size() - 2))->set_call_type(
+                    (m_filtering_istream_->template component< basic_dummy_filter<char_type> >(m_filtering_istream_->size() - 2))->set_call_type(
                         basic_dummy_filter< char_type >::buffered_call);
                     boost::asio::streambuf & recv_buf =
-                        (m_filtering_istream_->component<basic_dummy_filter<char_type> >(m_filtering_istream_->size() - 2))->use_buffer();
-                    (*m_filtering_istream_->component< device_type >(m_filtering_istream_->size() - 1))->async_read_some(
+                        (m_filtering_istream_->template component< basic_dummy_filter<char_type> >(m_filtering_istream_->size() - 2))->use_buffer();
+                    (*m_filtering_istream_->template component< device_type >(m_filtering_istream_->size() - 1))->async_read_some(
                         recv_buf.prepare(szbuffer), boost::bind(boost::ref(*this), _1, _2));
                 } else {
                     boost::system::error_code ec = util::stream::error::chain_is_not_complete;
@@ -115,7 +115,7 @@ namespace util
                 set_filter_buffer_size(0);
             }
             virtual ~async_basic_filtering_istream() {}            template < typename T >
-            void push(T & t, 
+            void push(const T & t, 
                 typename T::category * = NULL)
             {
                 using namespace boost::iostreams;
