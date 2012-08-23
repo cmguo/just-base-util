@@ -6,10 +6,10 @@
 #include <iostream>
 
 #include <boost/asio.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/categories.hpp>
 
-#include "boost/iostreams/filtering_stream.hpp"
-#include "boost/iostreams/categories.hpp"
-
+#include "util/buffers/BufferSize.h"
 #include "util/stream/StreamBuffers.h"
 #include "util/stream/StreamHandler.h"
 #include "util/stream/StreamErrors.h"
@@ -28,36 +28,41 @@ namespace util
         class async_basic_filtering_istream_handler
         {
         public:
-            typedef Ch   char_type;
-            typedef void result_type;
+            typedef Ch          char_type;
+            typedef void        result_type;
+            typedef DeviceType  device_type;
 
         public:
             async_basic_filtering_istream_handler(
-                async_basic_filtering_istream< Ch, DeviceType > * filter_stream,
+                async_basic_filtering_istream< char_type, device_type > * filter_stream,
                 StreamMutableBuffers const & buffers,
                 StreamHandler const & handler)
                 : m_filtering_istream_(filter_stream)
                 , m_buffers_(buffers)
                 , m_handler_(handler)
-                , m_bytes_transferred_(0)
             {}
 
             void start()
             {
                 using namespace boost::asio;
-
-                m_bytes_transferred_ = 0;
-                m_iter_ = m_buffers_.begin();
+                size_t szbuffer = util::buffers::buffer_size(m_buffers_);
+                if (szbuffer == 0) {
+                    m_filtering_istream_->get_io_service().post(boost::asio::detail::bind_handler(
+                        m_handler_, boost::system::error_code(), 0));
+                    return;
+                }
 
                 if (m_filtering_istream_->is_complete() && m_filtering_istream_->size() > 1) {
+                    (m_filtering_istream_->component< basic_dummy_filter< char_type > >(m_filtering_istream_->size() - 2))->set_call_type(
+                        basic_dummy_filter< char_type >::buffered_call);
                     boost::asio::streambuf & recv_buf =
                         (m_filtering_istream_->component<basic_dummy_filter<char_type> >(m_filtering_istream_->size() - 2))->use_buffer();
-                    (*m_filtering_istream_->component< DeviceType >(m_filtering_istream_->size() - 1))->async_read_some(
-                        recv_buf.prepare(1024), boost::bind(boost::ref(*this), _1, _2));
+                    (*m_filtering_istream_->component< device_type >(m_filtering_istream_->size() - 1))->async_read_some(
+                        recv_buf.prepare(szbuffer), boost::bind(boost::ref(*this), _1, _2));
                 } else {
                     boost::system::error_code ec = util::stream::error::chain_is_not_complete;
                     m_filtering_istream_->get_io_service().post(
-                        boost::asio::detail::bind_handler(m_handler_, ec, m_bytes_transferred_));
+                        boost::asio::detail::bind_handler(m_handler_, ec, 0));
                     delete this;
                 }
             }
@@ -68,42 +73,29 @@ namespace util
             {
                 if (ec) {
                     m_filtering_istream_->get_io_service().post(
-                        boost::asio::detail::bind_handler(m_handler_, ec, m_bytes_transferred_));
+                        boost::asio::detail::bind_handler(m_handler_, ec, 0));
                     delete this;
                 } else {
                     try {
-                        m_filtering_istream_->read(m_buf_, m_size_);
+                        //m_filtering_istream_->read(
+                        //    boost::asio::buffer_cast(m_buffers_), bytes_transferred);
                     } catch ( ... ) {
                         boost::system::error_code ec = util::stream::error::filter_source_error;
                         m_filtering_istream_->get_io_service().post(
-                            boost::asio::detail::bind_handler(m_handler_, ec, m_bytes_transferred_));
+                            boost::asio::detail::bind_handler(m_handler_, ec, 0));
                         delete this;
                         return;
                     }
-                    // 将过滤后的buffer写到buffers中去，并返回
-                    // todo something here
-                    // bytes_transferred += ??
-                    if (++m_iter_ == m_buffers_.end()) {
-                        m_filtering_istream_->get_io_service().post(
-                            boost::asio::detail::bind_handler(m_handler_, ec, m_bytes_transferred_));
-                        delete this;
-                    } else {
-                        boost::asio::streambuf & recv_buf =
-                            (m_filtering_istream_->component< basic_dummy_filter< char_type > >(m_filtering_istream_->size() - 2))->use_buffer();
-                        (*m_filtering_istream_->component< DeviceType >(m_filtering_istream_->size() - 1))->async_read_some(
-                            recv_buf.prepare(1024), boost::bind(boost::ref(*this), _1, _2));
-                    }
+                    m_filtering_istream_->get_io_service().post(
+                        boost::asio::detail::bind_handler(m_handler_, ec, bytes_transferred));
+                    delete this;
                 }
             }
 
         private:
-            async_basic_filtering_istream< Ch, DeviceType > *   m_filtering_istream_;
+            async_basic_filtering_istream< char_type, device_type > *   m_filtering_istream_;
             StreamMutableBuffers const &                        m_buffers_;
-            StreamMutableBuffers::const_iterator                m_iter_;
             StreamHandler const                                 m_handler_;
-            size_t                                              m_bytes_transferred_;
-            char_type *                                         m_buf_;
-            std::streamsize                                     m_size_;
         };
 
         template < typename Ch, typename DeviceType >
@@ -112,8 +104,9 @@ namespace util
             , public Source
         {
         public:
-            typedef Ch   char_type;
-            typedef void result_type;
+            typedef Ch          char_type;
+            typedef void        result_type;
+            typedef DeviceType  device_type;
 
         public:
             async_basic_filtering_istream(boost::asio::io_service & ios)
@@ -122,15 +115,14 @@ namespace util
                 set_filter_buffer_size(0);
             }
             virtual ~async_basic_filtering_istream() {}            template < typename T >
-            void push(const T & t, 
+            void push(T & t, 
                 typename T::category * = NULL)
             {
                 using namespace boost::iostreams;
-                typedef typename category_of<T>::type                             category;
                 typedef typename boost::iostreams::detail::unwrap_ios<T>::type    policy_type;
                 if (is_device<policy_type>::value) {
                     filtering_istream::push(
-                        basic_dummy_filter< Ch >());
+                        basic_dummy_filter< char_type >());
                 }
                 filtering_istream::push(t);
             }
@@ -156,7 +148,7 @@ namespace util
 
                 if (is_complete() && size() > 1) {
                     (component< basic_dummy_filter< char_type > >(size() - 2))->set_call_type(
-                        basic_dummy_filter< Ch >::buffered_call);
+                        basic_dummy_filter< char_type >::buffered_call);
 
                     for (const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
                         try {
@@ -181,16 +173,8 @@ namespace util
                 StreamMutableBuffers const & buffers, 
                 StreamHandler const & handler)
             {
-                if (is_complete() && size() > 1) {
-                    (component< basic_dummy_filter< char_type > >(size() - 2))->set_call_type(
-                        basic_dummy_filter< Ch >::buffered_call);
-                } else {
-                    boost::system::error_code ec = util::stream::error::chain_is_not_complete;
-                    get_io_service().post(
-                        boost::asio::detail::bind_handler(handler, ec, 0));
-                }
-                async_basic_filtering_istream_handler< Ch, DeviceType > *process_handler = 
-                    new async_basic_filtering_istream_handler< Ch, DeviceType >(this, buffers, handler);
+                async_basic_filtering_istream_handler< char_type, device_type > *process_handler = 
+                    new async_basic_filtering_istream_handler< char_type, device_type >(this, buffers, handler);
                 process_handler->start();
             }
 

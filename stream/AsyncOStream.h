@@ -8,9 +8,9 @@
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
 #include <boost/function.hpp>
-
-#include "boost/iostreams/filtering_stream.hpp"
-#include "boost/iostreams/categories.hpp"
+#include <boost/static_assert.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/categories.hpp>
 
 #include "util/stream/StreamBuffers.h"
 #include "util/stream/StreamHandler.h"
@@ -30,12 +30,13 @@ namespace util
         class async_basic_filtering_ostream_handler
         {
         public:
-            typedef Ch   char_type;
-            typedef void result_type;
+            typedef Ch          char_type;
+            typedef void        result_type;
+            typedef DeviceType  device_type;
 
         public:
             async_basic_filtering_ostream_handler(
-                async_basic_filtering_ostream< Ch, DeviceType > * filter_stream,
+                async_basic_filtering_ostream< char_type, device_type > * filter_stream,
                 StreamConstBuffers const & buffers,
                 StreamHandler const & handler)
                 : m_filtering_ostream_(filter_stream)
@@ -49,31 +50,37 @@ namespace util
                 using namespace boost::asio;
 
                 m_bytes_transferred_ = 0;
-                m_iter_ = m_buffers_.begin();
+                typedef StreamConstBuffers::const_iterator const_iterator;
 
                 if (m_filtering_ostream_->is_complete() && m_filtering_ostream_->size() > 1) {
-                    try {
-                        m_filtering_ostream_->write(
-                            (const char *)boost::asio::detail::buffer_cast_helper(*m_iter_),
-                            boost::asio::detail::buffer_size_helper(*m_iter_));
-                        m_filtering_ostream_->flush();
-                    } catch ( ... ) {
-                        boost::system::error_code ec = util::stream::error::filter_sink_error;
-                        m_filtering_ostream_->get_io_service().post(
-                            boost::asio::detail::bind_handler(m_handler_, ec, m_bytes_transferred_));
-                        delete this;
-                        return;
+                    (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->set_call_type(
+                        basic_dummy_filter< char_type >::buffered_call);
+                    for (const_iterator iter = m_buffers_.begin(); iter != m_buffers_.end(); ++iter) {
+                        try {
+                            m_filtering_ostream_->write(
+                                (const char *)boost::asio::detail::buffer_cast_helper(*iter),
+                                boost::asio::detail::buffer_size_helper(*iter));
+                        } catch ( ... ) {
+                            // 记录过滤中间的错误码
+                            m_ec_ = util::stream::error::filter_sink_error;
+                            boost::asio::streambuf const & send_buf =
+                                (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->get_buffer();
+                            // 中间出错，获取已经填充的过滤缓冲区一起发送发送
+                            (*m_filtering_ostream_->component< device_type >(m_filtering_ostream_->size() - 1))->async_write_some(
+                                send_buf.data(), boost::bind(boost::ref(*this), _1, _2));
+                            return;
+                        }
+                        m_bytes_transferred_ += boost::asio::detail::buffer_size_helper(*iter);
                     }
-                    streambuf const & send_buf = \
+                    boost::asio::streambuf const & send_buf =
                         (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->get_buffer();
-                    // 获取过滤缓冲区发送
-                    (*m_filtering_ostream_->component< DeviceType >(m_filtering_ostream_->size() - 1))->async_write_some( \
+                    // 过滤完毕，获取已经填充的过滤缓冲区一起发送发送
+                    (*m_filtering_ostream_->component< device_type >(m_filtering_ostream_->size() - 1))->async_write_some(
                         send_buf.data(), boost::bind(boost::ref(*this), _1, _2));
-
                 } else {
                     boost::system::error_code ec = util::stream::error::chain_is_not_complete;
                     m_filtering_ostream_->get_io_service().post(
-                        boost::asio::detail::bind_handler(m_handler_, ec, m_bytes_transferred_));
+                        boost::asio::detail::bind_handler(m_handler_, ec, 0));
                     delete this;
                 }
             }
@@ -85,43 +92,30 @@ namespace util
                 boost::asio::streambuf & send_buf =
                     (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->use_buffer();
                 send_buf.commit(bytes_transferred);
-                if (ec) {
+
+                if (ec) { // 发送出错，优先将网络错误码抛出
                     m_filtering_ostream_->get_io_service().post(
-                        boost::asio::detail::bind_handler(m_handler_, ec, m_bytes_transferred_));
-                    delete this;
+                        boost::asio::detail::bind_handler(m_handler_, ec, 0));
                 } else {
-                    m_bytes_transferred_ += bytes_transferred;
-                    if (++m_iter_ == m_buffers_.end()) {
+                    if (m_ec_) {
+                        // 抛出过滤错误，发送的字节数以处理前为准
+                        m_filtering_ostream_->get_io_service().post(
+                            boost::asio::detail::bind_handler(m_handler_, m_ec_, m_bytes_transferred_));
+                    } else {
                         m_filtering_ostream_->get_io_service().post(
                             boost::asio::detail::bind_handler(m_handler_, ec, m_bytes_transferred_));
-                        delete this;
-                    } else {
-                        try {
-                            m_filtering_ostream_->write(
-                                (const char *)boost::asio::detail::buffer_cast_helper(*m_iter_),
-                                boost::asio::detail::buffer_size_helper(*m_iter_));
-                            m_filtering_ostream_->flush();
-                        } catch ( ... ) {
-                            boost::system::error_code ec = util::stream::error::filter_sink_error;
-                            m_filtering_ostream_->get_io_service().post(
-                                boost::asio::detail::bind_handler(m_handler_, ec, m_bytes_transferred_));
-                            delete this;
-                        }
-                        const boost::asio::streambuf & send_buf =
-                            (m_filtering_ostream_->component< basic_dummy_filter< char_type > >(m_filtering_ostream_->size() - 2))->get_buffer();
-                        // 获取过滤缓冲区发送
-                        (*m_filtering_ostream_->component<DeviceType>(m_filtering_ostream_->size() - 1))->async_write_some(
-                            send_buf.data(), boost::bind(boost::ref(*this), _1, _2));
                     }
                 }
+
+                delete this;
             }
 
         private:
-            async_basic_filtering_ostream< Ch, DeviceType > *   m_filtering_ostream_;
+            async_basic_filtering_ostream< char_type, device_type > *   m_filtering_ostream_;
             StreamConstBuffers const                            m_buffers_;
-            StreamConstBuffers::const_iterator                  m_iter_;
             StreamHandler const                                 m_handler_;
             size_t                                              m_bytes_transferred_;
+            boost::system::error_code                           m_ec_;
         };
 
         template < typename Ch, typename DeviceType >
@@ -130,8 +124,9 @@ namespace util
             , public Sink
         {
         public:
-            typedef Ch   char_type;
-            typedef void result_type;
+            typedef Ch          char_type;
+            typedef void        result_type;
+            typedef DeviceType  device_type;
 
         public:
             async_basic_filtering_ostream(
@@ -144,15 +139,14 @@ namespace util
             virtual ~async_basic_filtering_ostream() {}
 
             template < typename T >
-            void push(const T & t,
+            void push(T & t,
                 typename T::category * = NULL)
             {
                 using namespace boost::iostreams;
-                typedef typename category_of<T>::type                             category;
                 typedef typename boost::iostreams::detail::unwrap_ios<T>::type    policy_type;
                 if (is_device<policy_type>::value) {
                     filtering_ostream::push(
-                        basic_dummy_filter< Ch >());
+                        basic_dummy_filter< char_type >());
                 }
                 filtering_ostream::push(t);
             }
@@ -178,18 +172,18 @@ namespace util
 
                 if (is_complete() && size() > 1) {
                     (component< basic_dummy_filter< char_type > >(size() - 2))->set_call_type(
-                        basic_dummy_filter< Ch >::buffered_call);
+                        basic_dummy_filter< char_type >::buffered_call);
                     for (const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
                         try {
                             write(
                                 (const char *)boost::asio::detail::buffer_cast_helper(*iter),
                                 boost::asio::detail::buffer_size_helper(*iter));
                             flush();
-                            bytes_transferred += boost::asio::detail::buffer_size_helper(*iter);
                         } catch ( ... ) {
                             ec = util::stream::error::filter_sink_error;
                             break;
                         }
+                        bytes_transferred += boost::asio::detail::buffer_size_helper(*iter);
                     }
                 } else {
                     ec = util::stream::error::chain_is_not_complete;
@@ -203,16 +197,8 @@ namespace util
                 StreamConstBuffers const & buffers, 
                 StreamHandler const & handler)
             {
-                if (is_complete() && size() > 1) {
-                    (component< basic_dummy_filter< char_type > >(size() - 2))->set_call_type(
-                        basic_dummy_filter< Ch >::buffered_call);
-                } else {
-                    boost::system::error_code ec = util::stream::error::chain_is_not_complete;
-                    get_io_service().post(
-                        boost::asio::detail::bind_handler(handler, ec, 0));
-                }
-
-                async_basic_filtering_ostream_handler< Ch, DeviceType > *process_handler = new async_basic_filtering_ostream_handler< Ch, DeviceType >(this, buffers, handler);
+                async_basic_filtering_ostream_handler< char_type, device_type > *process_handler =
+                    new async_basic_filtering_ostream_handler< char_type, device_type >(this, buffers, handler);
                 process_handler->start();
             }
 

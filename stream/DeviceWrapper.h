@@ -35,8 +35,8 @@ namespace util
         public:
             basic_async_device() {}
 
-            std::streamsize read(Ch*, std::streamsize) { return 0; }
-            std::streamsize write(const Ch*, std::streamsize n) { return n; }
+            std::streamsize read(char_type*, std::streamsize) { return 0; }
+            std::streamsize write(const char_type*, std::streamsize n) { return n; }
             std::streampos seek(boost::iostreams::stream_offset, BOOST_IOS::seekdir,
                 BOOST_IOS::openmode = 
                 BOOST_IOS::in | BOOST_IOS::out ) 
@@ -66,7 +66,7 @@ namespace util
                 return &m_source_;
             }
 
-            std::streamsize read(Ch * s, std::streamsize n)
+            std::streamsize read(char_type * s, std::streamsize n)
             {
                 return m_source_.read_some(
                     boost::asio::buffer(s, n));
@@ -99,7 +99,7 @@ namespace util
                 return &m_sink_;
             }
 
-            std::streamsize write(const Ch * s, std::streamsize n)
+            std::streamsize write(const char_type * s, std::streamsize n)
             {
                 return m_sink_.write_some(boost::asio::buffer(s, n));
             }

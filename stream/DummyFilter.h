@@ -3,11 +3,11 @@
 #ifndef _UTIL_STREAM_DUMMY_FILTER_H_
 #define _UTIL_STREAM_DUMMY_FILTER_H_
 
-#include "boost/iostreams/categories.hpp"
-#include "boost/iostreams/filtering_streambuf.hpp"
-#include "boost/iostreams/filtering_stream.hpp"
+#include <boost/iostreams/categories.hpp>
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 
-#include "boost/shared_ptr.hpp"
+#include <boost/shared_ptr.hpp>
 
 namespace util
 {
@@ -17,9 +17,9 @@ namespace util
         template < typename Ch >
         class basic_dummy_filter {
         public:
-            typedef Ch char_type;
-            typedef size_t size_type;
-            typedef boost::asio::streambuf buffer_type;
+            typedef Ch                      char_type;
+            typedef size_t                  size_type;
+            typedef boost::asio::streambuf  buffer_type;
             struct category
                 : boost::iostreams::dual_use,
                 boost::iostreams::filter_tag,
@@ -41,7 +41,7 @@ namespace util
             basic_dummy_filter(call_type type = buffered_call)
                 : m_call_type_(type)
                 , m_data_(new buffer_type)
-                , m_cur_(0) {}
+            {}
 
             ~basic_dummy_filter() {
                 close_impl();
@@ -118,7 +118,6 @@ namespace util
         private:
             call_type                       m_call_type_;
             boost::shared_ptr<buffer_type>  m_data_;
-            size_type                       m_cur_; // current read or write position
             int                             m_state_;
         };
 
