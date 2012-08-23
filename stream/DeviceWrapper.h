@@ -18,10 +18,6 @@ namespace util
     namespace stream
     {
 
-        typedef boost::function< void 
-            (boost::system::error_code const &,
-            size_t) > async_response_type;
-
         template<typename Ch, typename Mode>
         class basic_async_device
         {
