@@ -56,7 +56,6 @@ namespace util
             {
             }
 
-            // 外部直接调用此接口将不会产生过滤效果
             Source * operator->()
             {
                 return &m_source_;
@@ -89,7 +88,6 @@ namespace util
             {
             }
 
-            // 外部直接调用此接口将不会产生过滤效果
             Sink * operator->()
             {
                 return &m_sink_;

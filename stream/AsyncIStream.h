@@ -78,7 +78,7 @@ namespace util
                 } else {
                     try {
                         //m_filtering_istream_->read(
-                        //    boost::asio::buffer_cast(m_buffers_), bytes_transferred);
+                        //    boost::asio::detail::buffer_cast_helper(m_buffers_.prepare(bytes_transferred)), bytes_transferred);
                     } catch ( ... ) {
                         boost::system::error_code ec = util::stream::error::filter_source_error;
                         m_filtering_istream_->get_io_service().post(
@@ -95,7 +95,7 @@ namespace util
         private:
             async_basic_filtering_istream< char_type, device_type > *   m_filtering_istream_;
             StreamMutableBuffers const &                        m_buffers_;
-            StreamHandler const                                 m_handler_;
+            StreamHandler const &                               m_handler_;
         };
 
         template < typename Ch, typename DeviceType >
@@ -145,12 +145,19 @@ namespace util
 
                 typedef StreamMutableBuffers::const_iterator const_iterator;
                 std::size_t bytes_transferred = 0;
+                size_t szbuffer = util::buffers::buffer_size(buffers);
+                if (szbuffer == 0) {
+                    return 0;
+                }
 
                 if (is_complete() && size() > 1) {
                     (component< basic_dummy_filter< char_type > >(size() - 2))->set_call_type(
                         basic_dummy_filter< char_type >::buffered_call);
 
                     for (const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
+                        //boost::asio::streambuf & recv_buf =
+                        //    (component< basic_dummy_filter< char_type > >(size() - 2))->use_buffer();
+                        //*(component< basic_dummy_filter< char_type > >(size() - 1))->read_some(recv_buf.prepare(szbuffer), ec);
                         try {
                             read(m_buf_, m_size_);
                             // 将过滤后的buffer写到buffers中去，并返回
