@@ -3,8 +3,9 @@
 #include "util/Util.h"
 #include "util/daemon/Daemon.h"
 
-#include <framework/logger/LoggerStreamRecord.h>
-using framework::logger::Logger;
+#include <framework/logger/Logger.h>
+#include <framework/logger/StreamRecord.h>
+using namespace framework::logger;
 
 #include <boost/bind.hpp>
 #include <boost/thread/mutex.hpp>
@@ -103,7 +104,7 @@ namespace util
         {
             io_work_ = new boost::asio::io_service::work(io_svc_);
             boost::system::error_code result;
-            LOG_S(Logger::kLevelDebug, "[start] beg");
+            LOG_DEBUG("[start] beg");
             if (concurrency == 0) {
                 result = module_registry_->startup();
             } else {
@@ -120,9 +121,9 @@ namespace util
                 }
                 cond.wait(lock);
             }
-            LOG_S(Logger::kLevelDebug, "[start] end");
+            LOG_DEBUG("[start] end");
             if (result) {
-                LOG_S(Logger::kLevelDebug, "[stop] beg");
+                LOG_DEBUG("[stop] beg");
                 delete io_work_;
                 io_work_ = NULL;
                 run();
@@ -133,14 +134,14 @@ namespace util
         boost::system::error_code Daemon::start(
             start_call_back_type const & start_call_back)
         {
-            LOG_S(Logger::kLevelDebug, "[start] beg");
+            LOG_DEBUG("[start] beg");
             io_work_ = new boost::asio::io_service::work(io_svc_);
             boost::system::error_code result;
             result = module_registry_->startup();
-            LOG_S(Logger::kLevelDebug, "[start] end");
+            LOG_DEBUG("[start] end");
             start_call_back(result);
             if (result) {
-            	LOG_S(Logger::kLevelDebug, "[stop] beg");
+            	LOG_DEBUG("[stop] beg");
                 delete io_work_;
                 io_work_ = NULL;
             }
@@ -157,7 +158,7 @@ namespace util
                 io_svc_.run();
                 io_svc_.reset();
             }
-            LOG_S(Logger::kLevelDebug, "[stop] end");
+            LOG_DEBUG("[stop] end");
         }
 
         void Daemon::stop(
@@ -168,7 +169,7 @@ namespace util
             io_svc_.post(
                 boost::bind(&detail::ModuleRegistry::shutdown, module_registry_));
             if (wait) {
-                LOG_S(Logger::kLevelDebug, "[stop] beg");
+                LOG_DEBUG("[stop] beg");
                 run();
             }
         }

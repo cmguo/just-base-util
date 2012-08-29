@@ -4,7 +4,6 @@
 #define _UTIL_DAEMON_DAEMON_H_
 
 #include <framework/configure/Config.h>
-#include <framework/logger/Logger.h>
 
 #include <boost/asio/io_service.hpp>
 #include <boost/thread//thread.hpp>
@@ -97,11 +96,6 @@ namespace util
                 return config_;
             }
 
-            framework::logger::Logger & logger()
-            {
-                return logger_;
-            }
-
         public:
             template <
                 typename Module
@@ -148,7 +142,6 @@ namespace util
             boost::asio::io_service::work * io_work_;
             boost::thread_group th_grp_;
             framework::configure::Config config_;
-            framework::logger::Logger logger_;
 
             detail::ModuleRegistry * module_registry_;
         };

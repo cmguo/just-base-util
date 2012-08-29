@@ -7,8 +7,8 @@
 using namespace util::stream;
 
 #include <framework/logger/Logger.h>
-#include <framework/logger/LoggerFormatRecord.h>
-#include <framework/logger/LoggerSection.h>
+#include <framework/logger/FormatRecord.h>
+#include <framework/logger/Section.h>
 #include <framework/system/LogicError.h>
 #include <framework/string/Url.h>
 using namespace framework::logger;
@@ -55,7 +55,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_F(Logger::kLevelDebug, "[handle_receive_request_head] id =%u, ec = %s, bytes_transferred = %d" 
+            LOG_DEBUG("[handle_receive_request_head] id =%u, ec = %s, bytes_transferred = %d" 
                 % id_ % ec % bytes_transferred);
 
             if (ec) {
@@ -81,7 +81,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_F(Logger::kLevelDebug, "[handle_receive_request_data] id =%u, ec = %s, bytes_transferred = %d" 
+            LOG_DEBUG("[handle_receive_request_data] id =%u, ec = %s, bytes_transferred = %d" 
                 % id_ % ec % bytes_transferred);
 
             if (ec) {
@@ -99,7 +99,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_F(Logger::kLevelDebug, "[handle_local_process] id =%u, ec = %s" % id_ % ec);
+            LOG_DEBUG("[handle_local_process] id =%u, ec = %s" % id_ % ec);
 
             if (ec) {
                 response_error(ec);
@@ -120,7 +120,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_F(Logger::kLevelDebug, "[handle_send_response_head] id =%u, ec = %s, bytes_transferred = %d" 
+            LOG_DEBUG("[handle_send_response_head] id =%u, ec = %s, bytes_transferred = %d" 
                 % id_ % ec % bytes_transferred);
 
             if (ec) {
@@ -144,7 +144,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_F(Logger::kLevelDebug, "[handle_send_response_data] id =%u, ec = %s, bytes_transferred = %d" 
+            LOG_DEBUG("[handle_send_response_data] id =%u, ec = %s, bytes_transferred = %d" 
                 % id_ % ec % bytes_transferred);
 
             if (ec) {
@@ -166,7 +166,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_F(Logger::kLevelDebug, "[handle_response_error] id =%u, ec = %s, bytes_transferred = %d" 
+            LOG_DEBUG("[handle_response_error] id =%u, ec = %s, bytes_transferred = %d" 
                 % id_ % ec % bytes_transferred);
 
             delete this;
@@ -175,7 +175,7 @@ namespace util
        void RtspServer::handle_error(
             error_code const & ec)
         {
-            LOG_F(Logger::kLevelDebug, "[handle_error] id =%u, ec = %s" % id_ % ec);
+            LOG_DEBUG("[handle_error] id =%u, ec = %s" % id_ % ec);
 
             on_error(ec);
             delete this;

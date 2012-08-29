@@ -10,10 +10,11 @@
 using namespace util::stream;
 using namespace util::protocol::http_error;
 
-#include <framework/logger/Logger.h>
 #include <framework/system/LogicError.h>
-#include <framework/logger/LoggerFormatRecord.h>
-#include <framework/logger/LoggerSection.h>
+#include <framework/logger/Logger.h>
+#include <framework/logger/FormatRecord.h>
+#include <framework/logger/DataRecord.h>
+#include <framework/logger/Section.h>
 #include <framework/string/Url.h>
 #include <framework/network/NetName.h>
 using namespace framework::logger;
@@ -123,7 +124,7 @@ namespace util
             HttpRequest const & request, 
             error_code & ec)
         {
-            LOG_F(Logger::kLevelDebug, "[open] (id = %u, url = %s)" 
+            LOG_DEBUG("[open] (id = %u, url = %s)" 
                 % id_ % request.head().path.c_str());
 
             post_reqeust(request, false, ec);
@@ -157,7 +158,7 @@ namespace util
             HttpRequest const & request, 
             response_type const & resp)
         {
-            LOG_F(Logger::kLevelDebug, "[async_open] (id = %u, url = %s)" 
+            LOG_DEBUG("[async_open] (id = %u, url = %s)" 
                 % id_ % request.head().path);
 
             error_code ec;
@@ -184,7 +185,7 @@ namespace util
             HttpRequest const & request, 
             boost::system::error_code & ec)
         {
-            LOG_F(Logger::kLevelDebug, "[fetch] (id = %u, url = %s)" 
+            LOG_DEBUG("[fetch] (id = %u, url = %s)" 
                 % id_ % request.head().path.c_str());
 
             post_reqeust(request, true, ec);
@@ -214,7 +215,7 @@ namespace util
             HttpRequest const & request, 
             response_type const & resp)
         {
-            LOG_F(Logger::kLevelDebug, "[async_fetch] (id = %u, url = %s)" 
+            LOG_DEBUG("[async_fetch] (id = %u, url = %s)" 
                 % id_ % request.head().path);
 
             error_code ec;
@@ -453,14 +454,7 @@ namespace util
                             boost::asio::read(*this, response_.data(), boost::asio::transfer_at_least(4096), ec1);
                             if (block)
                                 set_non_block(false, ec1);
-                            if (response_.data().size() > 4096) {
-                                LOG_HEX(Logger::kLevelDebug, 
-                                    boost::asio::buffer_cast<unsigned char const *>(response_.data().data()), 4096);
-                                LOG_STR(Logger::kLevelDebug, (format(response_.data().size() - 4096) + " bytes remain").c_str());
-                            } else {
-                                LOG_HEX(Logger::kLevelDebug, 
-                                    boost::asio::buffer_cast<unsigned char const *>(response_.data().data()), response_.data().size());
-                            }
+                            LOG_DATA(Debug, ("recving_resp_head", response_.data().data()));
                         }
                         break;
                     }
@@ -618,14 +612,7 @@ namespace util
                     boost::asio::read(*this, response_.data(), boost::asio::transfer_at_least(4096), ec1);
                     if (block)
                         set_non_block(false, ec1);
-                    if (response_.data().size() > 4096) {
-                        LOG_HEX(Logger::kLevelDebug, 
-                            boost::asio::buffer_cast<unsigned char const *>(response_.data().data()), 4096);
-                        LOG_STR(Logger::kLevelDebug, (format(response_.data().size() - 4096) + " bytes remain").c_str());
-                    } else {
-                        LOG_HEX(Logger::kLevelDebug, 
-                            boost::asio::buffer_cast<unsigned char const *>(response_.data().data()), response_.data().size());
-                    }
+                    LOG_DATA(Debug, ("recving_resp_head", response_.data().data()));
                 }
                 if (!request.is_fetch 
                     || ec != boost::asio::error::eof
@@ -890,7 +877,7 @@ namespace util
             char const * function, 
             boost::system::error_code const & ec)
         {
-            LOG_F(Logger::kLevelDebug1, "[%s] (id = %u, status = %s, ec = %s)" 
+            LOG_TRACE("[%s] (id = %u, status = %s, ec = %s)" 
                 % function % id_ % con_status_str[status_] % ec.message());
         }
 
@@ -899,7 +886,7 @@ namespace util
             char const * function, 
             boost::system::error_code const & ec)
         {
-            LOG_F(Logger::kLevelDebug1, "[%s] (id = %u, req_id = %u, req_status = %s, ec = %s)" 
+            LOG_TRACE("[%s] (id = %u, req_id = %u, req_status = %s, ec = %s)" 
                 % function % id_ % request.id % req_status_str[request.status] % ec.message());
         }
 

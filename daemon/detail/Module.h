@@ -47,11 +47,6 @@ namespace util
                     return daemon_.config();
                 }
 
-                framework::logger::Logger & logger()
-                {
-                    return daemon_.logger();
-                }
-
                 std::string const & name() const
                 {
                     return name_;

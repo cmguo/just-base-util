@@ -3,8 +3,9 @@
 #include "util/Util.h"
 #include "util/daemon/Daemon.h"
 
-#include <framework/logger/LoggerStreamRecord.h>
-using framework::logger::Logger;
+#include <framework/logger/Logger.h>
+#include <framework/logger/StreamRecord.h>
+using namespace framework::logger;
 
 FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("Daemon", 0);
 
@@ -39,10 +40,10 @@ namespace util
                 boost::system::error_code ec;
                 Module * module = first_module_;
                 while (module) {
-                    LOG_S(Logger::kLevelEvent, "starting module " << module->name());
+                    LOG_INFO("starting module " << module->name());
                     ec = module->startup();
                     if (ec) {
-                        LOG_S(Logger::kLevelAlarm, "start module " << module->name() << " failed: " << ec.message());
+                        LOG_WARN("start module " << module->name() << " failed: " << ec.message());
                         break;
                     }
                     module = module->next_;
@@ -50,7 +51,7 @@ namespace util
                 if (module) {
                     module = module->prev_;
                     while (module) {
-                        LOG_S(Logger::kLevelEvent, "shutdowning module " << module->name());
+                        LOG_INFO("shutdowning module " << module->name());
                         module->shutdown();
                         module = module->prev_;
                     }
@@ -67,7 +68,7 @@ namespace util
                     return;
                 Module * module = last_module_;
                 while (module) {
-                    LOG_S(Logger::kLevelEvent, "shutdowning module " << module->name());
+                    LOG_INFO("shutdowning module " << module->name());
                     module->shutdown();
                     module = module->prev_;
                 }

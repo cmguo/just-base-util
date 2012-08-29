@@ -5,8 +5,9 @@
 #include "util/protocol/http/HttpError.h"
 
 #include <framework/logger/Logger.h>
-#include <framework/logger/LoggerFormatRecord.h>
-#include <framework/logger/LoggerSection.h>
+#include <framework/logger/FormatRecord.h>
+#include <framework/logger/DataRecord.h>
+#include <framework/logger/Section.h>
 #include <framework/system/LogicError.h>
 #include <framework/string/Url.h>
 #include <framework/string/Format.h>
@@ -136,7 +137,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_F(Logger::kLevelDebug, "[handle_async] (id = %u, status = %s, ec = %s, bytes_transferred = %s)" 
+            LOG_DEBUG("[handle_async] (id = %u, status = %s, ec = %s, bytes_transferred = %s)" 
                 %id_ % state_str[state_] % ec.message() % bytes_transferred.to_string());
 
             if (watch_state_ == broken) {
@@ -155,14 +156,7 @@ namespace util
                     boost::asio::read(http_to_client_, response_.data(), boost::asio::transfer_at_least(4096), ec1);
                     if (block)
                         http_to_client_.set_non_block(false, ec1);
-                    if (response_.data().size() > 4096) {
-                        LOG_HEX(Logger::kLevelDebug, 
-                            boost::asio::buffer_cast<unsigned char const *>(response_.data().data()), 4096);
-                        LOG_STR(Logger::kLevelDebug, (format(response_.data().size() - 4096) + " bytes remain").c_str());
-                    } else {
-                        LOG_HEX(Logger::kLevelDebug, 
-                            boost::asio::buffer_cast<unsigned char const *>(response_.data().data()), response_.data().size());
-                    }
+                    LOG_DATA(Debug, ("receiving_request_head", response_.data().data()));
                 }
                 on_error(ec);
                 switch (state_) {
@@ -323,7 +317,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_F(Logger::kLevelDebug, "[handle_watch] (id = %u, status = %s, ec = %s)" 
+            LOG_DEBUG("[handle_watch] (id = %u, status = %s, ec = %s)" 
                 %id_ % state_str[state_] % ec.message());
 
             if (state_ == exiting) {
