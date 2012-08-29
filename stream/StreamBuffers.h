@@ -23,8 +23,7 @@ namespace util
 
         public:
             StreamBuffers()
-                : count_(0)
-                , buffers_(NULL)
+                : buf_(NULL)
             {
             }
 
@@ -33,41 +32,44 @@ namespace util
             >
             StreamBuffers(
                 BufferSequence const & buffers)
-                : count_(0)
-                , buffers_(NULL)
+                : buf_(NULL)
             {
                 typename BufferSequence::const_iterator beg = buffers.begin();
                 typename BufferSequence::const_iterator end = buffers.end();
-                count_ = std::distance(beg, end);
-                if (count_ > 0) {
-                    buffers_ = new Buffer[count_];
-                    std::copy(beg, end, buffers_);
+                size_t count = std::distance(beg, end);
+                if (count > 0) {
+                    buf_ = new Buf;
+                    buf_->nref = 1;
+                    buf_->count = count;
+                    buf_->buffers = new Buffer[count];
+                    std::copy(beg, end, buf_->buffers);
                 }
             }
 
             StreamBuffers(
                 StreamBuffers const & r)
-                : count_(0)
-                , buffers_(NULL)
+                : buf_(r.buf_)
             {
-                swap(*this, r);
+                ++buf_->nref;
             }
 
             ~StreamBuffers()
             {
-                if (buffers_)
-                    delete [] buffers_;
+                if (buf_ && --buf_->nref) {
+                    delete [] buf_->buffers;
+                    delete buf_;
+                }
             }
 
         public:
             const_iterator begin() const
             {
-                return buffers_;
+                return buf_->buffers;
             }
 
             const_iterator end() const
             {
-                return buffers_ + count_;
+                return buf_->buffers + buf_->count;
             }
 
         public:
@@ -77,17 +79,15 @@ namespace util
             }
 
         private:
-            friend void swap(
-                StreamBuffers const & l, 
-                StreamBuffers const & r)
+            struct Buf
             {
-                std::swap(l.count_, r.count_);
-                std::swap(l.buffers_, r.buffers_);
-            }
+                size_t nref;
+                size_t count;
+                Buffer * buffers;
+            };
 
         private:
-            mutable size_t count_;
-            mutable Buffer * buffers_;
+            Buf * buf_;
         };
 
         typedef StreamBuffers<boost::asio::const_buffer> StreamConstBuffers;
