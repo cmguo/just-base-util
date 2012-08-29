@@ -55,7 +55,7 @@ namespace util
 
             ~StreamBuffers()
             {
-                if (buf_ && --buf_->nref) {
+                if (buf_ && --buf_->nref == 0) {
                     delete [] buf_->buffers;
                     delete buf_;
                 }
