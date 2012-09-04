@@ -114,10 +114,10 @@ namespace util
             {
                 Value & v = value_stack_.back();
                 if (v.type == Value::t_none) {
+                    t.reset();
+                } else {
                     t.reset(T());
                     (*this) >> t.get();
-                } else {
-                    t.reset();
                 }
             }
 
@@ -210,9 +210,9 @@ namespace util
                         }
                     }
                 }
-                if (v.type == Value::t_none) {
-                    this->state(2);
-                }
+                //if (v.type == Value::t_none) {
+                //    this->state(2);
+                //}
                 value_stack_.push_back(v);
             }
 
