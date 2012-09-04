@@ -3,16 +3,11 @@
 #ifndef _UTIL_ARCHIVE_BASIC_O_ARCHIVE_H_
 #define _UTIL_ARCHIVE_BASIC_O_ARCHIVE_H_
 
-#include "util/serialization/Serialization.h"
-#include "util/serialization/NVPair.h"
-#include "util/serialization/stl/string.h"
-#include "util/serialization/Array.h"
+#include "util/archive/BasicArchive.h"
 
 #include <boost/mpl/if.hpp>
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/is_enum.hpp>
-
-#include <vector>
 
 namespace util
 {
@@ -49,25 +44,14 @@ namespace util
          */
         template <typename Archive>
         class BasicOArchive
+            : public BasicArchive<Archive>
         {
         public:
             typedef boost::mpl::true_ is_saving; ///< 表明该归档是用于保存数据的
             typedef boost::mpl::false_ is_loading; ///< 表明该归档“不是”用于加载数据的
             friend struct SaveAccess;
 
-        protected:
-            BasicOArchive()
-                : state_(0)
-            {
-            }
-
         public:
-            /// 获取派生类的指针
-            Archive * This()
-            {
-                return static_cast<Archive *>(this);
-            }
-
             /// 处理指针序列化
             struct save_pointer
             {
@@ -220,43 +204,9 @@ namespace util
                 return *This();
             }
 
-            operator bool () const
-            {
-                return state_ == 0;
-            }
-
-            bool operator ! () const
-            {
-                return state_ != 0;
-            }
-
-            void fail()
-            {
-                state_ = 2;
-            }
-
-            bool failed()
-            {
-                return state_ == 2;
-            }
-
-            void clear()
-            {
-                state_ = 0;
-            }
-
-#ifdef SERIALIZATION_DEGUG
-            std::string failed_item_path() const
-            {
-                std::string path;
-                for (std::vector<std::string>::const_iterator i = path_.begin(); i != path_.end(); ++i) {
-                    path += "/";
-                    path += *i;
-                }
-                return path;
-            }
-#endif
         protected:
+            using BasicArchive<Archive>::This;
+
             /// 向流中写入标准库字符串
             template<class _Elem, class _Traits, class _Ax>
             void save(
@@ -272,25 +222,20 @@ namespace util
             void save_wrapper(
                 util::serialization::NVPair<T> const & t)
             {
-#ifdef SERIALIZATION_DEGUG
-                path_.push_back(t.name());
-#endif
+                this->path_push();
 
                 This()->save_start(t.name());
                 This()->operator << (t.data());
                 This()->save_end(t.name());
 
-#ifdef SERIALIZATION_DEGUG
-                if (state_ == 0)
-                    path_.pop_back();
-#endif
+                this->path_pop();
             }
 
             void save_binary(
                 char const * p, 
                 std::size_t n)
             {
-                state_ = 1;
+                this->state(1);
             }
 
             void save_start(
@@ -302,31 +247,6 @@ namespace util
                 std::string const & name)
             {
             }
-
-            void sub_start()
-            {
-            }
-
-            void sub_end()
-            {
-            }
-
-        protected:
-            int state() const
-            {
-                return state_;
-            }
-
-            void state(
-                int s)
-            {
-                state_ = s;
-            }
-
-        private:
-            int state_;
-
-            std::vector<std::string> path_;
         };
 
     } // namespace archive

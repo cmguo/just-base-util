@@ -3,10 +3,7 @@
 #ifndef _UTIL_ARCHIVE_BASIC_I_ARCHIVE_H_
 #define _UTIL_ARCHIVE_BASIC_I_ARCHIVE_H_
 
-#include "util/serialization/Serialization.h"
-#include "util/serialization/NVPair.h"
-#include "util/serialization/stl/string.h"
-#include "util/serialization/Array.h"
+#include "util/archive/BasicArchive.h"
 
 #include <boost/mpl/if.hpp>
 #include <boost/type_traits/is_pointer.hpp>
@@ -49,25 +46,14 @@ namespace util
          */
         template <typename Archive>
         class BasicIArchive
+            : public BasicArchive<Archive>
         {
         public:
             typedef boost::mpl::false_ is_saving; ///< 表明该归档“不是”用于保存数据的
             typedef boost::mpl::true_ is_loading; ///< 表明该归档是用于加载数据的
             friend struct LoadAccess;
 
-        protected:
-            BasicIArchive()
-                : state_(0)
-            {
-            }
-
         public:
-            /// 获取派生类的指针
-            Archive * This()
-            {
-                return static_cast<Archive *>(this);
-            }
-
             /// 处理指针类型的读
             struct load_pointer
             {
@@ -203,7 +189,7 @@ namespace util
             Archive & operator >> (
                 T const & t)
             {
-                if (state_) return *This();
+                if (this->state()) return *This();
                 typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_<
                     boost::is_pointer<T>, 
                     load_pointer, 
@@ -225,43 +211,9 @@ namespace util
                 return This()->operator >> (t);
             }
 
-            operator bool () const
-            {
-                return state_ == 0;
-            }
-
-            bool operator ! () const
-            {
-                return state_ != 0;
-            }
-
-            void fail()
-            {
-                state_ = 2;
-            }
-
-            bool failed()
-            {
-                return state_ == 2;
-            }
-
-            void clear()
-            {
-                state_ = 0;
-            }
-
-#ifdef SERIALIZATION_DEGUG
-            std::string failed_item_path() const
-            {
-                std::string path;
-                for (std::vector<std::string>::const_iterator i = path_.begin(); i != path_.end(); ++i) {
-                    path += "/";
-                    path += *i;
-                }
-                return path;
-            }
-#endif
         protected:
+            using BasicArchive<Archive>::This;
+
             /// 从流中读出标准库字符串
             template<class _Elem, class _Traits, class _Ax>
             void load(
@@ -269,13 +221,13 @@ namespace util
             {
                 typename std::basic_string<_Elem, _Traits, _Ax>::size_type len;
                 This()->operator >> (len);
-                if (state_) return;
+                if (this->state()) return;
                 std::size_t l = 0;
                 if (len > 1024) {
                     for (; len > 1024; l += 1024, len -= 1024) {
                         t.resize(l + 1024);
                         This()->load_binary(&t[l], sizeof(_Elem) * 1024);
-                        if (state_) return;
+                        if (this->state()) return;
                     }
                 }
                 t.resize(l + len);
@@ -287,25 +239,20 @@ namespace util
             void load_wrapper(
                 util::serialization::NVPair<T> & t)
             {
-#ifdef SERIALIZATION_DEGUG
-                path_.push_back(t.name());
-#endif
+                this->path_push();
 
                 this->This()->load_start(t.name());
                 This()->operator >> (t.data());
                 This()->load_end(t.name());
 
-#ifdef SERIALIZATION_DEGUG
-                if (state_ == 0)
-                    path_.pop_back();
-#endif
+                this->path_pop();
             }
 
             void load_binary(
                 char * p, 
                 std::size_t n)
             {
-                state_ = 1;
+                this->state(1);
             }
 
             void load_start(
@@ -317,31 +264,6 @@ namespace util
                 std::string const & name)
             {
             }
-
-            void sub_start()
-            {
-            }
-
-            void sub_end()
-            {
-            }
-
-        protected:
-            int state() const
-            {
-                return state_;
-            }
-
-            void state(
-                int s)
-            {
-                state_ = s;
-            }
-
-        private:
-            int state_;
-
-            std::vector<std::string> path_;
         }; // class basic_iarchive
 
     }  // namespace archive
