@@ -299,6 +299,7 @@ namespace util
                         state_ = stopped;
                         if (watch_state_ != watching) {
                             // restart
+                            watch_state_ = watch_stopped;
                             handle_async(ec, Size());
                         } else {
                             error_code ec;
@@ -326,9 +327,13 @@ namespace util
                 // restart
                 watch_state_ = watch_stopped;
                 start();
-            } else if (ec != boost::asio::error::operation_aborted) {
-                watch_state_ = broken;
-                on_broken_pipe();
+            } else if (ec 
+                && ec != boost::asio::error::eof
+                && ec != boost::asio::error::operation_aborted) {
+                    watch_state_ = broken;
+                    on_broken_pipe();
+            } else {
+                watch_state_ = watch_stopped;
             }
         }
 

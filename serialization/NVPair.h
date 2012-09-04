@@ -65,6 +65,9 @@ namespace util
 #define SERIALIZATION_NVP(v) \
     util::serialization::make_nvp(STRINGLIZE(v), v)
 
+#define SERIALIZATION_NVP_NAME(n, v) \
+    util::serialization::make_nvp(n, v)
+
 #define SERIALIZATION_NVP_1(t, v) \
     util::serialization::make_nvp(STRINGLIZE(v), t.v)
 
