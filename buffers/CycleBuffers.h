@@ -446,22 +446,7 @@ namespace util
                     boost::asio::const_buffer buffer(*iter);
                     capacity_ += boost::asio::buffer_size(buffer);
                 }
-                write_.at_end = false;
-                write_.begin_remainder = buffers_.begin();
-                read_.at_end = true;
-                read_.begin_remainder = buffers_.begin();
-                if (buffers_.begin() == buffers_.end()) {
-                    write_.at_end = true;
-                } else {
-                    write_.first = boost::asio::buffer(*buffers_.begin());
-                    ++write_.begin_remainder;
-                    if (write_.begin_remainder == buffers_.end())
-                        write_.begin_remainder = buffers_.begin();
-                    read_.first = boost::asio::buffer(*buffers_.begin(), 0);
-                    ++read_.begin_remainder;
-                    if (read_.begin_remainder == buffers_.end())
-                        read_.begin_remainder = buffers_.begin();
-                }
+                reset();
             }
             
             // Copy constructor.
@@ -624,6 +609,26 @@ namespace util
                 assert(wpos == out_position());
             }
 
+            void reset()
+            {
+                write_.at_end = false;
+                write_.begin_remainder = buffers_.begin();
+                read_.at_end = true;
+                read_.begin_remainder = buffers_.begin();
+                if (buffers_.begin() == buffers_.end()) {
+                    write_.at_end = true;
+                } else {
+                    write_.first = boost::asio::buffer(*buffers_.begin());
+                    ++write_.begin_remainder;
+                    if (write_.begin_remainder == buffers_.end())
+                        write_.begin_remainder = buffers_.begin();
+                    read_.first = boost::asio::buffer(*buffers_.begin(), 0);
+                    ++read_.begin_remainder;
+                    if (read_.begin_remainder == buffers_.end())
+                        read_.begin_remainder = buffers_.begin();
+                }
+            }
+
         private:
             virtual int_type underflow()
             {
@@ -669,8 +674,10 @@ namespace util
                 } else if (dir == std::ios_base::cur) {
                     if (mode == std::ios_base::in) {
                         pos = read_.position() + off;
-                    } else {
+                    } else if (mode == std::ios_base::out) {
                         pos = write_.position() + off;
+                    } else {
+                        return pos_type(-1);
                     }
                 } else {
                     return pos_type(-1);
@@ -715,6 +722,13 @@ namespace util
                         shift(write_, read_, pos - write_.position());
                     }
                     assert(pos == write_.position());
+                } else { // mode == std::ios_base::in | std::ios_base::out
+                    reset();
+                    pos_type pos1 = pos % capacity_;
+                    shift(write_, read_, pos1);
+                    shift(read_, write_, pos1);
+                    write_.position(pos);
+                    read_.position(pos);
                 }
                 return pos;
             }
@@ -734,7 +748,7 @@ namespace util
 
             void check()
             {
-                assert(write_.position() <= read_.position() + (std::streamoff)capacity_);
+                assert(write_.position() - read_.position() <= capacity_);
                 if (read_.begin_remainder == write_.begin_remainder) {
                     assert(this->egptr() == this->pbase() || this->epptr() == this->eback());
                 }
