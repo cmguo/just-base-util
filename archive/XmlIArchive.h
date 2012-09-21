@@ -121,6 +121,19 @@ namespace util
                 }
             }
 
+            /// 从流中读出可选值
+            template<class T>
+            void load(
+                util::serialization::optional_ref<T> & t)
+            {
+                Value & v = value_stack_.back();
+                if (v.type == Value::t_none) {
+                    t.reset();
+                } else {
+                    t.serialize(*this);
+                }
+            }
+
             using StreamIArchive<XmlIArchive<_Elem, _Traits>, _Elem, _Traits>::load;
 
             void start_abnormal_collection()

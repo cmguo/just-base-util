@@ -21,6 +21,19 @@ namespace util
         template<
             class _T
         >
+        struct optional_ref;
+
+        template<
+            class _T
+        >
+        struct is_primitive<optional_ref<_T> >
+            : boost::true_type
+        {
+        };
+
+        template<
+            class _T
+        >
         struct optional_ref
         {
             optional_ref(
@@ -29,6 +42,11 @@ namespace util
                 : t_(t)
                 , ver_(ver)
             {
+            }
+
+            void reset()
+            {
+                t_ = _T();
             }
 
             template <
