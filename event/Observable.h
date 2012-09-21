@@ -22,9 +22,23 @@ namespace util
                 EventId const & e, 
                 Listener const & l);
 
+            template <typename E>
+            void on(
+                Listener const & l)
+            {
+                on(E::id, l);
+            }
+
             void un(
                 EventId const & e, 
                 Listener const & l);
+
+            template <typename E>
+            void un(
+                Listener const & l)
+            {
+                un(E::id, l);
+            }
 
         protected:
             void raise(
