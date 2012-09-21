@@ -9,8 +9,6 @@
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/is_enum.hpp>
 
-#include <vector>
-
 namespace util
 {
     namespace archive

@@ -8,7 +8,9 @@
 #include "util/serialization/stl/string.h"
 #include "util/serialization/Array.h"
 
-#include <vector>
+#if (defined _DEBUG) || (defined DEBUG)
+#  define SERIALIZATION_DEBUG
+#endif
 
 namespace util
 {
