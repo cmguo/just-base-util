@@ -27,6 +27,8 @@ namespace util
                 , delimiter_(none)
                 , os_(os)
                 , local_os_(false)
+                , space_(" ")
+                , newline_("\n")
             {
             }
 
@@ -36,6 +38,8 @@ namespace util
                 , delimiter_(none)
                 , os_(*new std::basic_ostream<_Elem, _Traits>(&buf))
                 , local_os_(true)
+                , space_(" ")
+                , newline_("\n")
             {
             }
 
@@ -70,11 +74,39 @@ namespace util
 
             using StreamOArchive<TextOArchive>::save;
 
+            void save_start(
+                std::string const & name)
+            {
+                if (!delim_.empty()) {
+                    newtoken();
+                    os_ << name << delim_;
+                    delimiter_ = none;
+                }
+            }
+
         public:
             /// 以换行符为分隔符，下一个变量将另起一行输出，然后自动恢复为空格分隔符
             void newline()
             {
                 delimiter_ = eol;
+            }
+
+            void set_delim(
+                std::string const & s)
+            {
+                delim_ = s;
+            }
+
+            void set_space(
+                std::string const & s)
+            {
+                space_ = s;
+            }
+
+            void set_newline(
+                std::string const & s)
+            {
+                newline_ = s;
             }
 
         private:
@@ -95,13 +127,13 @@ namespace util
                     this->state(1);
                     break;
                 case eol:
-                    if (!os_.put('\n'))
+                    if (!(os_ << newline_))
                         this->state(1);
                     // 自动恢复为空格分隔符
                     delimiter_ = space;
                     break;
                 case space:
-                    if (!os_.put(' '))
+                    if (!(os_ << space_))
                         this->state(1);
                     break;
                 case none:
@@ -113,6 +145,9 @@ namespace util
         private:
             std::basic_ostream<_Elem, _Traits> & os_;
             bool local_os_;
+            std::string delim_;
+            std::string space_;
+            std::string newline_;
         };
 
     }  // namespace archive

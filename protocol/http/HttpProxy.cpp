@@ -293,7 +293,8 @@ namespace util
                                 delete this;
                             } else {
                                 error_code ec;
-                                http_to_client_.cancel(ec);
+                                http_to_client_.shutdown(boost::asio::socket_base::shutdown_send, ec);
+                                http_to_client_.boost::asio::ip::tcp::socket::cancel(ec);
                             }
                     } else {
                         state_ = stopped;
