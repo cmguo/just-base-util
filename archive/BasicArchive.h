@@ -42,7 +42,6 @@ namespace util
             void version(
                 size_t v)
             {
-                assert(version_ == 0);
                 version_ = v;
             }
 
