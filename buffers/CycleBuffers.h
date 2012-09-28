@@ -748,7 +748,7 @@ namespace util
 
             void check()
             {
-                assert(write_.position() - read_.position() <= capacity_);
+                assert((size_t)(write_.position() - read_.position()) <= capacity_);
                 if (read_.begin_remainder == write_.begin_remainder) {
                     assert(this->egptr() == this->pbase() || this->epptr() == this->eback());
                 }
