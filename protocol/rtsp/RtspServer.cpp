@@ -26,7 +26,7 @@ namespace util
     namespace protocol
     {
 
-        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("RtspServer", 2);
+        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.protocol.RtspServer", Warn);
 
         static size_t const DATA_BUFFER_SIZE = 10240;
 

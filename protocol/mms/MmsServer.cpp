@@ -28,7 +28,7 @@ namespace util
     namespace protocol
     {
 
-        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("MmsServer", 2);
+        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.protocol.MmsServer", Warn);
 
         static size_t const DATA_BUFFER_SIZE = 10240;
 

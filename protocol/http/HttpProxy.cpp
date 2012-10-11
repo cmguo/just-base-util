@@ -27,7 +27,7 @@ namespace util
     namespace protocol
     {
 
-        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("HttpProxy", 2);
+        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.protocol.HttpProxy", Warn);
 
         std::string const HttpProxy::state_str[] = {
             "stopped", 
