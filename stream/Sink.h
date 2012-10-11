@@ -18,6 +18,11 @@ namespace util
             : virtual public Base
         {
         public:
+            typedef StreamConstBuffers buffers_t;
+
+            typedef StreamHandler handler_t;
+
+        public:
             Sink(
                 boost::asio::io_service & io_svc)
             {
@@ -32,7 +37,7 @@ namespace util
             {
                 boost::system::error_code ec;
                 std::size_t bytes_transferred = 
-                    private_write_some(StreamConstBuffers(buffers), ec);
+                    private_write_some(buffers_t(buffers), ec);
                 boost::asio::detail::throw_error(ec);
                 return bytes_transferred;
             }
@@ -45,7 +50,7 @@ namespace util
                 boost::system::error_code& ec)
             {
                 std::size_t bytes_transferred = 
-                    private_write_some(StreamConstBuffers(buffers), ec);
+                    private_write_some(buffers_t(buffers), ec);
                 return bytes_transferred;
             }
 
@@ -57,8 +62,8 @@ namespace util
                 WriteHandler handler)
             {
                 private_async_write_some(
-                    StreamConstBuffers(buffers), 
-                    StreamHandler(handler));
+                    buffers_t(buffers), 
+                    handler_t(handler));
             }
 
         protected:
@@ -67,16 +72,16 @@ namespace util
                 boost::system::error_code & ec);
 
             virtual std::size_t private_write_some(
-                StreamConstBuffers const & buffers,
+                buffers_t const & buffers,
                 boost::system::error_code & ec);
 
             virtual void private_async_write_some(
                 boost::asio::const_buffer const & buffer, 
-                StreamHandler const & handler);
+                handler_t const & handler);
 
             virtual void private_async_write_some(
-                StreamConstBuffers const & buffers, 
-                StreamHandler const & handler);
+                buffers_t const & buffers, 
+                handler_t const & handler);
         };
 
     } // namespace stream
