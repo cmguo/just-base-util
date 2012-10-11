@@ -21,14 +21,14 @@ namespace util
 
         public:
             template <typename E>
-            E * cast()
+            E * as()
             {
                 assert(&E::id == id_);
                 return (&E::id == id_) ? (E *)(this) : NULL;
             }
 
             template <typename E>
-            E const * cast() const
+            E const * as() const
             {
                 assert(&E::id == id_);
                 return (&E::id == id_) ? (E const *)(this) : NULL;
