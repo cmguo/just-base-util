@@ -25,6 +25,10 @@ using namespace framework::system::logic_error;
 #include <boost/bind.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
+#include <boost/iostreams/stream.hpp>
+#include <boost/iostreams/categories.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 using namespace boost::system;
 using namespace boost::asio;
 
@@ -63,6 +67,11 @@ namespace util
             , is_keep_alive_(false)
             , req_id_(0)
             , num_sent_(0)
+            , m_stream_socket_(*this)
+            , m_chunked_source_(m_stream_socket_)
+            , m_chunked_sink_(m_stream_socket_)
+            , m_afi_(io_svc)
+            , m_afo_(io_svc)
         {
             static size_t gid = 0;
             id_ = gid++;
@@ -672,6 +681,18 @@ namespace util
                             return async_resume();
                         }
                     }
+                    { // ≥ı ºªØ
+                        std::string encoding = response_.head()["Content-Encoding"];
+                        if ("{gzip}" == encoding && m_afi_.empty()) {
+                            m_afi_.push(boost::iostreams::gzip_decompressor());
+                        }
+                        encoding = response_.head()["Transfer-Encoding"];
+                        if ("{chunked}" == encoding && (!m_afi_.is_complete())) {
+                            m_afi_.push((util::stream::Source &)m_chunked_source_);
+                        } else if (!m_afi_.is_complete()) {
+                            m_afi_.push((util::stream::Source &)m_stream_socket_);
+                        }
+                    }
                     if (request.is_fetch) {
                         request.status = recving_resp_data;
                         response_.clear_data();
@@ -682,7 +703,7 @@ namespace util
                                     boost::asio::transfer_at_least(content_length), 
                                     boost::bind(&HttpClient::handle_async_reqeust, this, pending, boost::bind(commit_stream<boost::asio::streambuf>, boost::ref(response_.data()), _1, _2)));
                                 break;
-                            // } else { no break;
+                                // } else { no break;
                             }
                         } else {
                             boost::asio::async_read(*this, response_.data(), 

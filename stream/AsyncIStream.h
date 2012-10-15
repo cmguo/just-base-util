@@ -77,8 +77,16 @@ namespace util
                     delete this;
                 } else {
                     try {
-                        //m_filtering_istream_->read(
-                        //    boost::asio::detail::buffer_cast_helper(m_buffers_.prepare(bytes_transferred)), bytes_transferred);
+                        using namespace boost::asio;
+
+                        typedef StreamMutableBuffers::const_iterator const_iterator;
+                        std::size_t total_size = 0;
+                        for (const_iterator iter = m_buffers_.begin(); iter != m_buffers_.end(); ++iter) {
+                            //total_size += private_read_some(*iter, ec);
+                            m_filtering_istream_->read(
+                                (char_type *)boost::asio::detail::buffer_cast_helper(*iter),
+                                (std::streamsize)boost::asio::detail::buffer_size_helper(*iter));
+                        }
                     } catch ( ... ) {
                         boost::system::error_code ec = util::stream::error::filter_source_error;
                         m_filtering_istream_->get_io_service().post(
@@ -94,8 +102,8 @@ namespace util
 
         private:
             async_basic_filtering_istream< char_type, device_type > *   m_filtering_istream_;
-            StreamMutableBuffers const &                        m_buffers_;
-            StreamHandler const &                               m_handler_;
+            StreamMutableBuffers const                          m_buffers_;
+            StreamHandler const                                 m_handler_;
         };
 
         template < typename Ch, typename DeviceType >

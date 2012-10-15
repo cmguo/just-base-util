@@ -7,6 +7,11 @@
 #include "util/protocol/http/HttpRequest.h"
 #include "util/protocol/http/HttpResponse.h"
 #include "util/protocol/http/HttpError.h"
+#include "util/stream/AsyncIStream.h"
+#include "util/stream/AsyncOStream.h"
+#include "util/stream/Socket.h"
+#include "util/stream/ChunkedSource.h"
+#include "util/stream/ChunkedSink.h"
 
 #include <framework/string/Url.h>
 
@@ -167,6 +172,17 @@ namespace util
             boost::system::error_code read_finish(
                 boost::system::error_code & ec, 
                 boost::uint64_t bytes_transferred);
+
+        public:
+            util::stream::async_filtering_istream &
+                get_response_stream() {
+                return m_afi_;
+            }
+
+            util::stream::async_filtering_ostream &
+                get_request_stream() {
+                return m_afo_;
+            }
 
         public:
             void close();
@@ -499,6 +515,13 @@ namespace util
 
         private:
             size_t id_;
+
+        private:
+            util::stream::Socket<HttpSocket>        m_stream_socket_;
+            util::stream::ChunkedSource             m_chunked_source_;
+            util::stream::ChunkedSink               m_chunked_sink_;
+            util::stream::async_filtering_istream   m_afi_;
+            util::stream::async_filtering_ostream   m_afo_;
         };
 
     } // namespace protocol
