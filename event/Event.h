@@ -23,15 +23,19 @@ namespace util
             template <typename E>
             E * as()
             {
-                assert(&E::id == id_);
                 return (&E::id == id_) ? (E *)(this) : NULL;
             }
 
             template <typename E>
             E const * as() const
             {
-                assert(&E::id == id_);
                 return (&E::id == id_) ? (E const *)(this) : NULL;
+            }
+
+            template <typename E>
+            bool is() const
+            {
+                return (&E::id == id_);
             }
 
         protected:
