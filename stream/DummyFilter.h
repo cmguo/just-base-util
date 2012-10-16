@@ -33,29 +33,33 @@ namespace util
             } call_type;
 
         public:
-            basic_dummy_filter(call_type type = buffered_call)
-                : m_call_type_(type)
+            basic_dummy_filter()
+                : is_async_(false)
+                , eof_(false)
                 , m_data_(new buffer_type)
-            {}
-
-            ~basic_dummy_filter() {
-                close_impl();
+            {
             }
 
-            void reset() {
+            ~basic_dummy_filter()
+            {
             }
 
+        public:
             template< typename Source >
             std::streamsize read(
                 Source & src, 
                 char_type * s, 
                 std::streamsize n)
             {
-                if (m_call_type_ == unbuffered_call && m_data_->size() == 0) {
-                    return boost::iostreams::read(src, s, n);
-                } else {
+                if (m_data_->size() > 0) {
                     std::streamsize amt = m_data_->sgetn(s, n);
                     return amt;
+                } else if (eof_) {
+                    return std::char_traits<char_type>::eof();
+                } else if (!is_async_) {
+                    return boost::iostreams::read(src, s, n);
+                } else {
+                    return 0;
                 }
             }
 
@@ -89,11 +93,7 @@ namespace util
             {
             }
 
-            void set_calltype(call_type type)
-            {
-                m_call_type_ = type;
-            }
-
+        public:
             const buffer_type & get_buffer() const
             {
                 return *m_data_;
@@ -104,19 +104,31 @@ namespace util
                 return *m_data_;
             }
 
-            call_type get_call_type() const
+            void begin_async()
             {
-                return m_call_type_;
+                is_async_ = true;
             }
 
-            void set_call_type(
-                call_type calltype) {
-                m_call_type_ = calltype;
+            void end_async()
+            {
+                is_async_ = false;
+            }
+
+            void set_eof()
+            {
+                eof_ = true;
+            }
+
+            bool is_eof() const
+            {
+                return eof_;
             }
 
         private:
-            call_type                       m_call_type_;
-            boost::shared_ptr<buffer_type>  m_data_;
+            call_type m_call_type_;
+            bool is_async_;
+            bool eof_;
+            boost::shared_ptr<buffer_type> m_data_;
         };
 
         typedef basic_dummy_filter< char >    MDummyFilter;

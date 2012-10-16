@@ -32,32 +32,24 @@ namespace util
             {
                 using namespace boost::asio;
 
-                if (sink_.is_complete() && sink_.size() > 1) {
-                    basic_dummy_filter<char> & dummy = 
-                        *sink_.template component<basic_dummy_filter<char> >(sink_.size() - 2);
-                    Sink & device = 
-                        *sink_.template component<Sink>(sink_.size() - 1);
-                    dummy.set_call_type(dummy.buffered_call);
+                basic_dummy_filter<char> & dummy = 
+                    *sink_.template component<basic_dummy_filter<char> >(sink_.size() - 2);
+                Sink & device = 
+                    *sink_.template component<Sink>(sink_.size() - 1);
 
-                    typedef StreamConstBuffers::const_iterator const_iterator;
-                    for (const_iterator iter = buffers_.begin(); iter != buffers_.end(); ++iter) {
-                        try {
-                            sink_.write(
-                                boost::asio::buffer_cast<char const *>(*iter),
-                                boost::asio::buffer_size(*iter));
-                        } catch ( ... ) {
-                        }
-                        bytes_write_ += boost::asio::buffer_size(*iter);
+                typedef StreamConstBuffers::const_iterator const_iterator;
+                for (const_iterator iter = buffers_.begin(); iter != buffers_.end(); ++iter) {
+                    try {
+                        sink_.write(
+                            boost::asio::buffer_cast<char const *>(*iter),
+                            boost::asio::buffer_size(*iter));
+                    } catch ( ... ) {
                     }
-                    // 过滤完毕，获取已经填充的过滤缓冲区一起发送发送
-                    device.async_write_some(
-                        dummy.get_buffer().data(), boost::bind(boost::ref(*this), _1, _2));
-                } else {
-                    boost::system::error_code ec = util::stream::error::chain_is_not_complete;
-                    sink_.get_io_service().post(
-                        boost::asio::detail::bind_handler(handler_, ec, 0));
-                    delete this;
+                    bytes_write_ += boost::asio::buffer_size(*iter);
                 }
+                // 过滤完毕，获取已经填充的过滤缓冲区一起发送发送
+                device.async_write_some(
+                    dummy.get_buffer().data(), boost::bind(boost::ref(*this), _1, _2));
             }
 
             void operator()(
@@ -106,31 +98,27 @@ namespace util
             StreamConstBuffers const & buffers, 
             boost::system::error_code & ec)
         {
+            assert(is_complete() && size() > 1);
+
             using namespace boost::asio;
 
-            typedef StreamConstBuffers::const_iterator const_iterator;
-            std::size_t bytes_transferred = 0;
+            std::size_t bytes_write = 0;
 
-            if (is_complete() && size() > 1) {
-                (component< basic_dummy_filter< char_type > >(size() - 2))->set_call_type(
-                    basic_dummy_filter< char_type >::buffered_call);
-                for (const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
-                    try {
-                        write(
-                            (const char *)boost::asio::detail::buffer_cast_helper(*iter),
-                            boost::asio::detail::buffer_size_helper(*iter));
-                        flush();
-                    } catch ( ... ) {
-                        ec = util::stream::error::filter_sink_error;
-                        break;
-                    }
-                    bytes_transferred += boost::asio::detail::buffer_size_helper(*iter);
+            typedef StreamConstBuffers::const_iterator const_iterator;
+            for (const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
+                try {
+                    write(
+                        (const char *)boost::asio::detail::buffer_cast_helper(*iter),
+                        boost::asio::detail::buffer_size_helper(*iter));
+                    flush();
+                } catch ( ... ) {
+                    ec = util::stream::error::filter_sink_error;
+                    break;
                 }
-            } else {
-                ec = util::stream::error::chain_is_not_complete;
+                bytes_write += boost::asio::detail::buffer_size_helper(*iter);
             }
 
-            return bytes_transferred;
+            return bytes_write;
         }
 
         // 内部filter设置类型为buffered_call
@@ -138,6 +126,12 @@ namespace util
             StreamConstBuffers const & buffers, 
             StreamHandler const & handler)
         {
+            assert(is_complete() && size() > 1);
+
+            basic_dummy_filter<char> & dummy = 
+                *component<basic_dummy_filter<char> >(size() - 2);
+            dummy.begin_async();
+
             write_handler * process_handler =
                 new write_handler(*this, buffers, handler);
             process_handler->start();
