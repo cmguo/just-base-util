@@ -138,10 +138,12 @@ namespace util
 
             void start_abnormal_collection()
             {
+                if (this->state())
+                    return;
                 Value & vp = value_stack_.back();
                 Value v;
                 v.type = Value::t_set2;
-                v.attr = vp.elem->Value();
+                v.attr = vp.elem->Value(); // used attr as xml tag name
                 vp.elem = NULL;
                 value_stack_.push_back(v);
             }
