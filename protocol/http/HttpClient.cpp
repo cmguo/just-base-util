@@ -1,12 +1,12 @@
 // HttpClient.cpp
 
 #include "util/Util.h"
-#include "util/stream/StreamTransfer.h"
-#include "util/stream/StlStream.h"
 #include "util/protocol/http/HttpClient.h"
 #include "util/protocol/http/HttpError.h"
 #include "util/protocol/http/HttpRequest.h"
 #include "util/protocol/http/HttpResponse.h"
+#include "util/stream/StreamTransfer.h"
+#include "util/stream/StlStream.h"
 using namespace util::stream;
 using namespace util::protocol::http_error;
 
@@ -67,11 +67,11 @@ namespace util
             , is_keep_alive_(false)
             , req_id_(0)
             , num_sent_(0)
-            , m_stream_socket_(*this)
-            , m_chunked_source_(m_stream_socket_)
-            , m_chunked_sink_(m_stream_socket_)
-            , m_afi_(io_svc)
-            , m_afo_(io_svc)
+            , stream_(*this)
+            , chunked_source_(stream_)
+            , chunked_sink_(stream_)
+            , filter_source_(io_svc)
+            , filter_sink_(io_svc)
         {
             static size_t gid = 0;
             id_ = gid++;
@@ -360,7 +360,7 @@ namespace util
 
             switch (status_) {
                 case closed:
-                    dump("resume_connect1", ec);
+                    dump("resume_connect begin", ec);
                     status_ = connectting;
                     if (!addr_.host().empty()) {
                         connect(addr_, ec);
@@ -377,18 +377,19 @@ namespace util
                         }
                         // 如果失败，最后会把状态设置成broken，这里都设置为connectting
                     } else {
-                        dump("resume_connect", ec);
+                        dump("resume_connect direct finish", ec);
                         status_ = established;
                     }
                     break;
                 case connectting:
+                    dump("resume_connect resume", ec);
                     connect(addr_, ec); // 这里的addr_没有意义
                     if (ec) {
                         if (ec == boost::asio::error::in_progress) {
                             ec = boost::asio::error::would_block;
                         }
                     } else {
-                        dump("resume_connect", ec);
+                        dump("resume_connect succeed", ec);
                         status_ = established;
                     }
                     break;
@@ -397,7 +398,7 @@ namespace util
             }
 
             if (ec && ec != boost::asio::error::would_block) {
-                dump("resume_connect2", ec);
+                dump("resume_connect failed", ec);
                 status_ = broken;
                 broken_error_ = ec;
             }
@@ -474,6 +475,7 @@ namespace util
                         request.status = send_pending;
                         return resume(false, ec);
                     }
+                    set_response_stream(response_.head());
                     if (request.is_fetch) {
                         request.status = recving_resp_data;
                         response_.clear_data();
@@ -681,32 +683,21 @@ namespace util
                             return async_resume();
                         }
                     }
-                    { // 初始化
-                        std::string encoding = response_.head()["Content-Encoding"];
-                        if ("{gzip}" == encoding && m_afi_.empty()) {
-                            m_afi_.push(boost::iostreams::gzip_decompressor());
-                        }
-                        encoding = response_.head()["Transfer-Encoding"];
-                        if ("{chunked}" == encoding && (!m_afi_.is_complete())) {
-                            m_afi_.push((util::stream::Source &)m_chunked_source_);
-                        } else if (!m_afi_.is_complete()) {
-                            m_afi_.push((util::stream::Source &)m_stream_socket_);
-                        }
-                    }
+                    set_response_stream(response_.head());
                     if (request.is_fetch) {
                         request.status = recving_resp_data;
                         response_.clear_data();
                         if (response_.head().content_length.is_initialized()) {
                             boost::uint64_t content_length = response_.head().content_length.get();
                             if (content_length > 0) {
-                                boost::asio::async_read(*this, response_.data().prepare(content_length), 
+                                boost::asio::async_read(filter_source_, response_.data().prepare(content_length), 
                                     boost::asio::transfer_at_least(content_length), 
                                     boost::bind(&HttpClient::handle_async_reqeust, this, pending, boost::bind(commit_stream<boost::asio::streambuf>, boost::ref(response_.data()), _1, _2)));
                                 break;
-                                // } else { no break;
+                            // } else { no break;
                             }
                         } else {
-                            boost::asio::async_read(*this, response_.data(), 
+                            boost::asio::async_read(filter_source_, response_.data(), 
                                 boost::asio::transfer_all(), 
                                 boost::bind(&HttpClient::handle_async_reqeust, this, pending, _1));
                             break;
@@ -893,6 +884,31 @@ namespace util
             }
             return true;
         }
+
+        void HttpClient::set_request_stream(
+            HttpHead const & head)
+        {
+
+        }
+
+        void HttpClient::set_response_stream(
+            HttpHead const & head)
+        {
+            { // 初始化
+                filter_source_.reset();
+                std::string encoding = head.content_encoding.get_value_or("");
+                if ("gzip" == encoding && filter_source_.empty()) {
+                    filter_source_.push(boost::iostreams::gzip_decompressor());
+                }
+                encoding = head.transfer_encoding.get_value_or("");
+                if ("chunked" == encoding && (!filter_source_.is_complete())) {
+                    filter_source_.push((util::stream::Source &)chunked_source_);
+                } else if (!filter_source_.is_complete()) {
+                    filter_source_.push((util::stream::Source &)stream_);
+                }
+            }
+        }
+
 
         void HttpClient::dump(
             char const * function, 

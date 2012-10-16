@@ -46,7 +46,6 @@ namespace util
                         boost::system::error_code ec1;
                         head_.set_content(is, ec1);
                         handler_(ec1, old_size - buf_.size());
-                        buf_.reset();
                     } else {
                         handler_(ec, 0);
                     }

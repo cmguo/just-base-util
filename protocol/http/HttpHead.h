@@ -67,6 +67,8 @@ namespace util
         public:
             boost::optional<boost::uint64_t> content_length;
             boost::optional<std::string> host;
+            boost::optional<std::string> content_encoding;
+            boost::optional<std::string> transfer_encoding;
             boost::optional<std::string> location;
             boost::optional<http_field::Range> range;
             boost::optional<http_field::ContentRange> content_range;

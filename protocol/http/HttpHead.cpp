@@ -43,6 +43,8 @@ namespace util
             ar 
                 & make_nvp("Host", t.host)
                 & make_nvp("Content-Length", t.content_length)
+                & make_nvp("Content-Encoding", t.content_encoding)
+                & make_nvp("Transfer-Encoding", t.transfer_encoding)
                 & make_nvp("Location", t.location)
                 & make_nvp("Range", t.range)
                 & make_nvp("ContentRange", t.content_range)
