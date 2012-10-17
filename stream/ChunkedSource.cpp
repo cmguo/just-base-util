@@ -193,7 +193,7 @@ namespace util
                 }
                 if (rcv_buf_.size()) {
                     // 剩余的Chunk头部或者尾部数据
-                    rcv_buf_.consume(bytes_transferred);
+                    rcv_buf_.commit(bytes_transferred);
                     rcv_left_ -= bytes_transferred;
                     if (rcv_left_) {
                         handler_(ec, bytes_recv_);
