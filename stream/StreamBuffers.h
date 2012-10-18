@@ -39,6 +39,7 @@ namespace util
                 size_t count = std::distance(beg, end);
                 if (count > 0) {
                     reserve(count);
+                    buf_->count = count;
                     std::copy(beg, end, buf_->buffers);
                 }
             }
