@@ -47,7 +47,7 @@ namespace util
                 & make_nvp("Transfer-Encoding", t.transfer_encoding)
                 & make_nvp("Location", t.location)
                 & make_nvp("Range", t.range)
-                & make_nvp("ContentRange", t.content_range)
+                & make_nvp("Content-Range", t.content_range)
                 & make_nvp("Connection", t.connection)
                 & make_nvp("Pragma", t.pragma)
                 ;

@@ -18,6 +18,82 @@ namespace util
         namespace http_field
         {
 
+            struct RangeUnit
+            {
+            public:
+                RangeUnit()
+                    : b_(0)
+                    , e_(0)
+                {
+                }
+
+                RangeUnit(
+                    boost::int64_t b, 
+                    boost::int64_t e)
+                    : b_(b)
+                    , e_(e)
+                {
+                }
+
+            public:
+                boost::int64_t begin() const
+                {
+                    return b_;
+                }
+
+                boost::int64_t end() const
+                {
+                    return e_;
+                }
+
+                bool has_end() const
+                {
+                    return e_ > b_;
+                }
+
+            public:
+                std::string to_string() const
+                {
+                    using namespace framework::string;
+
+                    if (b_ >= 0) {
+                        if (has_end()) {
+                            return format(b_) + "-" + format(e_ - 1);
+                        } else {
+                            return format(b_) + "-";
+                        }
+                    } else {
+                        return format(b_);
+                    }
+                }
+
+                boost::system::error_code from_string(
+                    std::string const & str)
+                {
+                    using namespace framework::string;
+                    using namespace framework::system::logic_error;
+
+                    boost::system::error_code ec = succeed;
+                    std::string::size_type p = str.find('-');
+                    if (p == 0) {
+                        ec = parse2(str, b_);
+                    } else if (p == str.size() - 1) {
+                        ec = parse2(str.substr(0, p), b_);
+                    } else {
+                        ec = parse2(str.substr(0, p), b_);
+                        if (!ec) {
+                            ec = parse2(str.substr(p + 1), e_);
+                            if (!ec)
+                                ++e_;
+                        }
+                    }
+                    return ec;
+                }
+
+                boost::int64_t b_;
+                boost::int64_t e_;
+            };
+
             class Range
             {
             public:
@@ -37,117 +113,49 @@ namespace util
                 void add_range(
                     boost::int64_t b)
                 {
-                    units_.push_back(Unit(b, b - 1));
+                    units_.push_back(RangeUnit(b, b - 1));
                 }
 
                 void add_range(
                     boost::int64_t b, 
                     boost::int64_t e)
                 {
-                    units_.push_back(Unit(b, e));
+                    units_.push_back(RangeUnit(b, e));
                 }
 
-                std::string to_string() const;
+            public:
+                std::string to_string() const
+                {
+                    using namespace framework::string;
+                    return join(units_.begin(), units_.end(), ",", "bytes=");
+                }
 
                 boost::system::error_code from_string(
-                    std::string const & str);
-
-            public:
-                struct Unit
+                    std::string const & str)
                 {
-                public:
-                    Unit()
-                        : b_(0)
-                        , e_(0)
-                    {
-                    }
-
-                    Unit(
-                        boost::int64_t b, 
-                        boost::int64_t e)
-                        : b_(b)
-                        , e_(e)
-                    {
-                    }
-
-                public:
-                    boost::int64_t begin() const
-                    {
-                        return b_;
-                    }
-
-                    boost::int64_t end() const
-                    {
-                        return e_;
-                    }
-
-                    bool has_end() const
-                    {
-                         return e_ > b_;
-                    }
-                    
-                public:
-                    std::string to_string() const
-                    {
-                        using namespace framework::string;
-
-                        if (b_ >= 0) {
-                            if (has_end()) {
-                                return format(b_) + "-" + format(e_ - 1);
-                            } else {
-                                return format(b_) + "-";
-                            }
-                        } else {
-                            return format(b_);
-                        }
-                    }
-
-                    boost::system::error_code from_string(
-                        std::string const & str)
-                    {
-                        using namespace framework::string;
-                        using namespace framework::system::logic_error;
-
-                        boost::system::error_code ec = succeed;
-                        std::string::size_type p = str.find('-');
-                        if (p == 0) {
-                            ec = parse2(str, b_);
-                        } else if (p == str.size() - 1) {
-                            ec = parse2(str.substr(0, p), b_);
-                        } else {
-                            ec = parse2(str.substr(0, p), b_);
-                            if (!ec) {
-                                ec = parse2(str.substr(p + 1), e_);
-                                if (!ec)
-                                    ++e_;
-                            }
-                        }
-                        return ec;
-                    }
-
-                    boost::int64_t b_;
-                    boost::int64_t e_;
-                };
+                    units_.clear();
+                    using namespace framework::string;
+                    return slice<RangeUnit>(str, std::inserter(units_, units_.end()), ",", "bytes=");
+                }
 
             public:
-                Unit & operator[](
+                RangeUnit & operator[](
                     size_t index)
                 {
                     return units_[index];
                 }
 
-                Unit const & operator[](
+                RangeUnit const & operator[](
                     size_t index) const
                 {
                     return units_[index];
                 }
 
             private:
-                std::vector<Unit> units_;
+                std::vector<RangeUnit> units_;
             };
 
             class ContentRange
-                : Range
             {
             public:
                 ContentRange(
@@ -157,6 +165,11 @@ namespace util
                 }
 
             public:
+                RangeUnit unit() const
+                {
+                    return unit_;
+                }
+
                 boost::uint64_t total() const
                 {
                     return total_;
@@ -165,17 +178,18 @@ namespace util
             public:
                 std::string to_string() const
                 {
-                    return Range::to_string() + "/" + framework::string::format(total_);
+                    return "bytes " + unit_.to_string() + "/" + framework::string::format(total_);
                 }
 
                 boost::system::error_code from_string(
                     std::string const & str)
                 {
                     std::string::size_type p = str.find('/');
-                    if (p == std::string::npos) {
+                    if (p == std::string::npos || p < 6 || str.compare(0, 6, "bytes ")) {
                         return framework::system::logic_error::invalid_argument;
                     } else {
-                        boost::system::error_code ec = Range::from_string(str.substr(0, p));
+                        boost::system::error_code ec = 
+                            unit_.from_string(str.substr(6, p));
                         if (!ec)
                             ec = framework::string::parse2(str.substr(p + 1), total_);
                         return ec;
@@ -183,6 +197,7 @@ namespace util
                 }
 
             private:
+                RangeUnit unit_;
                 boost::uint64_t total_;
             };
 
@@ -190,30 +205,5 @@ namespace util
 
     } // namespace protocol
 } // namespace util
-
-namespace util
-{
-    namespace protocol
-    {
-        namespace http_field
-        {
-
-            inline std::string Range::to_string() const
-            {
-                using namespace framework::string;
-                return join(units_.begin(), units_.end(), ",", "bytes=");
-            }
-
-            inline boost::system::error_code Range::from_string(
-                std::string const & str)
-            {
-                units_.clear();
-                using namespace framework::string;
-                return slice<Range::Unit>(str, std::inserter(units_, units_.end()), ",", "bytes=");
-            }
-
-        }
-    }
-}
 
 #endif // _UTIL_PROTOCOL_HTTP_FIELD_RANGE_H_
