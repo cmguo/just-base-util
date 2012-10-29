@@ -23,19 +23,7 @@ namespace util
 
             virtual ~FilterSink();
 
-            template < typename T >
-            void push(const T & t,
-                typename T::category * = NULL)
-            {
-                using namespace boost::iostreams;
-                typedef typename boost::iostreams::detail::unwrap_ios<T>::type    policy_type;
-                if (is_device<policy_type>::value) {
-                    filtering_ostream::push(
-                        basic_dummy_filter< char_type >());
-                }
-                filtering_ostream::push(t);
-            }
-
+            using boost::iostreams::filtering_ostream::push;
             void push(
                 Sink & t);
 
