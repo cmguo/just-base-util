@@ -5,6 +5,12 @@
 
 #include "util/protocol/http/HttpHead.h"
 
+#include "util/stream/Socket.h"
+#include "util/stream/ChunkedSource.h"
+#include "util/stream/ChunkedSink.h"
+#include "util/stream/FilterSource.h"
+#include "util/stream/FilterSink.h"
+
 #include <framework/network/TcpSocket.h>
 #include <framework/network/AsioHandlerHelper.h>
 
@@ -69,11 +75,7 @@ namespace util
 
         public:
             HttpSocket(
-                boost::asio::io_service & io_svc)
-                : super(io_svc)
-                , non_block_(false)
-            {
-            }
+                boost::asio::io_service & io_svc);
 
         public:
             void close()
@@ -305,6 +307,17 @@ namespace util
                 return bytes_copied;
             }
 
+        protected:
+            void set_source(
+                HttpHead const & head);
+
+            void set_sink(
+                HttpHead const & head);
+
+            util::stream::Source & source();
+
+            util::stream::Sink & sink();
+
         private:
             BOOST_STATIC_CONSTANT(size_t, BUF_SIZE = 2048);
 
@@ -312,6 +325,13 @@ namespace util
             bool non_block_;
             boost::asio::streambuf snd_buf_;
             boost::asio::streambuf rcv_buf_;
+
+        private:
+            util::stream::Socket<HttpSocket> stream_;
+            util::stream::ChunkedSource chunked_source_;
+            util::stream::ChunkedSink chunked_sink_;
+            util::stream::FilterSource filter_source_;
+            util::stream::FilterSink filter_sink_;
         };
 
     } // namespace protocol

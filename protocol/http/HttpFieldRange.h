@@ -164,6 +164,23 @@ namespace util
                 {
                 }
 
+                ContentRange(
+                    boost::uint64_t total, 
+                    boost::int64_t b)
+                    : total_(total)
+                    , unit_(b, b - 1)
+                {
+                }
+
+                ContentRange(
+                    boost::uint64_t total, 
+                    boost::int64_t b, 
+                    boost::int64_t e)
+                    : total_(total)
+                    , unit_(b, e)
+                {
+                }
+
             public:
                 RangeUnit unit() const
                 {
@@ -197,8 +214,8 @@ namespace util
                 }
 
             private:
-                RangeUnit unit_;
                 boost::uint64_t total_;
+                RangeUnit unit_;
             };
 
         }

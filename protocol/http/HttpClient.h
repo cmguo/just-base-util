@@ -7,11 +7,6 @@
 #include "util/protocol/http/HttpRequest.h"
 #include "util/protocol/http/HttpResponse.h"
 #include "util/protocol/http/HttpError.h"
-#include "util/stream/Socket.h"
-#include "util/stream/ChunkedSource.h"
-#include "util/stream/ChunkedSink.h"
-#include "util/stream/FilterSource.h"
-#include "util/stream/FilterSink.h"
 
 #include <framework/string/Url.h>
 
@@ -409,12 +404,12 @@ namespace util
 
             util::stream::Sink & request_stream()
             {
-                return filter_sink_;
+                return sink();
             }
 
             util::stream::Source & response_stream()
             {
-                return filter_source_;
+                return source();
             }
 
             boost::asio::streambuf & request_data()
@@ -482,12 +477,6 @@ namespace util
                 Request & request, 
                 boost::system::error_code & ec);
 
-            void set_request_stream(
-                HttpHead const & head);
-
-            void set_response_stream(
-                HttpHead const & head);
-
             void dump(
                 char const * function, 
                 boost::system::error_code const & ec);
@@ -520,13 +509,6 @@ namespace util
 
         private:
             size_t id_;
-
-        private:
-            util::stream::Socket<HttpSocket> stream_;
-            util::stream::ChunkedSource chunked_source_;
-            util::stream::ChunkedSink chunked_sink_;
-            util::stream::FilterSource filter_source_;
-            util::stream::FilterSink filter_sink_;
         };
 
     } // namespace protocol
