@@ -109,8 +109,8 @@ namespace util
             std::size_t bytes_read = 0;
 
             typedef StreamMutableBuffers::const_iterator const_iterator;
-            for (const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
-                try {
+            try {
+                for (const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
                     read(buffer_cast<char *>(*iter), buffer_size(*iter));
                     bytes_read += gcount();
                     if (eof()) {
@@ -120,9 +120,11 @@ namespace util
                         clear();
                         break;
                     }
-                } catch ( ... ) {
-                    ec = util::stream::error::filter_source_error;
                 }
+            } catch (boost::system::system_error const & e) {
+                ec = e.code();
+            } catch ( ... ) {
+                ec = util::stream::error::filter_source_error;
             }
 
             return bytes_read;

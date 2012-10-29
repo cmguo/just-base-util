@@ -111,6 +111,8 @@ namespace util
                         (const char *)boost::asio::detail::buffer_cast_helper(*iter),
                         boost::asio::detail::buffer_size_helper(*iter));
                     flush();
+                } catch (boost::system::system_error const & e) {
+                    ec = e.code();
                 } catch ( ... ) {
                     ec = util::stream::error::filter_sink_error;
                     break;

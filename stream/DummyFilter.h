@@ -27,12 +27,6 @@ namespace util
             {};
 
         public:
-            typedef enum {
-                buffered_call,
-                unbuffered_call
-            } call_type;
-
-        public:
             basic_dummy_filter()
                 : is_async_(false)
                 , eof_(false)
@@ -69,7 +63,9 @@ namespace util
                 const char_type * s, 
                 std::streamsize n)
             {
-                if (m_call_type_ == unbuffered_call) {
+                if (is_async_) {
+                    n = m_data_->sputn(s, n);
+                } else {
                     if (m_data_->size() > 0) {
                         n = boost::iostreams::write(
                             snk, boost::asio::buffer_cast<char_type const *>(m_data_->data()), m_data_->size());
@@ -80,8 +76,6 @@ namespace util
                     } else {
                         n = boost::iostreams::write(snk, s, n);
                     }
-                } else {
-                    n = m_data_->sputn(s, n);
                 }
                 return n;
             }
@@ -125,7 +119,6 @@ namespace util
             }
 
         private:
-            call_type m_call_type_;
             bool is_async_;
             bool eof_;
             boost::shared_ptr<buffer_type> m_data_;
