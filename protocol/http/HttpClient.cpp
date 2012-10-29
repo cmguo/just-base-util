@@ -37,7 +37,7 @@ namespace util
     namespace protocol
     {
 
-        FRAMEWORK_LOGGER_DECLARE_MODULE("HttpClient");
+        FRAMEWORK_LOGGER_DECLARE_MODULE("util.protocol.HttpClient");
 
         static char const SERVICE_NAME[] = "http";
 
@@ -67,11 +67,6 @@ namespace util
             , is_keep_alive_(false)
             , req_id_(0)
             , num_sent_(0)
-            , stream_(*this)
-            , chunked_source_(stream_)
-            , chunked_sink_(stream_)
-            , filter_source_(io_svc)
-            , filter_sink_(io_svc)
         {
             static size_t gid = 0;
             id_ = gid++;
@@ -383,7 +378,16 @@ namespace util
                     break;
                 case connectting:
                     dump("resume_connect resume", ec);
-                    connect(addr_, ec); // 这里的addr_没有意义
+                    //connect(addr_, ec); // 这里的addr_没有意义
+                    if (!addr_.host().empty()) {
+                        connect(addr_, ec);
+                    } else if (requests_[0].head().host.is_initialized()) {
+                        NetName addr(":80");
+                        addr.from_string(requests_[0].head().host.get());
+                        connect(addr, ec);
+                    } else {
+                        ec = not_bind;
+                    }
                     if (ec) {
                         if (ec == boost::asio::error::in_progress) {
                             ec = boost::asio::error::would_block;
@@ -475,7 +479,7 @@ namespace util
                         request.status = send_pending;
                         return resume(false, ec);
                     }
-                    set_response_stream(response_.head());
+                    set_source(response_.head());
                     if (request.is_fetch) {
                         request.status = recving_resp_data;
                         response_.clear_data();
@@ -683,21 +687,21 @@ namespace util
                             return async_resume();
                         }
                     }
-                    set_response_stream(response_.head());
+                    set_source(response_.head());
                     if (request.is_fetch) {
                         request.status = recving_resp_data;
                         response_.clear_data();
                         if (response_.head().content_length.is_initialized()) {
                             boost::uint64_t content_length = response_.head().content_length.get();
                             if (content_length > 0) {
-                                boost::asio::async_read(filter_source_, response_.data().prepare(content_length), 
+                                boost::asio::async_read(source(), response_.data().prepare(content_length), 
                                     boost::asio::transfer_at_least(content_length), 
                                     boost::bind(&HttpClient::handle_async_reqeust, this, pending, boost::bind(commit_stream<boost::asio::streambuf>, boost::ref(response_.data()), _1, _2)));
                                 break;
                             // } else { no break;
                             }
                         } else {
-                            boost::asio::async_read(filter_source_, response_.data(), 
+                            boost::asio::async_read(source(), response_.data(), 
                                 boost::asio::transfer_all(), 
                                 boost::bind(&HttpClient::handle_async_reqeust, this, pending, _1));
                             break;
@@ -885,32 +889,7 @@ namespace util
             return true;
         }
 
-        void HttpClient::set_request_stream(
-            HttpHead const & head)
-        {
-
-        }
-
-        void HttpClient::set_response_stream(
-            HttpHead const & head)
-        {
-            { // 初始化
-                filter_source_.reset();
-                std::string encoding = head.content_encoding.get_value_or("");
-                if ("gzip" == encoding && filter_source_.empty()) {
-                    filter_source_.push(boost::iostreams::gzip_decompressor());
-                }
-                encoding = head.transfer_encoding.get_value_or("");
-                if ("chunked" == encoding && (!filter_source_.is_complete())) {
-                    filter_source_.push((util::stream::Source &)chunked_source_);
-                } else if (!filter_source_.is_complete()) {
-                    filter_source_.push((util::stream::Source &)stream_);
-                }
-            }
-        }
-
-
-        void HttpClient::dump(
+       void HttpClient::dump(
             char const * function, 
             boost::system::error_code const & ec)
         {
