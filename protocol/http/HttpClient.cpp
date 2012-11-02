@@ -831,9 +831,9 @@ namespace util
             }
 
             if ((status_ == established || status_ == ready)
-                && request.status >= opened 
-                && response_.head().connection
-                && response_.head().connection.get() == http_field::Connection::close) {
+                && (!is_keep_alive_ || (request.status >= opened 
+                && (!response_.head().connection
+                || response_.head().connection.get() == http_field::Connection::close)))) {
                     if (request.status > opened) {
                         close_socket(broken_error_);
                         status_ = broken;
