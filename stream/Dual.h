@@ -15,6 +15,13 @@ namespace util
             : public Source, public Sink
         {
         public:
+            typedef StreamMutableBuffers mutable_buffers_t;
+
+            typedef StreamConstBuffers const_buffers_t;
+
+            typedef StreamHandler handler_t;
+
+        public:
             Dual(
                 boost::asio::io_service & io_svc)
                 : Source(io_svc)

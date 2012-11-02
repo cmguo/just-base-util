@@ -15,6 +15,9 @@ namespace util
             : public Dual
         {
         public:
+            typedef SocketType socket_t;
+
+        public:
             Socket(
                 SocketType & socket)
                 : Dual(socket.get_io_service())
@@ -22,33 +25,33 @@ namespace util
             {
             }
 
-        private:
+        protected:
             virtual std::size_t private_read_some(
                 StreamMutableBuffers const & buffers,
                 boost::system::error_code & ec)
             {
-                return socket_.read_some(buffers, ec);
+                return socket_.receive(buffers, 0, ec);
             }
 
             virtual void private_async_read_some(
                 StreamMutableBuffers const & buffers, 
                 StreamHandler const & handler)
             {
-                socket_.async_read_some(buffers, handler);
+                socket_.async_receive(buffers, 0, handler);
             }
 
             virtual std::size_t private_write_some(
                 StreamConstBuffers const & buffers, 
                 boost::system::error_code & ec)
             {
-                return socket_.write_some(buffers, ec);
+                return socket_.send(buffers, 0, ec);
             }
 
             virtual void private_async_write_some(
                 StreamConstBuffers const & buffers, 
                 StreamHandler const & handler)
             {
-                socket_.async_write_some(buffers, handler);
+                socket_.async_send(buffers, 0, handler);
             }
 
         private:
