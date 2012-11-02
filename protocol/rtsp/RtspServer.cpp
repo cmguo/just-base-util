@@ -55,8 +55,8 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_DEBUG("[handle_receive_request_head] id =%u, ec = %s, bytes_transferred = %d" 
-                % id_ % ec % bytes_transferred);
+            LOG_DEBUG("[handle_receive_request_head] id = %u, ec = %s, bytes_transferred = %d" 
+                % id_ % ec.message() % bytes_transferred);
 
             if (ec) {
                 handle_error(ec);
@@ -81,8 +81,8 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_DEBUG("[handle_receive_request_data] id =%u, ec = %s, bytes_transferred = %d" 
-                % id_ % ec % bytes_transferred);
+            LOG_DEBUG("[handle_receive_request_data] id = %u, ec = %s, bytes_transferred = %d" 
+                % id_ % ec.message() % bytes_transferred);
 
             if (ec) {
                 handle_error(ec);
@@ -99,7 +99,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_DEBUG("[handle_local_process] id =%u, ec = %s" % id_ % ec);
+            LOG_DEBUG("[handle_local_process] id = %u, ec = %s" % id_ % ec.message());
 
             if (ec) {
                 response_error(ec);
@@ -120,8 +120,8 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_DEBUG("[handle_send_response_head] id =%u, ec = %s, bytes_transferred = %d" 
-                % id_ % ec % bytes_transferred);
+            LOG_DEBUG("[handle_send_response_head] id = %u, ec = %s, bytes_transferred = %d" 
+                % id_ % ec.message() % bytes_transferred);
 
             if (ec) {
                 handle_error(ec);
@@ -144,8 +144,8 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_DEBUG("[handle_send_response_data] id =%u, ec = %s, bytes_transferred = %d" 
-                % id_ % ec % bytes_transferred);
+            LOG_DEBUG("[handle_send_response_data] id = %u, ec = %s, bytes_transferred = %d" 
+                % id_ % ec.message() % bytes_transferred);
 
             if (ec) {
                 handle_error(ec);
@@ -166,8 +166,8 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_DEBUG("[handle_response_error] id =%u, ec = %s, bytes_transferred = %d" 
-                % id_ % ec % bytes_transferred);
+            LOG_DEBUG("[handle_response_error] id = %u, ec = %s, bytes_transferred = %d" 
+                % id_ % ec.message() % bytes_transferred);
 
             delete this;
         }
@@ -175,7 +175,7 @@ namespace util
        void RtspServer::handle_error(
             error_code const & ec)
         {
-            LOG_DEBUG("[handle_error] id =%u, ec = %s" % id_ % ec);
+            LOG_DEBUG("[handle_error] id = %u, ec = %s" % id_ % ec.message());
 
             on_error(ec);
             delete this;
