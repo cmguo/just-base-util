@@ -34,22 +34,18 @@ namespace util
 
                 basic_dummy_filter<char> & dummy = 
                     *sink_.template component<basic_dummy_filter<char> >(sink_.size() - 2);
-                Sink & device = 
-                    *sink_.template component<Sink>(sink_.size() - 1);
+                basic_sink_wrapper<char> & device = 
+                    *sink_.template component<basic_sink_wrapper<char> >(sink_.size() - 1);
 
-                typedef StreamConstBuffers::const_iterator const_iterator;
-                for (const_iterator iter = buffers_.begin(); iter != buffers_.end(); ++iter) {
-                    try {
-                        sink_.write(
-                            boost::asio::buffer_cast<char const *>(*iter),
-                            boost::asio::buffer_size(*iter));
-                    } catch ( ... ) {
-                    }
-                    bytes_write_ += boost::asio::buffer_size(*iter);
+                boost::system::error_code ec;
+                bytes_write_ = sink_.write_some(buffers_, ec);
+                if (ec) {
+                    sink_.get_io_service().post(
+                        boost::asio::detail::bind_handler(handler_, ec, bytes_write_));
+                } else {
+                    device->async_write_some(
+                        dummy.get_buffer().data(), boost::bind(boost::ref(*this), _1, _2));
                 }
-                // 过滤完毕，获取已经填充的过滤缓冲区一起发送发送
-                device.async_write_some(
-                    dummy.get_buffer().data(), boost::bind(boost::ref(*this), _1, _2));
             }
 
             void operator()(
@@ -60,8 +56,9 @@ namespace util
                     *sink_.template component<basic_dummy_filter<char> >(sink_.size() - 2);
                 dummy.use_buffer().consume(bytes_transferred);
 
-                sink_.get_io_service().post(
-                    boost::asio::detail::bind_handler(handler_, ec, bytes_write_));
+                dummy.end_async();
+
+                handler_(ec, bytes_write_);
 
                 delete this;
             }
