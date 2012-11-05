@@ -39,9 +39,9 @@ namespace util
                 using namespace boost::asio;
 
                 basic_dummy_filter<char> & dummy = 
-                    *source_.template component<basic_dummy_filter<char> >(source_.size() - 2);
+                    *source_.component<basic_dummy_filter<char> >(source_.size() - 2);
                 basic_source_wrapper<char> & device = 
-                    *source_.template component<basic_source_wrapper<char> >(source_.size() - 1);
+                    *source_.component<basic_source_wrapper<char> >(source_.size() - 1);
                 size_t szbuffer = util::buffers::buffer_size(buffers_);
                 device->async_read_some(
                     dummy.use_buffer().prepare(szbuffer), boost::bind(boost::ref(*this), _1, _2));
@@ -52,7 +52,7 @@ namespace util
                 size_t bytes_transferred)
             {
                 basic_dummy_filter<char> & dummy = 
-                    *source_.template component< basic_dummy_filter<char> >(source_.size() - 2);
+                    *source_.component< basic_dummy_filter<char> >(source_.size() - 2);
                 dummy.use_buffer().commit(bytes_transferred);
 
                 boost::system::error_code ec1 = ec;

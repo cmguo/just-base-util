@@ -33,9 +33,9 @@ namespace util
                 using namespace boost::asio;
 
                 basic_dummy_filter<char> & dummy = 
-                    *sink_.template component<basic_dummy_filter<char> >(sink_.size() - 2);
+                    *sink_.component<basic_dummy_filter<char> >(sink_.size() - 2);
                 basic_sink_wrapper<char> & device = 
-                    *sink_.template component<basic_sink_wrapper<char> >(sink_.size() - 1);
+                    *sink_.component<basic_sink_wrapper<char> >(sink_.size() - 1);
 
                 boost::system::error_code ec;
                 bytes_write_ = sink_.write_some(buffers_, ec);
@@ -53,7 +53,7 @@ namespace util
                 size_t bytes_transferred)
             {
                 basic_dummy_filter<char> & dummy = 
-                    *sink_.template component<basic_dummy_filter<char> >(sink_.size() - 2);
+                    *sink_.component<basic_dummy_filter<char> >(sink_.size() - 2);
                 dummy.use_buffer().consume(bytes_transferred);
 
                 dummy.end_async();
