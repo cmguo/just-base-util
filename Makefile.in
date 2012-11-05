@@ -52,6 +52,7 @@ PROJECT_LINK_FLAGS		:=
 
 PROJECT_DEPENDS			:= \
 				../framework \
+				../boost/iostreams \
 				../zlib \
 				$(PROJECT_DEPENDS)
 
