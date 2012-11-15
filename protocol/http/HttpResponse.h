@@ -15,7 +15,6 @@ namespace util
             : public HttpHead
         {
         public:
-            size_t version;
             size_t err_code;
             std::string err_msg;
 
