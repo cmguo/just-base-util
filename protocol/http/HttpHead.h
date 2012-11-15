@@ -25,9 +25,12 @@ namespace util
             typedef fields_map::value_type field_type;
 
         public:
-            HttpHead() {};
-            
-            virtual ~HttpHead() {}
+            HttpHead();
+
+            HttpHead(
+                size_t version);
+
+            virtual ~HttpHead();
 
         public:
             void add_fields(
@@ -65,6 +68,12 @@ namespace util
                 boost::system::error_code & ec);
 
         public:
+            static size_t const version_1_0 = 0x100;
+            static size_t const version_1_1 = 0x101;
+
+        public:
+            size_t version;
+
             boost::optional<boost::uint64_t> content_length;
             boost::optional<std::string> host;
             boost::optional<std::string> content_encoding;

@@ -25,19 +25,16 @@ namespace util
 
         public:
             HttpRequestHead(
-                MethodEnum method = get)
-                : method(method)
-            {
-                version = 0x00000100; // 1.0
-            }
+                MethodEnum method = get);
+
+            HttpRequestHead(
+                MethodEnum method, 
+                std::string const & path);
 
             HttpRequestHead(
                 MethodEnum method, 
                 std::string const & path, 
-                size_t version = 0x00000100)
-                : method(method)
-                , path(path)
-                , version(version) {}
+                size_t version);
 
         public:
             static std::string const method_str[];
@@ -45,7 +42,6 @@ namespace util
         public:
             MethodEnum method;
             std::string path;
-            size_t version;
 
         private:
             virtual bool get_line(

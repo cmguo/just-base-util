@@ -4,11 +4,13 @@
 #define _UTIL_PROTOCOL_HTTP_RESPONSE_H_
 
 #include "util/protocol/http/HttpPacket.h"
+#include "util/protocol/http/HttpError.h"
 
 namespace util
 {
     namespace protocol
     {
+
         class HttpResponseHead
             : public HttpHead
         {
@@ -19,23 +21,16 @@ namespace util
 
         public:
             HttpResponseHead(
-                size_t err_code = 200, 
-                size_t version = 0x00000100)
-                : version(version)
-                , err_code(err_code)
-                , err_msg("OK")
-            {
-            }
+                size_t err_code = http_error::ok);
+
+            HttpResponseHead(
+                size_t err_code, 
+                std::string const & err_msg);
 
             HttpResponseHead(
                 size_t err_code, 
                 std::string const & err_msg, 
-                size_t version = 0x00000100)
-                : version(version)
-                , err_code(err_code)
-                , err_msg(err_msg)
-            {
-            }
+                size_t version);
 
         private:
             virtual bool get_line(
