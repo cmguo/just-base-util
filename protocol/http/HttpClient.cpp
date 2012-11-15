@@ -6,7 +6,6 @@
 #include "util/protocol/http/HttpRequest.h"
 #include "util/protocol/http/HttpResponse.h"
 #include "util/stream/StreamTransfer.h"
-#include "util/stream/StlStream.h"
 using namespace util::stream;
 using namespace util::protocol::http_error;
 
@@ -25,10 +24,6 @@ using namespace framework::system::logic_error;
 #include <boost/bind.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
-#include <boost/iostreams/stream.hpp>
-#include <boost/iostreams/categories.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
 using namespace boost::system;
 using namespace boost::asio;
 
@@ -513,6 +508,7 @@ namespace util
                             }
                         }
                         stat.response_data_time = stat.elapse();
+                        reset_source(response_.head());
                         request.status = finished;
                     } else {
                         ec = already_open;
@@ -714,6 +710,7 @@ namespace util
                         break;
                     }
                 case recving_resp_data:
+                    reset_source(response_.head());
                     stat.response_data_time = stat.elapse();
                     assert(request.is_fetch);
                     if (request.is_fetch) {

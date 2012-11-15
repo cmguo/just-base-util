@@ -3,7 +3,11 @@
 #include "util/Util.h"
 #include "util/protocol/http/HttpSocket.h"
 
-#include <boost/iostreams/filtering_stream.hpp>
+#include "util/stream/ChunkedSource.h"
+#include "util/stream/ChunkedSink.h"
+#include "util/stream/FilterSource.h"
+#include "util/stream/FilterSink.h"
+
 #include <boost/iostreams/filter/gzip.hpp>
 
 namespace util
@@ -16,53 +20,92 @@ namespace util
             : super(io_svc)
             , non_block_(false)
             , stream_(*this)
-            , chunked_source_(stream_)
-            , chunked_sink_(stream_)
-            , filter_source_(io_svc)
-            , filter_sink_(io_svc)
+            , source_(&stream_)
+            , sink_(&stream_)
         {
         }
 
         void HttpSocket::set_source(
             HttpHead const & head)
         {
-            filter_source_.reset();
+            assert(source_ == &stream_);
+            std::string encoding = head.transfer_encoding.get_value_or("");
+            if ("chunked" == encoding) {
+                source_ = new util::stream::ChunkedSource(*source_);
+            }
+            encoding = head.content_encoding.get_value_or("");
+            if ("gzip" == encoding) {
+                util::stream::FilterSource * filter_source = new util::stream::FilterSource(*source_);
+                filter_source->push(boost::iostreams::gzip_decompressor());
+                filter_source->complete();
+                source_ = filter_source;
+            }
+        }
+
+        void HttpSocket::reset_source(
+            HttpHead const & head)
+        {
+            assert(source_ == &stream_);
             std::string encoding = head.content_encoding.get_value_or("");
-            if ("gzip" == encoding && filter_source_.empty()) {
-                filter_source_.push(boost::iostreams::gzip_decompressor());
+            if ("gzip" == encoding) {
+                util::stream::FilterSource * filter_source = (util::stream::FilterSource *)source_;
+                source_ = &filter_source->source();
+                filter_source->reset();
+                delete filter_source;
             }
             encoding = head.transfer_encoding.get_value_or("");
             if ("chunked" == encoding) {
-                filter_source_.push((util::stream::Source &)chunked_source_);
-            } else {
-                filter_source_.push((util::stream::Source &)stream_);
+                util::stream::ChunkedSource * chunked_source = (util::stream::ChunkedSource *)source_;
+                source_ = &chunked_source->source();
+                delete chunked_source;
             }
+            assert(source_ == &stream_);
         }
 
         void HttpSocket::set_sink(
             HttpHead const & head)
         {
-            filter_sink_.reset();
+            assert(sink_ == &stream_);
+            std::string encoding = head.transfer_encoding.get_value_or("");
+            if ("chunked" == encoding) {
+                sink_ = new util::stream::ChunkedSink(*sink_);
+            }
+            encoding = head.content_encoding.get_value_or("");
+            if ("gzip" == encoding) {
+                util::stream::FilterSink * filter_sink = new util::stream::FilterSink(*sink_);
+                filter_sink->push(boost::iostreams::gzip_compressor());
+                filter_sink->complete();
+                sink_ = filter_sink;
+            }
+        }
+
+        void HttpSocket::reset_sink(
+            HttpHead const & head)
+        {
             std::string encoding = head.content_encoding.get_value_or("");
-            if ("gzip" == encoding && filter_source_.empty()) {
-                filter_sink_.push(boost::iostreams::gzip_compressor());
+            if ("gzip" == encoding) {
+                util::stream::FilterSink * filter_sink = (util::stream::FilterSink *)sink_;
+                sink_ = &filter_sink->sink();
+                filter_sink->reset();
+                delete filter_sink;
             }
             encoding = head.transfer_encoding.get_value_or("");
             if ("chunked" == encoding) {
-                filter_sink_.push((util::stream::Sink &)chunked_sink_);
-            } else {
-                filter_sink_.push((util::stream::Sink &)stream_);
+                util::stream::ChunkedSink * chunked_sink = (util::stream::ChunkedSink *)sink_;
+                sink_ = &chunked_sink->sink();
+                delete chunked_sink;
             }
+            assert(sink_ == &stream_);
         }
 
         util::stream::Source & HttpSocket::source()
         {
-            return filter_source_;
+            return *source_;
         }
 
         util::stream::Sink & HttpSocket::sink()
         {
-            return filter_sink_;
+            return *sink_;
         }
 
 

@@ -167,6 +167,7 @@ namespace util
                         boost::bind(&HttpServer::handle_async, this, _1, _2));
                     break;
                 case transferring_request_data:
+                    reset_source(request_.head());
                     on_receive_request_data(transfer_buf_);
                     transfer_buf_.consume(transfer_buf_.size());
                     state_ = local_processing;
@@ -201,6 +202,7 @@ namespace util
                         boost::bind(&HttpServer::handle_async, this, _1, _2));
                     break;
                 case transferring_response_data:
+                    reset_sink(response_.head());
                     on_finish();
                     if (!response_.head().connection
                         || response_.head().connection.get() == http_field::Connection::close) {
