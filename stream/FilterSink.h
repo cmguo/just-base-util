@@ -6,7 +6,7 @@
 #include "util/stream/Sink.h"
 
 #include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/categories.hpp>
+#include <boost/asio/streambuf.hpp>
 
 namespace util
 {
@@ -19,23 +19,38 @@ namespace util
         {
         public:
             FilterSink(
-                boost::asio::io_service & ios);
+                Sink & sink);
 
             virtual ~FilterSink();
 
-            using boost::iostreams::filtering_ostream::push;
-            void push(
-                Sink & t);
+        public:
+            void complete();
+
+            Sink & sink()
+            {
+                return sink_;
+            }
+
+        private:
+            friend class write_handler;
+
+            size_t filter_write(
+                buffers_t const & buffers, 
+                boost::system::error_code & ec);
 
         private:
             virtual size_t private_write_some(
-                StreamConstBuffers const & buffers, 
+                buffers_t const & buffers, 
                 boost::system::error_code & ec);
 
             // 内部filter设置类型为buffered_call
             virtual void private_async_write_some(
-                StreamConstBuffers const & buffers, 
-                StreamHandler const & handler);
+                buffers_t const & buffers, 
+                handler_t const & handler);
+
+        private:
+            Sink & sink_;
+            boost::asio::streambuf buf_;
         };
 
     } // stream

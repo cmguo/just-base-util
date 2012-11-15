@@ -32,6 +32,11 @@ namespace util
                 snd_buf_.reset();
             }
 
+            Sink & sink()
+            {
+                return sink_;
+            }
+
         public:
             std::size_t write_eof(
                 boost::system::error_code & ec);

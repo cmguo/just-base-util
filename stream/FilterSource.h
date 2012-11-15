@@ -6,7 +6,7 @@
 #include "util/stream/Source.h"
 
 #include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/categories.hpp>
+#include <boost/asio/streambuf.hpp>
 
 namespace util
 {
@@ -19,20 +19,31 @@ namespace util
         {
         public:
             FilterSource(
-                boost::asio::io_service & ios);
+                Source & source);
 
-            virtual ~FilterSource();            using boost::iostreams::filtering_istream::push;            void push(
-                Source & t);
+            virtual ~FilterSource();        public:
+            void complete();            Source & source()            {                return source_;            }
+        private:
+            friend class read_handler;
+
+            size_t filter_read(
+                buffers_t const & buffers, 
+                boost::system::error_code & ec);
+
         private:
             // 内部filter设置类型为buffered_call
             virtual std::size_t private_read_some(
-                StreamMutableBuffers const & buffers,
+                buffers_t const & buffers,
                 boost::system::error_code & ec);
 
             // 内部filter设置类型为buffered_call
             virtual void private_async_read_some(
-                StreamMutableBuffers const & buffers, 
-                StreamHandler const & handler);
+                buffers_t const & buffers, 
+                handler_t const & handler);
+
+        private:
+            Source & source_;
+            boost::asio::streambuf buf_;
         };
 
     } // stream
