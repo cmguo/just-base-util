@@ -4,20 +4,62 @@
 #include "util/stream/FilterSource.h"
 #include "util/buffers/BufferSize.h"
 #include "util/stream/StreamErrors.h"
-#include "util/stream/DummyFilter.h"
-#include "util/stream/DeviceWrapper.h"
 
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/categories.hpp>
-
-#include <iostream>
+#include <boost/bind.hpp>
+#include <boost/asio/io_service.hpp>
 
 namespace util
 {
     namespace stream
     {
 
-        class FilterSource;
+        class BufferSource
+        {
+        public:
+            struct category
+                : boost::iostreams::source_tag 
+                , boost::iostreams::multichar_tag
+            {};
+
+            typedef char char_type;
+
+        public:
+            BufferSource(
+                boost::asio::streambuf & data)
+                : m_data_(data)
+            {
+            }
+
+            ~BufferSource()
+            {
+            }
+
+        public:
+            std::streamsize read(
+                char * s, 
+                std::streamsize n)
+            {
+                n = m_data_.sgetn(s, n);
+                if (n == 0 && eof_)
+                    return std::char_traits<char>::eof();
+                return n;
+            }
+
+        public:
+            void set_eof()
+            {
+                eof_ = true;
+            }
+
+            bool is_eof() const
+            {
+                return eof_;
+            }
+
+        private:
+            bool eof_;
+            boost::asio::streambuf & m_data_;
+        };
 
         class read_handler
         {
@@ -38,39 +80,33 @@ namespace util
             {
                 using namespace boost::asio;
 
-                basic_dummy_filter<char> & dummy = 
-                    *source_.component<basic_dummy_filter<char> >(source_.size() - 2);
-                basic_source_wrapper<char> & device = 
-                    *source_.component<basic_source_wrapper<char> >(source_.size() - 1);
                 size_t szbuffer = util::buffers::buffer_size(buffers_);
-                device->async_read_some(
-                    dummy.use_buffer().prepare(szbuffer), boost::bind(boost::ref(*this), _1, _2));
+                source_.source_.async_read_some(
+                    source_.buf_.prepare(szbuffer), boost::bind(boost::ref(*this), _1, _2));
             }
 
             void operator()(
-                boost::system::error_code const & ec,
+                boost::system::error_code ec,
                 size_t bytes_transferred)
             {
-                basic_dummy_filter<char> & dummy = 
-                    *source_.component< basic_dummy_filter<char> >(source_.size() - 2);
-                dummy.use_buffer().commit(bytes_transferred);
+                BufferSource & dummy = 
+                    *source_.component<BufferSource>(source_.size() - 1);
 
-                boost::system::error_code ec1 = ec;
-                std::size_t bytes_read = 0;
+                source_.buf_.commit(bytes_transferred);
 
-                if (!ec1 || ec1 == boost::asio::error::eof) {
-                    if (ec1 == boost::asio::error::eof) {
+                size_t bytes_read = 0;
+
+                if (!ec || ec == boost::asio::error::eof) {
+                    if (ec == boost::asio::error::eof) {
                         dummy.set_eof();
                     }
-                    bytes_read = source_.read_some(buffers_, ec1);
-                    if (ec1 == boost::asio::error::eof && ec != boost::asio::error::eof) {
-                        ec1.clear();
+                    bytes_read = source_.read_some(buffers_, ec);
+                    if (ec == boost::asio::error::eof && !dummy.is_eof()) {
+                        ec.clear();
                     }
                 }
 
-                dummy.end_async();
-
-                handler_(ec1, bytes_read);
+                handler_(ec, bytes_read);
 
                 delete this;
             }
@@ -82,36 +118,30 @@ namespace util
         };
 
         FilterSource::FilterSource(
-            boost::asio::io_service & ios)
-            : Source(ios)
+            Source & source)
+            : Source(source.get_io_service())
+            , source_(source)
         {
             set_device_buffer_size(0);
             set_filter_buffer_size(0);
         }
-        FilterSource::~FilterSource()        {        }        void FilterSource::push(
-            Source & t)
+        FilterSource::~FilterSource()        {        }        void FilterSource::complete()
         {
-            using namespace boost::iostreams;
-            filtering_istream::push(
-                basic_dummy_filter<char>());
-            filtering_istream::push(basic_source_wrapper<char>(t));
+            boost::iostreams::filtering_istream::push(BufferSource(buf_));
         }
-        // 内部filter设置类型为buffered_call
-        std::size_t FilterSource::private_read_some(
-            StreamMutableBuffers const & buffers,
+        std::size_t FilterSource::filter_read(
+            buffers_t const & buffers,
             boost::system::error_code & ec)
         {
-            using namespace boost::asio;
-
             assert(is_complete() && size() > 1);
 
-            ec.clear();
             std::size_t bytes_read = 0;
 
-            typedef StreamMutableBuffers::const_iterator const_iterator;
             try {
-                for (const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
-                    read(buffer_cast<char *>(*iter), buffer_size(*iter));
+                for (buffers_t::const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
+                    read(
+                        boost::asio::buffer_cast<char *>(*iter), 
+                        boost::asio::buffer_size(*iter));
                     bytes_read += gcount();
                     if (eof()) {
                         ec = boost::asio::error::eof;
@@ -130,22 +160,35 @@ namespace util
             return bytes_read;
         }
 
+        std::size_t FilterSource::private_read_some(
+            buffers_t const & buffers,
+            boost::system::error_code & ec)
+        {
+            size_t szbuffer = util::buffers::buffer_size(buffers);
+
+            buf_.commit(source_.read_some(buf_.prepare(szbuffer), ec));
+
+            if (ec && buf_.size() == 0) {
+                return 0;
+            }
+
+            size_t bytes_read = filter_read(buffers, ec);
+
+            return bytes_read;
+        }
+
         // 内部filter设置类型为buffered_call
         void FilterSource::private_async_read_some(
             StreamMutableBuffers const & buffers, 
             StreamHandler const & handler)
         {
-            assert(is_complete() && size() > 1);
-
-            basic_dummy_filter<char> & dummy = 
-                *component<basic_dummy_filter<char> >(size() - 2);
-            dummy.begin_async();
+            BufferSource & dummy = 
+                *component<BufferSource>(size() - 1);
 
             if (dummy.is_eof()) {
                 boost::system::error_code ec;
-                size_t bytes_read = private_read_some(buffers, ec);
+                size_t bytes_read = filter_read(buffers, ec);
                 get_io_service().post(boost::bind(handler, ec, bytes_read));
-                dummy.end_async();
             } else {
                 read_handler * process_handler = 
                     new read_handler(*this, buffers, handler);

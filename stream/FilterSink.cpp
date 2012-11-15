@@ -3,13 +3,60 @@
 #include "util/Util.h"
 #include "util/stream/FilterSink.h"
 #include "util/stream/StreamErrors.h"
-#include "util/stream/DummyFilter.h"
-#include "util/stream/DeviceWrapper.h"
+
+#include <boost/bind.hpp>
+#include <boost/asio/io_service.hpp>
 
 namespace util
 {
     namespace stream
     {
+
+        class BufferSink
+        {
+        public:
+            struct category
+                : boost::iostreams::sink_tag 
+                , boost::iostreams::multichar_tag
+            {};
+
+            typedef char char_type;
+
+        public:
+            BufferSink(
+                boost::asio::streambuf & data)
+                : m_data_(data)
+            {
+            }
+
+            ~BufferSink()
+            {
+            }
+
+        public:
+            std::streamsize write(
+                const char * s, 
+                std::streamsize n)
+            {
+                n = m_data_.sputn(s, n);
+                return n;
+            }
+
+        public:
+            void set_eof()
+            {
+                eof_ = true;
+            }
+
+            bool is_eof() const
+            {
+                return eof_;
+            }
+
+        private:
+            bool eof_;
+            boost::asio::streambuf & m_data_;
+        };
 
         class write_handler
         {
@@ -18,10 +65,10 @@ namespace util
 
         public:
             write_handler(
-                FilterSink & source,
+                FilterSink & sink,
                 StreamConstBuffers const & buffers,
                 StreamHandler const & handler)
-                : sink_(source)
+                : sink_(sink)
                 , buffers_(buffers)
                 , handler_(handler)
                 , bytes_write_(0)
@@ -30,33 +77,39 @@ namespace util
 
             void start()
             {
-                using namespace boost::asio;
-
-                basic_dummy_filter<char> & dummy = 
-                    *sink_.component<basic_dummy_filter<char> >(sink_.size() - 2);
-                basic_sink_wrapper<char> & device = 
-                    *sink_.component<basic_sink_wrapper<char> >(sink_.size() - 1);
-
-                boost::system::error_code ec;
-                bytes_write_ = sink_.write_some(buffers_, ec);
-                if (ec) {
-                    sink_.get_io_service().post(
-                        boost::asio::detail::bind_handler(handler_, ec, bytes_write_));
+                if (sink_.buf_.size() > 0) {
+                    sink_.sink_.async_write_some(
+                        sink_.buf_.data(), boost::bind(boost::ref(*this), _1, _2));
                 } else {
-                    device->async_write_some(
-                        dummy.get_buffer().data(), boost::bind(boost::ref(*this), _1, _2));
+                    boost::system::error_code ec;
+                    bytes_write_ = sink_.filter_write(buffers_, ec);
+                    sink_.get_io_service().post(
+                        boost::bind(boost::ref(*this), ec, 0));
+                    return;
                 }
             }
 
             void operator()(
-                boost::system::error_code const & ec,
+                boost::system::error_code ec,
                 size_t bytes_transferred)
             {
-                basic_dummy_filter<char> & dummy = 
-                    *sink_.component<basic_dummy_filter<char> >(sink_.size() - 2);
-                dummy.use_buffer().consume(bytes_transferred);
+                sink_.buf_.consume(bytes_transferred);
 
-                dummy.end_async();
+                if (ec) {
+                    handler_(ec, bytes_write_);
+                    return;
+                }
+
+                if (sink_.buf_.size() > 0) {
+                    sink_.sink_.async_write_some(
+                        sink_.buf_.data(), boost::bind(boost::ref(*this), _1, _2));
+                    return;
+                } else if (!has_write_) {
+                    bytes_write_ = sink_.filter_write(buffers_, ec);
+                    has_write_ = true;
+                    (*this)(ec, 0);
+                    return;
+                }
 
                 handler_(ec, bytes_write_);
 
@@ -68,11 +121,13 @@ namespace util
             StreamConstBuffers const buffers_;
             StreamHandler const handler_;
             size_t bytes_write_;
+            bool has_write_;
         };
 
         FilterSink::FilterSink(
-            boost::asio::io_service & ios)
-            : Sink(ios)
+            Sink & sink)
+            : Sink(sink.get_io_service())
+            , sink_(sink)
         {
             set_device_buffer_size(0);
             set_filter_buffer_size(0);
@@ -82,54 +137,73 @@ namespace util
         {
         }
 
-        void FilterSink::push(
-            Sink & t)
+        void FilterSink::complete()
         {
-            using namespace boost::iostreams;
-            filtering_ostream::push(
-                basic_dummy_filter< char_type >());
-            filtering_ostream::push(basic_sink_wrapper< char_type >(t));
+            boost::iostreams::filtering_ostream::push(BufferSink(buf_));
         }
 
-        size_t FilterSink::private_write_some(
-            StreamConstBuffers const & buffers, 
+        size_t FilterSink::filter_write(
+            buffers_t const & buffers, 
             boost::system::error_code & ec)
         {
-            assert(is_complete() && size() > 1);
-
-            using namespace boost::asio;
-
             std::size_t bytes_write = 0;
 
             typedef StreamConstBuffers::const_iterator const_iterator;
             for (const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
                 try {
                     write(
-                        (const char *)boost::asio::detail::buffer_cast_helper(*iter),
-                        boost::asio::detail::buffer_size_helper(*iter));
-                    flush();
+                        boost::asio::buffer_cast<const char *>(*iter),
+                        boost::asio::buffer_size(*iter));
+                    bytes_write += boost::asio::buffer_size(*iter);
                 } catch (boost::system::system_error const & e) {
                     ec = e.code();
+                    break;
                 } catch ( ... ) {
                     ec = util::stream::error::filter_sink_error;
                     break;
                 }
-                bytes_write += boost::asio::detail::buffer_size_helper(*iter);
             }
 
             return bytes_write;
         }
 
-        // 内部filter设置类型为buffered_call
-        void FilterSink::private_async_write_some(
-            StreamConstBuffers const & buffers, 
-            StreamHandler const & handler)
+        size_t FilterSink::private_write_some(
+            buffers_t const & buffers, 
+            boost::system::error_code & ec)
         {
             assert(is_complete() && size() > 1);
 
-            basic_dummy_filter<char> & dummy = 
-                *component<basic_dummy_filter<char> >(size() - 2);
-            dummy.begin_async();
+            using namespace boost::asio;
+
+            ec.clear();
+            while (!ec && buf_.size() > 0) {
+                buf_.consume(sink_.write_some(buf_.data(), ec));
+            }
+
+            if (ec) {
+                return 0;
+            }
+
+            std::size_t bytes_write = filter_write(buffers, ec);
+
+            if (ec) {
+                return 0;
+            }
+
+            while (!ec && buf_.size() > 0) {
+                buf_.consume(sink_.write_some(buf_.data(), ec));
+            }
+
+            ec.clear(); // 如果sink_.write_some有错误，下次返回
+            return bytes_write;
+        }
+
+        // 内部filter设置类型为buffered_call
+        void FilterSink::private_async_write_some(
+            buffers_t const & buffers, 
+            handler_t const & handler)
+        {
+            assert(is_complete() && size() > 1);
 
             write_handler * process_handler =
                 new write_handler(*this, buffers, handler);
