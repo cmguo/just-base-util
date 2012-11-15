@@ -4,12 +4,7 @@
 #define _UTIL_PROTOCOL_HTTP_SOCKET_H_
 
 #include "util/protocol/http/HttpHead.h"
-
 #include "util/stream/Socket.h"
-#include "util/stream/ChunkedSource.h"
-#include "util/stream/ChunkedSink.h"
-#include "util/stream/FilterSource.h"
-#include "util/stream/FilterSink.h"
 
 #include <framework/network/TcpSocket.h>
 #include <framework/network/AsioHandlerHelper.h>
@@ -311,7 +306,13 @@ namespace util
             void set_source(
                 HttpHead const & head);
 
+            void reset_source(
+                HttpHead const & head);
+
             void set_sink(
+                HttpHead const & head);
+
+            void reset_sink(
                 HttpHead const & head);
 
             util::stream::Source & source();
@@ -328,10 +329,8 @@ namespace util
 
         private:
             util::stream::Socket<HttpSocket> stream_;
-            util::stream::ChunkedSource chunked_source_;
-            util::stream::ChunkedSink chunked_sink_;
-            util::stream::FilterSource filter_source_;
-            util::stream::FilterSink filter_sink_;
+            util::stream::Source * source_;
+            util::stream::Sink * sink_;
         };
 
     } // namespace protocol
