@@ -21,6 +21,7 @@ namespace framework
 {
     namespace string
     {
+
         std::string to_string(
             util::protocol::HttpRequestHead::MethodEnum const & e)
         {
@@ -39,6 +40,7 @@ namespace framework
             }
             return invalid_argument;
         }
+
     }
 }
 
@@ -67,6 +69,31 @@ namespace util
             "HEAD", 
             "invalid_method"
         };
+
+        HttpRequestHead::HttpRequestHead(
+            MethodEnum method)
+            : method(method)
+        {
+
+        }
+
+        HttpRequestHead::HttpRequestHead(
+            MethodEnum method, 
+            std::string const & path)
+            : method(method)
+            , path(path)
+        {
+        }
+
+        HttpRequestHead::HttpRequestHead(
+            MethodEnum method, 
+            std::string const & path, 
+            size_t version)
+            : HttpHead(version)
+            , method(method)
+            , path(path)
+        {
+        }
 
         bool HttpRequestHead::get_line(
             std::string & line) const
@@ -105,6 +132,31 @@ namespace util
             head_stream >> tmp;
             version |= tmp & 0xff;
             return head_stream;
+        }
+
+        HttpResponseHead::HttpResponseHead(
+            size_t err_code)
+            : err_code(err_code)
+        {
+            err_msg = make_error_code(http_error::errors(err_code)).message();
+        }
+
+        HttpResponseHead::HttpResponseHead(
+            size_t err_code, 
+            std::string const & err_msg)
+            : err_code(err_code)
+            , err_msg(err_msg)
+        {
+        }
+
+        HttpResponseHead::HttpResponseHead(
+            size_t err_code, 
+            std::string const & err_msg, 
+            size_t version)
+            : HttpHead(version)
+            , err_code(err_code)
+            , err_msg(err_msg)
+        {
         }
 
         bool HttpResponseHead::get_line(
