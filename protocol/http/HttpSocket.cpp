@@ -45,7 +45,6 @@ namespace util
         void HttpSocket::reset_source(
             HttpHead const & head)
         {
-            assert(source_ == &stream_);
             std::string encoding = head.content_encoding.get_value_or("");
             if ("gzip" == encoding) {
                 util::stream::FilterSource * filter_source = (util::stream::FilterSource *)source_;
