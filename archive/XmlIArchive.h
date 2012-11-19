@@ -4,10 +4,9 @@
 #define _UTIL_ARCHIVE_XML_I_ARCHIVE_H_
 
 #include "util/archive/StreamIArchive.h"
+#include "util/serialization/Optional.h"
 
 #include <framework/string/Parse.h>
-
-#include <boost/optional.hpp>
 
 #include <iterator>
 
