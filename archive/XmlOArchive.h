@@ -96,7 +96,7 @@ namespace util
                 doc_.SaveFile(file_name.c_str());
                 {
                     std::ifstream ifs(file_name.c_str(), std::ios::binary);
-                    std::basic_ostream<_Elem, _Traits> os(&this->buf_);
+                    std::basic_ostream<_Elem, _Traits> os(this->buf_);
                     os << ifs.rdbuf();
                 }
                 ::unlink(file_name.c_str());
