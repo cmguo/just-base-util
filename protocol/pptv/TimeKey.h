@@ -12,7 +12,7 @@ namespace util
         {
 
             std::string gen_key_from_time(
-                unsigned int time_now);
+                boost::uint32_t time_now);
 
         }
 
