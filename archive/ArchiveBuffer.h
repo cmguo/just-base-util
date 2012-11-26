@@ -32,9 +32,8 @@ namespace util
                 : buf_(buf)
                 , buf_size_(buf_size)
             {
-                this->setg(buf_, buf, buf + data_size);
-                this->setp(buf_, buf + buf_size);
-                this->pbump(data_size);
+                this->setg(buf_, buf_, buf_ + data_size);
+                this->setp(buf_ + data_size, buf_ + buf_size_);
             }
 
             /**
@@ -45,7 +44,7 @@ namespace util
             boost::asio::const_buffers_1 data(
                 std::size_t n = std::size_t(-1))
             {
-                if (this->gptr() + n > this->pptr())
+                if (n > (size_t)(this->pptr() - this->gptr()))
                     n = this->pptr() - this->gptr();
                 return boost::asio::const_buffers_1(this->gptr(), n);
             }
@@ -64,7 +63,7 @@ namespace util
             void commit(
                 std::size_t n)
             {
-                if (this->pptr() + n > this->epptr())
+                if (n > (size_t)(this->epptr() - this->pptr()))
                     n = this->epptr() - this->pptr();
                 this->pbump(static_cast<int>(n));
                 this->setg(this->eback(), this->gptr(), this->pptr());
@@ -79,10 +78,12 @@ namespace util
             void consume(
                 std::size_t n)
             {
-                if (this->gptr() + n > this->pptr())
+                if (n > (size_t)(this->pptr() - this->gptr()))
                     n = this->pptr() - this->gptr();
                 this->gbump(static_cast<int>(n));
-                this->setg(this->eback(), this->gptr(), this->pptr());
+                n = this->pptr() - this->gptr();
+                this->setp(this->gptr(), this->epptr());
+                this->pbump(static_cast<int>(n));
             }
 
             /**
@@ -90,9 +91,10 @@ namespace util
 
             并不移动写指针。
             */
-            boost::asio::mutable_buffers_1 prepare(std::size_t n)
+            boost::asio::mutable_buffers_1 prepare(
+                std::size_t n)
             {
-                if (this->pptr() + n > this->epptr())
+                if (n > (size_t)(this->epptr() - this->pptr()))
                     n = this->epptr() - this->pptr();
                 return boost::asio::mutable_buffers_1(this->pptr(), n);
             }
@@ -111,6 +113,57 @@ namespace util
             {
                 throw std::length_error("archive buffer too long");
                 return traits_type::not_eof(c);
+            }
+
+            virtual pos_type seekoff(
+                off_type off, 
+                std::ios_base::seekdir dir,
+                std::ios_base::openmode mode)
+            {
+                if (dir == std::ios_base::cur) {
+                    pos_type pos = (mode == std::ios_base::in ? gptr() : pptr()) - buf_;
+                    if (off == 0) {
+                        return pos;
+                    }
+                    pos += off;
+                    return seekpos(pos, mode);
+                } else if (dir == std::ios_base::beg) {
+                    return seekpos(off, mode);
+                } else if (dir == std::ios_base::end) {
+                    assert(off <= 0);
+                    return seekpos(pos_type(buf_size_) + off, mode);
+                } else {
+                    return pos_type(-1);
+                }
+            }
+
+            virtual pos_type seekpos(
+                pos_type position, 
+                std::ios_base::openmode mode)
+            {
+                assert(position != pos_type(-1));
+                if (mode == std::ios_base::in) {
+                    if (position <= this->pptr() - buf_) {
+                        setg(this->eback(), this->eback() + position, this->pptr());
+                    } else {
+                        return pos_type(-1);
+                    }
+                } else if (mode == std::ios_base::out) {
+                    if (position >= this->gptr() - buf_) {
+                        setp(this->pptr(), this->epptr());
+                        this->pbump(buf_ + position - this->pptr());
+                    } else {
+                        return pos_type(-1);
+                    }
+                } else {
+                    if (position <= buf_size_) {
+                        this->setg(buf_, buf_ + position, buf_ + position);
+                        this->setp(buf_ + position, buf_ + buf_size_);
+                    } else {
+                        return pos_type(-1);
+                    }
+                }
+                return position;
             }
 
         private:
