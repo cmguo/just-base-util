@@ -115,7 +115,7 @@ namespace util
             }
 
             std::string gen_key_from_time(
-                unsigned int time_now)
+                boost::uint32_t time_now)
             {
                 unsigned char bytes[16] = {0};
                 std::string keypwd = "qqqqqww";
