@@ -24,6 +24,8 @@ namespace util
             typedef typename std::basic_streambuf<_Elem, _Traits>::char_type char_type;
             typedef typename std::basic_streambuf<_Elem, _Traits>::int_type int_type;
             typedef typename std::basic_streambuf<_Elem, _Traits>::traits_type traits_type;
+            typedef typename std::basic_streambuf<_Elem, _Traits>::pos_type pos_type;
+            typedef typename std::basic_streambuf<_Elem, _Traits>::off_type off_type;
 
             ArchiveBuffer(
                 char_type * buf, 
@@ -121,7 +123,7 @@ namespace util
                 std::ios_base::openmode mode)
             {
                 if (dir == std::ios_base::cur) {
-                    pos_type pos = (mode == std::ios_base::in ? gptr() : pptr()) - buf_;
+                    pos_type pos = (mode == std::ios_base::in ? this->gptr() : this->pptr()) - buf_;
                     if (off == 0) {
                         return pos;
                     }
