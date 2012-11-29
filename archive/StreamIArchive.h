@@ -32,12 +32,12 @@ namespace util
             {
             }
 
-            std::basic_streambuf<_Elem, _Traits> * rdbuf()
+            std::basic_streambuf<_Elem, _Traits> * rdbuf() const
             {
                 return buf_;
             }
 
-            std::basic_streambuf<_Elem, _Traits> & streambuf()
+            std::basic_streambuf<_Elem, _Traits> & streambuf() const
             {
                 return *buf_;
             }
