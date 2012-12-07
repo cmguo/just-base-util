@@ -12,7 +12,6 @@ using namespace util::stream;
 #include <framework/logger/Section.h>
 #include <framework/system/LogicError.h>
 #include <framework/string/Url.h>
-using namespace framework::logger;
 using namespace framework::network;
 using namespace framework::system::logic_error;
 
@@ -28,7 +27,7 @@ namespace util
     namespace protocol
     {
 
-        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.protocol.MmsServer", Warn);
+        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.protocol.MmsServer", framework::logger::Warn);
 
         static size_t const DATA_BUFFER_SIZE = 10240;
 
@@ -93,7 +92,7 @@ namespace util
             LOG_DEBUG("[handle_receive_request_data] id =%u, ec = %s, bytes_transferred = %d" 
                 % id_ % ec % bytes_transferred);
 
-            LOG_DATA(Debug, ("request_data", request_.data().data()));
+            LOG_DATA(framework::logger::Debug, ("request_data", request_.data().data()));
 
             if (ec) {
                 handle_error(ec);

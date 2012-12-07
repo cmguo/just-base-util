@@ -5,9 +5,8 @@
 
 #include <framework/logger/Logger.h>
 #include <framework/logger/StreamRecord.h>
-using namespace framework::logger;
 
-FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.daemon.Daemon", Info);
+FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.daemon.Daemon", framework::logger::Info);
 
 namespace util
 {

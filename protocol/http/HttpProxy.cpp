@@ -11,7 +11,6 @@
 #include <framework/system/LogicError.h>
 #include <framework/string/Url.h>
 #include <framework/string/Format.h>
-using namespace framework::logger;
 using namespace framework::network;
 using namespace framework::string;
 using namespace framework::system::logic_error;
@@ -27,7 +26,7 @@ namespace util
     namespace protocol
     {
 
-        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.protocol.HttpProxy", Warn);
+        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.protocol.HttpProxy", framework::logger::Warn);
 
         std::string const HttpProxy::state_str[] = {
             "stopped", 
@@ -156,7 +155,7 @@ namespace util
                     boost::asio::read(http_to_client_, response_.data(), boost::asio::transfer_at_least(4096), ec1);
                     if (block)
                         http_to_client_.set_non_block(false, ec1);
-                    LOG_DATA(Debug, ("receiving_request_head", response_.data().data()));
+                    LOG_DATA(framework::logger::Debug, ("receiving_request_head", response_.data().data()));
                 }
                 on_error(ec);
                 switch (state_) {

@@ -11,7 +11,7 @@ using namespace framework::logger;
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
 
-FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("Daemon", 0);
+FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("Daemon", framework::logger::Info);
 
 namespace util
 {
@@ -104,7 +104,7 @@ namespace util
         {
             io_work_ = new boost::asio::io_service::work(io_svc_);
             boost::system::error_code result;
-            LOG_DEBUG("[start] beg");
+            LOG_INFO("[start] beg");
             if (concurrency == 0) {
                 result = module_registry_->startup();
             } else {
@@ -121,9 +121,9 @@ namespace util
                 }
                 cond.wait(lock);
             }
-            LOG_DEBUG("[start] end");
+            LOG_INFO("[start] end");
             if (result) {
-                LOG_DEBUG("[stop] beg");
+                LOG_INFO("[stop] beg");
                 delete io_work_;
                 io_work_ = NULL;
                 run();
@@ -134,14 +134,14 @@ namespace util
         boost::system::error_code Daemon::start(
             start_call_back_type const & start_call_back)
         {
-            LOG_DEBUG("[start] beg");
+            LOG_INFO("[start] beg");
             io_work_ = new boost::asio::io_service::work(io_svc_);
             boost::system::error_code result;
             result = module_registry_->startup();
-            LOG_DEBUG("[start] end");
+            LOG_INFO("[start] end");
             start_call_back(result);
             if (result) {
-            	LOG_DEBUG("[stop] beg");
+            	LOG_INFO("[stop] beg");
                 delete io_work_;
                 io_work_ = NULL;
             }
@@ -158,7 +158,7 @@ namespace util
                 io_svc_.run();
                 io_svc_.reset();
             }
-            LOG_DEBUG("[stop] end");
+            LOG_INFO("[stop] end");
         }
 
         void Daemon::stop(
@@ -169,7 +169,7 @@ namespace util
             io_svc_.post(
                 boost::bind(&detail::ModuleRegistry::shutdown, module_registry_));
             if (wait) {
-                LOG_DEBUG("[stop] beg");
+                LOG_INFO("[stop] beg");
                 run();
             }
         }

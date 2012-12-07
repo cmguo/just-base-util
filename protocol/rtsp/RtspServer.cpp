@@ -11,7 +11,6 @@ using namespace util::stream;
 #include <framework/logger/Section.h>
 #include <framework/system/LogicError.h>
 #include <framework/string/Url.h>
-using namespace framework::logger;
 using namespace framework::network;
 using namespace framework::system::logic_error;
 
@@ -26,7 +25,7 @@ namespace util
     namespace protocol
     {
 
-        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.protocol.RtspServer", Warn);
+        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.protocol.RtspServer", framework::logger::Warn);
 
         static size_t const DATA_BUFFER_SIZE = 10240;
 
