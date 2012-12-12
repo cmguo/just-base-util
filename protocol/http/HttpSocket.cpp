@@ -2,6 +2,7 @@
 
 #include "util/Util.h"
 #include "util/protocol/http/HttpSocket.h"
+#include "util/protocol/http/HttpSocket.hpp"
 
 #include "util/stream/ChunkedSource.h"
 #include "util/stream/ChunkedSink.h"

@@ -2,6 +2,7 @@
 
 #include "util/Util.h"
 #include "util/protocol/rtsp/RtspSocket.h"
+#include "util/protocol/rtsp/RtspSocket.hpp"
 
 #include <boost/asio/read_until.hpp>
 #include <boost/asio/write.hpp>
