@@ -3,6 +3,7 @@
 #include "util/Util.h"
 #include "util/stream/StreamTransfer.h"
 #include "util/protocol/rtsp/RtspServer.h"
+#include "util/protocol/rtsp/RtspSocket.hpp"
 #include "util/protocol/rtsp/RtspError.h"
 using namespace util::stream;
 
@@ -177,8 +178,20 @@ namespace util
             LOG_DEBUG("[handle_error] id = %u, ec = %s" % id_ % ec.message());
 
             on_error(ec);
-            delete this;
+
+            post_process(
+                boost::bind(&RtspServer::handle_post_process, this, _1));
         }
+
+       void RtspServer::handle_post_process(
+           error_code const & ec)
+       {
+           LOG_SECTION();
+
+           LOG_DEBUG("[handle_post_process] id = %u, ec = %s" % id_ % ec.message());
+
+           delete this;
+       }
 
         void RtspServer::response_error(
             error_code const & ec)
