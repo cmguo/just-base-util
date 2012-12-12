@@ -1,7 +1,7 @@
 // RtspServer.h
 
-#ifndef _UTIL_PROTOCOL_RTSP_SERVER_H_
-#define _UTIL_PROTOCOL_RTSP_SERVER_H_
+#ifndef _UTIL_PROTOCOL_RTSP_RTSP_SERVER_H_
+#define _UTIL_PROTOCOL_RTSP_RTSP_SERVER_H_
 
 #include "util/protocol/rtsp/RtspSocket.h"
 #include "util/protocol/rtsp/RtspRequest.h"
@@ -30,7 +30,7 @@ namespace util
         protected:
             typedef boost::function1<void, 
                 boost::system::error_code const &
-            > local_process_response_type;
+            > response_type;
 
         protected:
             RtspRequest & request()
@@ -45,7 +45,13 @@ namespace util
 
         protected:
             virtual void local_process(
-                local_process_response_type const & resp)
+                response_type const & resp)
+            {
+                resp(boost::system::error_code());
+            }
+
+            virtual void post_process(
+                response_type const & resp)
             {
                 resp(boost::system::error_code());
             }
@@ -71,27 +77,12 @@ namespace util
                 boost::system::error_code const & ec, 
                 size_t bytes_transferred);
 
-            void handle_connect_server(
-                boost::system::error_code const & ec);
-
-            void handle_send_request_head(
-                boost::system::error_code const & ec, 
-                size_t bytes_transferred);
-
             void handle_receive_request_data(
                 boost::system::error_code const & ec, 
                 size_t bytes_transferred);
 
-            void handle_transfer_request_data(
-                boost::system::error_code const & ec, 
-                util::stream::transfer_size const & bytes_transferred);
-
             void handle_local_process(
                 boost::system::error_code const & ec);
-
-            void handle_receive_response_head(
-                boost::system::error_code const & ec, 
-                size_t bytes_transferred);
 
             void handle_send_response_head(
                 boost::system::error_code const & ec, 
@@ -101,13 +92,12 @@ namespace util
                 boost::system::error_code const & ec, 
                 size_t bytes_transferred);
 
-            void handle_transfer_response_data(
-                boost::system::error_code const & ec, 
-                util::stream::transfer_size const & bytes_transferred);
-
             void handle_response_error(
                 boost::system::error_code const & ec, 
                 size_t bytes_transferred);
+
+            void handle_post_process(
+                boost::system::error_code const & ec);
 
             void handle_error(
                 boost::system::error_code const & ec);
@@ -127,4 +117,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_RTSP_SERVER_H_
+#endif // _UTIL_PROTOCOL_RTSP_RTSP_SERVER_H_
