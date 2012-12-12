@@ -1,7 +1,7 @@
 // Rtsp.h
 
-#ifndef _UTIL_PROTOCOL_RTSP_ERROR_H_
-#define _UTIL_PROTOCOL_RTSP_ERROR_H_
+#ifndef _UTIL_PROTOCOL_RTSP_RTSP_ERROR_H_
+#define _UTIL_PROTOCOL_RTSP_RTSP_ERROR_H_
 
 namespace util
 {
@@ -229,4 +229,4 @@ namespace boost
     }
 }
 
-#endif // _UTIL_PROTOCOL_RTSP_ERROR_H_
+#endif // _UTIL_PROTOCOL_RTSP_RTSP_ERROR_H_

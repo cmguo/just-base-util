@@ -1,7 +1,7 @@
 // RtspRequest.h
 
-#ifndef _UTIL_PROTOCOL_RTSP_REQUEST_H_
-#define _UTIL_PROTOCOL_RTSP_REQUEST_H_
+#ifndef _UTIL_PROTOCOL_RTSP_RTSP_REQUEST_H_
+#define _UTIL_PROTOCOL_RTSP_RTSP_REQUEST_H_
 
 #include "util/protocol/rtsp/RtspPacket.h"
 
@@ -88,4 +88,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_RTSP_REQUEST_H_
+#endif // _UTIL_PROTOCOL_RTSP_RTSP_REQUEST_H_

@@ -1,7 +1,7 @@
 // HttpResponse.h
 
-#ifndef _UTIL_PROTOCOL_HTTP_RESPONSE_H_
-#define _UTIL_PROTOCOL_HTTP_RESPONSE_H_
+#ifndef _UTIL_PROTOCOL_HTTP_HTTP_RESPONSE_H_
+#define _UTIL_PROTOCOL_HTTP_HTTP_RESPONSE_H_
 
 #include "util/protocol/http/HttpPacket.h"
 #include "util/protocol/http/HttpError.h"
@@ -81,4 +81,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_HTTP_RESPONSE_H_
+#endif // _UTIL_PROTOCOL_HTTP_HTTP_RESPONSE_H_

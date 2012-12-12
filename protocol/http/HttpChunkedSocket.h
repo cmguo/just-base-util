@@ -1,7 +1,7 @@
 // HttpChunkedSocket.h
 
-#ifndef _UTIL_PROTOCOL_HTTP_CHUNKED_SOCKET_H_
-#define _UTIL_PROTOCOL_HTTP_CHUNKED_SOCKET_H_
+#ifndef _UTIL_PROTOCOL_HTTP_HTTP_CHUNKED_SOCKET_H_
+#define _UTIL_PROTOCOL_HTTP_HTTP_CHUNKED_SOCKET_H_
 
 #include "util/buffers/BuffersSize.h"
 #include "util/buffers/SubBuffers.h"
@@ -678,4 +678,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_HTTP_CHUNKED_SOCKET_H_
+#endif // _UTIL_PROTOCOL_HTTP_HTTP_CHUNKED_SOCKET_H_

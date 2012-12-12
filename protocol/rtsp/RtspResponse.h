@@ -1,7 +1,7 @@
 // RtspResponse.h
 
-#ifndef _UTIL_PROTOCOL_RTSP_RESPONSE_H_
-#define _UTIL_PROTOCOL_RTSP_RESPONSE_H_
+#ifndef _UTIL_PROTOCOL_RTSP_RTSP_RESPONSE_H_
+#define _UTIL_PROTOCOL_RTSP_RTSP_RESPONSE_H_
 
 #include "util/protocol/rtsp/RtspPacket.h"
 
@@ -70,4 +70,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_RTSP_RESPONSE_H_
+#endif // _UTIL_PROTOCOL_RTSP_RTSP_RESPONSE_H_

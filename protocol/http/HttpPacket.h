@@ -1,7 +1,7 @@
 // HttpPacket.h
 
-#ifndef _UTIL_PROTOCOL_HTTP_PACKET_H_
-#define _UTIL_PROTOCOL_HTTP_PACKET_H_
+#ifndef _UTIL_PROTOCOL_HTTP_HTTP_PACKET_H_
+#define _UTIL_PROTOCOL_HTTP_HTTP_PACKET_H_
 
 #include "util/protocol/http/HttpHead.h"
 
@@ -48,4 +48,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_HTTP_PACKET_H_
+#endif // _UTIL_PROTOCOL_HTTP_HTTP_PACKET_H_

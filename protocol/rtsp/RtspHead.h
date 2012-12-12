@@ -1,7 +1,7 @@
 // RtspHead.h
 
-#ifndef _UTIL_PROTOCOL_RTSP_HEAD_H_
-#define _UTIL_PROTOCOL_RTSP_HEAD_H_
+#ifndef _UTIL_PROTOCOL_RTSP_RTSP_HEAD_H_
+#define _UTIL_PROTOCOL_RTSP_RTSP_HEAD_H_
 
 #include "util/protocol/rtsp/RtspStringField.h"
 #include "util/protocol/rtsp/RtspFieldRange.h"
@@ -98,4 +98,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_RTSP_HEAD_H_
+#endif // _UTIL_PROTOCOL_RTSP_RTSP_HEAD_H_

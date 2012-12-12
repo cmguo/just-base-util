@@ -1,7 +1,7 @@
 // HttpProxyManager.h
 
-#ifndef _UTIL_PROTOCOL_HTTP_PROXY_MANAGER_H_
-#define _UTIL_PROTOCOL_HTTP_PROXY_MANAGER_H_
+#ifndef _UTIL_PROTOCOL_HTTP_HTTP_PROXY_MANAGER_H_
+#define _UTIL_PROTOCOL_HTTP_HTTP_PROXY_MANAGER_H_
 
 #include <boost/bind.hpp>
 
@@ -147,4 +147,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_HTTP_PROXY_MANAGER_H_
+#endif // _UTIL_PROTOCOL_HTTP_HTTP_PROXY_MANAGER_H_

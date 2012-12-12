@@ -1,7 +1,7 @@
 // HttpClient.h
 
-#ifndef _UTIL_PROTOCOL_HTTP_CLIENT_H_
-#define _UTIL_PROTOCOL_HTTP_CLIENT_H_
+#ifndef _UTIL_PROTOCOL_HTTP_HTTP_CLIENT_H_
+#define _UTIL_PROTOCOL_HTTP_HTTP_CLIENT_H_
 
 #include "util/protocol/http/HttpSocket.h"
 #include "util/protocol/http/HttpRequest.h"
@@ -514,4 +514,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_HTTP_CLIENT_H_
+#endif // _UTIL_PROTOCOL_HTTP_HTTP_CLIENT_H_

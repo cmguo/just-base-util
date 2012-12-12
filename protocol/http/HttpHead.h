@@ -1,7 +1,7 @@
 // HttpHead.h
 
-#ifndef _UTIL_PROTOCOL_HTTP_HEAD_H_
-#define _UTIL_PROTOCOL_HTTP_HEAD_H_
+#ifndef _UTIL_PROTOCOL_HTTP_HTTP_HEAD_H_
+#define _UTIL_PROTOCOL_HTTP_HTTP_HEAD_H_
 
 #include "util/protocol/http/HttpStringField.h"
 #include "util/protocol/http/HttpFieldRange.h"
@@ -108,4 +108,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_HTTP_HEAD_H_
+#endif // _UTIL_PROTOCOL_HTTP_HTTP_HEAD_H_

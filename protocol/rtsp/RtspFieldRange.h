@@ -1,7 +1,7 @@
 // RtspFieldRange.h
 
-#ifndef _UTIL_PROTOCOL_RTSP_FIELD_RANGE_H_
-#define _UTIL_PROTOCOL_RTSP_FIELD_RANGE_H_
+#ifndef _UTIL_PROTOCOL_RTSP_RTSP_FIELD_RANGE_H_
+#define _UTIL_PROTOCOL_RTSP_RTSP_FIELD_RANGE_H_
 
 #include <framework/string/Format.h>
 #include <framework/string/Parse.h>
@@ -175,4 +175,4 @@ namespace util
     }
 }
 
-#endif // _UTIL_PROTOCOL_RTSP_FIELD_RANGE_H_
+#endif // _UTIL_PROTOCOL_RTSP_RTSP_FIELD_RANGE_H_
