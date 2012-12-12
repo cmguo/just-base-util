@@ -9,6 +9,8 @@
 #include "util/stream/FilterSink.h"
 
 #include <boost/iostreams/filter/gzip.hpp>
+#include <boost/asio/read_until.hpp>
+#include <boost/asio/write.hpp>
 
 namespace util
 {
@@ -23,6 +25,71 @@ namespace util
             , source_(&stream_)
             , sink_(&stream_)
         {
+        }
+
+        void HttpSocket::close()
+        {
+            snd_buf_.reset();
+            rcv_buf_.reset();
+            super::close();
+        }
+
+        size_t HttpSocket::write(
+            HttpHead & head)
+        {
+            if (snd_buf_.size() == 0) {
+                std::ostream os(&snd_buf_);
+                boost::system::error_code ec;
+                head.get_content(os, ec);
+                assert(!ec);
+            }
+            return boost::asio::write((super &)*this, snd_buf_);
+        }
+
+        size_t HttpSocket::write(
+            HttpHead & head, 
+            boost::system::error_code & ec)
+        {
+            if (snd_buf_.size() == 0) {
+                std::ostream os(&snd_buf_);
+                head.get_content(os, ec);
+                assert(!ec);
+            }
+            return boost::asio::write((super &)*this, snd_buf_, boost::asio::transfer_all(), ec);
+        }
+
+        size_t HttpSocket::read(
+            HttpHead & head)
+        {
+            boost::asio::read_until((super &)*this, rcv_buf_, "\r\n\r\n");
+            size_t old_size = rcv_buf_.size();
+            std::istream is(&rcv_buf_);
+            boost::system::error_code ec;
+            head.set_content(is, ec);
+            assert(!ec);
+            return old_size - rcv_buf_.size();
+        }
+
+        size_t HttpSocket::read(
+            HttpHead & head, 
+            boost::system::error_code & ec)
+        {
+            boost::asio::read_until((super &)*this, rcv_buf_, "\r\n\r\n", ec);
+            if (!ec) {
+                size_t old_size = rcv_buf_.size();
+                std::istream is(&rcv_buf_);
+                head.set_content(is, ec);
+                return old_size - rcv_buf_.size();
+            }
+            return 0;
+        }
+
+        boost::system::error_code HttpSocket::close(
+            boost::system::error_code & ec)
+        {
+            snd_buf_.reset();
+            rcv_buf_.reset();
+            return super::close(ec);
         }
 
         void HttpSocket::set_source(

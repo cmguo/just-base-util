@@ -1,7 +1,7 @@
 // HttpArchive.h 
 
-#ifndef _UTIL_PROTOCOL_HTTP_ARCHIVE_H_
-#define _UTIL_PROTOCOL_HTTP_ARCHIVE_H_
+#ifndef _UTIL_PROTOCOL_HTTP_HTTP_ARCHIVE_H_
+#define _UTIL_PROTOCOL_HTTP_HTTP_ARCHIVE_H_
 
 #include "util/serialization/NVPair.h"
 #include "util/serialization/stl/vector.h"
@@ -579,4 +579,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_HTTP_ARCHIVE_H_
+#endif // _UTIL_PROTOCOL_HTTP_HTTP_ARCHIVE_H_

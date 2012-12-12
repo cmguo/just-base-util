@@ -2,6 +2,7 @@
 
 #include "util/Util.h"
 #include "util/protocol/http/HttpClient.h"
+#include "util/protocol/http/HttpSocket.hpp"
 #include "util/protocol/http/HttpError.h"
 #include "util/protocol/http/HttpRequest.h"
 #include "util/protocol/http/HttpResponse.h"

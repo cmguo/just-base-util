@@ -2,6 +2,7 @@
 
 #include "util/Util.h"
 #include "util/protocol/http/HttpProxy.h"
+#include "util/protocol/http/HttpSocket.hpp"
 #include "util/protocol/http/HttpError.h"
 
 #include <framework/logger/Logger.h>

@@ -2,6 +2,7 @@
 
 #include "util/Util.h"
 #include "util/protocol/http/HttpProxy.h"
+#include "util/protocol/http/HttpSocket.hpp"
 #include "util/stream/StreamTransfer.h"
 using namespace util::stream;
 
