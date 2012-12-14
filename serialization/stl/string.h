@@ -15,11 +15,12 @@ namespace util
     {
 
         template<
+            typename Ar, 
             class _Elem, 
             class _Traits, 
             class _Alloc
         >
-        struct is_primitive<std::basic_string<_Elem, _Traits, _Alloc> >
+        struct is_primitive<Ar, std::basic_string<_Elem, _Traits, _Alloc> >
             : boost::true_type
         {
         };

@@ -21,14 +21,19 @@ namespace util
 
         /// 指示一个类型是否是序列化基本类型
         /// 基本类型的序列化（反序列化）直接调用序列化（反序列化）类的save（load）方法
-        template <typename T>
+        template <
+            typename Ar, 
+            typename T
+        >
         struct is_primitive
             : boost::is_fundamental<T>
         {
         };
 
         /// 指示一个类型是否是序列化基本类型
-        template <typename T>
+        template <
+            typename T
+        >
         struct is_sigle_unit
             : boost::false_type
         {
