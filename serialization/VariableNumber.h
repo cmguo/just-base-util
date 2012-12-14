@@ -13,9 +13,10 @@ namespace util
     {
 
         template<
+            typename Archive, 
             typename _Ty
         >
-        struct is_primitive<framework::system::VariableNumber<_Ty> >
+        struct is_primitive<Archive, framework::system::VariableNumber<_Ty> >
             : boost::true_type
         {
         };

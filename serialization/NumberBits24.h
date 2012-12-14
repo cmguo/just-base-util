@@ -13,8 +13,9 @@ namespace util
     {
 
         template<
+            typename Archive
         >
-        struct is_primitive<framework::system::UInt24>
+        struct is_primitive<Archive, framework::system::UInt24>
             : boost::true_type
         {
         };
