@@ -158,7 +158,7 @@ namespace util
                         return pos_type(-1);
                     }
                 } else {
-                    if (position <= buf_size_) {
+                    if ((size_t)position <= buf_size_) {
                         this->setg(buf_, buf_ + position, buf_ + position);
                         this->setp(buf_ + position, buf_ + buf_size_);
                     } else {

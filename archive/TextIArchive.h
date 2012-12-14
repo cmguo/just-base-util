@@ -58,7 +58,7 @@ namespace util
                 is_.get(); // Ìø¹ý¿Õ¸ñ
             }
 
-            using StreamIArchive<TextIArchive>::load;
+            using StreamIArchive<TextIArchive, _Elem, _Traits>::load;
 
         private:
             std::basic_istream<_Elem, _Traits> & is_;

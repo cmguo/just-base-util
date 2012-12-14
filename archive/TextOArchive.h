@@ -69,10 +69,10 @@ namespace util
             {
                 save((std::size_t)t.size());
                 newtoken(); // 加上一个空格
-                this->save_binary((char const *)&t[0], t.size());
+                this->save_binary((_Elem const *)&t[0], t.size());
             }
 
-            using StreamOArchive<TextOArchive>::save;
+            using StreamOArchive<TextOArchive, _Elem, _Traits>::save;
 
             void save_start(
                 std::string const & name)
