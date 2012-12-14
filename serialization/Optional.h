@@ -13,27 +13,6 @@ namespace util
         template<
             class _T
         >
-        struct is_primitive<boost::optional<_T> >
-            : boost::true_type
-        {
-        };
-
-        template<
-            class _T
-        >
-        struct optional_ref;
-
-        template<
-            class _T
-        >
-        struct is_primitive<optional_ref<_T> >
-            : boost::true_type
-        {
-        };
-
-        template<
-            class _T
-        >
         struct optional_ref
         {
             optional_ref(

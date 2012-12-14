@@ -160,7 +160,7 @@ namespace util
                 {
                     /// 根据类型类别（基本类型，标准类型），分别处理序列化
                     typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                        util::serialization::is_primitive<T>, 
+                        util::serialization::is_primitive<Archive, T>, 
                         save_primitive, 
                         BOOST_DEDUCED_TYPENAME boost::mpl::if_<
                             util::serialization::is_wrapper<T>, 

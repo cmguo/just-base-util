@@ -302,4 +302,37 @@ namespace util
     } // namespace archive
 } // namespace util
 
+namespace util
+{
+    namespace serialization
+    {
+
+        template<
+            typename _Elem, 
+            typename _Traits, 
+            class _T
+        >
+        struct is_primitive<util::archive::XmlIArchive<_Elem, _Traits>, boost::optional<_T> >
+            : boost::true_type
+        {
+        };
+
+        template<
+            class _T
+        >
+        struct optional_ref;
+
+        template<
+            typename _Elem, 
+            typename _Traits, 
+            class _T
+        >
+        struct is_primitive<util::archive::XmlIArchive<_Elem, _Traits>, optional_ref<_T> >
+            : boost::true_type
+        {
+        };
+
+    }
+}
+
 #endif // _UTIL_ARCHIVE_XML_I_ARCHIVE_H_
