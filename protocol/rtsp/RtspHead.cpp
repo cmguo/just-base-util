@@ -20,11 +20,23 @@ using namespace boost::system;
 
 namespace util
 {
+    namespace protocol
+    {
+        class RtspHeadIArchive;
+        class RtspHeadOArchive;
+    }
+
     namespace serialization
     {
 
         template <typename T>
-        struct is_primitive<boost::optional<T> >
+        struct is_primitive<util::protocol::RtspHeadIArchive, boost::optional<T> >
+            : boost::true_type
+        {
+        };
+
+        template <typename T>
+        struct is_primitive<util::protocol::RtspHeadOArchive, boost::optional<T> >
             : boost::true_type
         {
         };
