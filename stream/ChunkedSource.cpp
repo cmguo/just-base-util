@@ -5,9 +5,14 @@
 #include "util/buffers/BuffersSize.h"
 #include "util/buffers/SubBuffers.h"
 
+#include <framework/logger/Logger.h>
+#include <framework/logger/StreamRecord.h>
+
 #include <boost/asio/io_service.hpp>
 #include <boost/bind.hpp>
 #include <boost/ref.hpp>
+
+FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.stream.ChunkedSource", framework::logger::Trace);
 
 namespace util
 {
@@ -103,23 +108,32 @@ namespace util
                 if (rcv_buf_.size()) {
                     // 剩余的Chunk头部或者尾部数据
                     std::size_t bytes_transferred = source_.read_some(rcv_buf_.prepare(rcv_left_), ec);
-                    rcv_buf_.consume(bytes_transferred);
+                    rcv_buf_.commit(bytes_transferred);
                     rcv_left_ -= bytes_transferred;
                     if (rcv_left_) {
+                        // 底层source没有返回足够数据，应该would_block或者其他错误
+                        // 退出循环，返回
                         break;
                     }
                     if (!recv_crlf(rcv_buf_, rcv_left_)) {
+                        // Chunk头部或者尾部还没有完成
+                        // 继续循环收Chunk头部或者尾部数据
                         continue;
                     }
                     if (rcv_left_ == std::size_t(-1)) {
+                        // 已经到了最后的Chunk
+                        // 退出循环，返回eof
                         ec = boost::asio::error::eof;
                         break;
                     }
                 }
+                // 至此，Chunk头部或者尾部收完，根据rcv_left_是否为0可以判断是头部还是尾部
                 if (rcv_left_ == 0) {
                     // 刚刚接收了尾部，重组新的Chunk
                     if (bytes_left == 0)
                         break;
+                    // 还没有达到调用者期望的数据量
+                    // 继续循环收Chunk头部
                     recv_crlf(rcv_buf_, rcv_left_);
                 } else {
                     // 接收完头部，接收剩余数据
@@ -161,21 +175,26 @@ namespace util
 
             void start()
             {
+                //LOG_TRACE("[recv_handler::start]");
                 if (rcv_buf_.size()) {
+                    //LOG_TRACE("[recv_handler::start] recv chunk, rcv_left: " << rcv_left_);
                     source_.async_read_some(rcv_buf_.prepare(rcv_left_), 
                         boost::bind(boost::ref(*this), _1, _2));
                 } else {
                     if (rcv_left_ == 0) { 
                         if (bytes_left_ == 0) {
+                            //LOG_TRACE("[recv_handler::start] sudden finish");
                             source_.get_io_service().post(
                                 boost::bind(handler_, boost::system::error_code(), bytes_recv_));
                             delete this;
                             return;
                         }
                         ChunkedSource::recv_crlf(rcv_buf_, rcv_left_);
+                        //LOG_TRACE("[recv_handler::start] recv chunk, rcv_left: " << rcv_left_);
                         source_.async_read_some(rcv_buf_.prepare(rcv_left_), 
                             boost::bind(boost::ref(*this), _1, _2));
                     } else {
+                        //LOG_TRACE("[recv_handler::start] recv data, rcv_left: " << rcv_left_);
                         source_.async_read_some(buffers::sub_buffers(buffers_, bytes_recv_, rcv_left_), 
                             boost::bind(boost::ref(*this), _1, _2));
                     }
@@ -186,27 +205,34 @@ namespace util
                 boost::system::error_code const & ec, 
                 size_t bytes_transferred)
             {
+                //LOG_TRACE("[recv_handler::operator()] bytes_transferred: " << bytes_transferred);
                 if (ec) {
+                    //LOG_TRACE("[recv_handler::operator()] callback, bytes_recv: " << bytes_recv_);
                     handler_(ec, bytes_recv_);
                     delete this;
                     return;
                 }
                 if (rcv_buf_.size()) {
                     // 剩余的Chunk头部或者尾部数据
+                    //LOG_TRACE("[recv_handler::operator()] commit chunk");
                     rcv_buf_.commit(bytes_transferred);
                     rcv_left_ -= bytes_transferred;
                     if (rcv_left_) {
+                        //LOG_TRACE("[recv_handler::operator()] callback, bytes_recv: " << bytes_recv_);
                         handler_(ec, bytes_recv_);
                         delete this;
                         return;
                     }
                     if (!ChunkedSource::recv_crlf(rcv_buf_, rcv_left_)) {
+                        //LOG_TRACE("[recv_handler::operator()] recv chunk, rcv_left: " << rcv_left_);
                         source_.async_read_some(rcv_buf_.prepare(rcv_left_), 
                             boost::bind(boost::ref(*this), _1, _2));
                         return;
                     }
                     if (rcv_left_ == std::size_t(-1)) {
+                        //LOG_TRACE("[recv_handler::operator()] eof");
                         rcv_left_ = 0; // 重置为初始状态，为后续的接受做准备
+                        //LOG_TRACE("[recv_handler::operator()] callback, bytes_recv: " << bytes_recv_);
                         handler_(boost::asio::error::eof, bytes_recv_);
                         delete this;
                         return;
@@ -214,18 +240,22 @@ namespace util
                     if (rcv_left_ == 0) {
                         // 刚刚接收了尾部，重组新的Chunk
                         if (bytes_left_ == 0) {
+                            //LOG_TRACE("[recv_handler::operator()] callback, bytes_recv: " << bytes_recv_);
                             handler_(ec, bytes_recv_);
                             delete this;
                             return;
                         }
+                        //LOG_TRACE("[recv_handler::operator()] recv chunk, rcv_left: " << rcv_left_);
                         ChunkedSource::recv_crlf(rcv_buf_, rcv_left_);
                         source_.async_read_some(rcv_buf_.prepare(rcv_left_), 
                             boost::bind(boost::ref(*this), _1, _2));
                     } else {
+                        //LOG_TRACE("[recv_handler::operator()] recv data, rcv_left: " << rcv_left_);
                         source_.async_read_some(buffers::sub_buffers(buffers_, bytes_recv_, rcv_left_), 
                             boost::bind(boost::ref(*this), _1, _2));
                     }
                 } else {
+                    //LOG_TRACE("[recv_handler::operator()] commit data");
                     // 接收完头部，接收剩余数据
                     bytes_recv_ += bytes_transferred;
                     bytes_left_ -= bytes_transferred;
@@ -234,6 +264,7 @@ namespace util
                         // 接收完数据，构建尾部
                         ChunkedSource::recv_crlf(rcv_buf_, rcv_left_ = 1);
                     }
+                    //LOG_TRACE("[recv_handler::operator()] callback, bytes_recv: " << bytes_recv_);
                     handler_(ec, bytes_recv_);
                     delete this;
                     return;
