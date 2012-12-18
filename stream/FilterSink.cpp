@@ -25,7 +25,8 @@ namespace util
         public:
             BufferSink(
                 boost::asio::streambuf & data)
-                : m_data_(data)
+                : eof_(false)
+                , m_data_(data)
             {
             }
 

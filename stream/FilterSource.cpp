@@ -26,7 +26,8 @@ namespace util
         public:
             BufferSource(
                 boost::asio::streambuf & data)
-                : m_data_(data)
+                : eof_(false)
+                , m_data_(data)
             {
             }
 
@@ -98,12 +99,10 @@ namespace util
 
                 if (!ec || ec == boost::asio::error::eof) {
                     if (ec == boost::asio::error::eof) {
+                        ec.clear();
                         dummy.set_eof();
                     }
-                    bytes_read = source_.read_some(buffers_, ec);
-                    if (ec == boost::asio::error::eof && !dummy.is_eof()) {
-                        ec.clear();
-                    }
+                    bytes_read = source_.filter_read(buffers_, ec);
                 }
 
                 handler_(ec, bytes_read);
@@ -137,13 +136,16 @@ namespace util
 
             std::size_t bytes_read = 0;
 
+            BufferSource & dummy = 
+                *component<BufferSource>(size() - 1);
+
             try {
                 for (buffers_t::const_iterator iter = buffers.begin(); iter != buffers.end(); ++iter) {
                     read(
                         boost::asio::buffer_cast<char *>(*iter), 
                         boost::asio::buffer_size(*iter));
                     bytes_read += gcount();
-                    if (eof()) {
+                    if (bytes_read == 0 && eof() && dummy.is_eof()) {
                         ec = boost::asio::error::eof;
                     }
                     if (fail()) {
@@ -168,8 +170,16 @@ namespace util
 
             buf_.commit(source_.read_some(buf_.prepare(szbuffer), ec));
 
-            if (ec && buf_.size() == 0) {
+            if (ec && ec != boost::asio::error::eof) {
                 return 0;
+            }
+
+            BufferSource & dummy = 
+                *component<BufferSource>(size() - 1);
+
+            if (ec == boost::asio::error::eof) {
+                ec.clear();
+                dummy.set_eof();
             }
 
             size_t bytes_read = filter_read(buffers, ec);
