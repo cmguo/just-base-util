@@ -561,6 +561,9 @@ namespace util
                             right.pos += right.first.drop_back();
                             return;
                         } else if (right.first.ptr() < left.first.ptr()) {
+                            std::size_t off = left.first.offset();
+                            right.first.commit(off);
+                            right.at_end = false;
                         } else {
                             // 左指针在右指针后面，追上了，所以结束
                             if (left.first.before(right.first)) {
@@ -572,8 +575,6 @@ namespace util
                     // 左指针在右指针前面，左指针离开，右指针跟进
                     std::size_t off = left.first.offset();
                     left.pos += off;
-                    right.first.commit(off);
-                    right.at_end = false;
                     left.first = boost::asio::buffer(*left.begin_remainder++);
                     if (left.begin_remainder == buffers_.end())
                         left.begin_remainder = buffers_.begin();
