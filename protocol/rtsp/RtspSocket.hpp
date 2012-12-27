@@ -5,6 +5,7 @@
 
 #include "util/protocol/rtsp/RtspSocket.h"
 
+#include <framework/network/TcpSocket.hpp>
 #include <framework/network/AsioHandlerHelper.h>
 
 #include <boost/asio/read_until.hpp>

@@ -3,12 +3,12 @@
 #ifndef _UTIL_PROTOCOL_HTTP_SERVER_MANAGER_H_
 #define _UTIL_PROTOCOL_HTTP_SERVER_MANAGER_H_
 
-#include <boost/bind.hpp>
-
 #include <framework/network/NetName.h>
 #include <framework/network/Acceptor.h>
+#include <framework/network/TcpSocket.hpp>
 
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/bind.hpp>
 
 namespace util
 {
