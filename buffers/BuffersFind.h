@@ -26,7 +26,6 @@ namespace util
                 typename BufferIterator
             >
             void buffers_char(
-                BuffersLimit<BufferIterator> const & limit, 
                 BuffersPosition<Buffer, BufferIterator> & pos, 
                 BuffersPosition<Buffer, BufferIterator> const & end, 
                 char chr)
@@ -36,10 +35,10 @@ namespace util
                     size_t size = boost::asio::buffer_size(pos.dereference_buffer());
                     char const * buf1 = (char const *)::memchr(buf, chr, size);
                     if (buf1) {
-                        pos.increment_bytes(limit, end, buf1 - buf);
+                        pos.increment_bytes(end, buf1 - buf);
                         return;
                     }
-                    pos.increment_buffer(limit, end);
+                    pos.increment_buffer(end);
                 };
             }
 
@@ -56,8 +55,6 @@ namespace util
                 boost::forward_traversal_tag>
         {
         public:
-            typedef BuffersLimit<BufferIterator> Limit;
-
             typedef BuffersPosition<Buffer, BufferIterator> Position;
 
             typedef BuffersBufferIterator<Buffer, BufferIterator> BuffersIterator;
@@ -69,13 +66,12 @@ namespace util
                 BufferIterator const & beg, 
                 BufferIterator const & end, 
                 int chr)
-                : limit_(beg, end)
-                , chr_(chr)
-                , cur_(limit_, beg)
-                , end_(limit_, end)
+                : chr_(chr)
+                , beg_(beg, end)
+                , end_(end)
                 , reset_postion_(false)
             {
-                detail::buffers_char(limit_, cur_, end_, chr_);
+                detail::buffers_char(beg_, end_, chr_);
             }
 
             BuffersCharIterator()
@@ -85,74 +81,77 @@ namespace util
         public:
             template <
                 typename Buffer2, 
-                typename BuffersLimit2
+                typename BufferIterator2
             >
             int compare_continue(
-                BuffersLimit2 const & limit2, 
+                BufferIterator2 const & pos2, 
+                BufferIterator2 const & end2, 
                 size_t size)
             {
-                return detail::buffers_compare_impl<Buffer2>(limit_, limit2, cur_, end_, size);
+                BuffersPosition<Buffer2, BufferIterator2> bpos2(pos2, end2);
+                BuffersPosition<Buffer2, BufferIterator2> bend2(end2);
+                return detail::buffers_compare_impl(beg_, end_, bpos2, bend2, size);
             }
 
         public:
             void skip_bytes(
                 size_t size)
             {
-                cur_.increment_bytes(limit_, end_, size);
+                beg_.increment_bytes(end_, size);
                 reset_postion_ = true;
             }
 
             BufferIterator sub_buffers()
             {
-                return BufferIterator(limit_, cur_, end_);
+                return BufferIterator(beg_, end_);
             }
             
             ByteIterator sub_bytes()
             {
-                return ByteIterator(limit_, cur_, end_);
+                return ByteIterator(beg_, end_);
             }
             
             BufferIterator sub_buffers_from(
                 Position const & pos)
             {
-                return BufferIterator(limit_, pos, cur_);
+                return BufferIterator(pos, beg_);
             }
             
             ByteIterator sub_bytes_from(
                 Position const & pos)
             {
-                return ByteIterator(limit_, pos, cur_);
+                return ByteIterator(pos, beg_);
             }
             
             BufferIterator sub_buffers_to(
                 Position const & pos)
             {
-                return BufferIterator(limit_, cur_, pos);
+                return BufferIterator(beg_, pos);
             }
             
             ByteIterator sub_bytes_to(
                 Position const & pos)
             {
-                return ByteIterator(limit_, cur_, pos);
+                return ByteIterator(beg_, pos);
             }
             
             BufferIterator next_buffers()
             {
                 Position pos = position();
                 increment();
-                return BufferIterator(limit_, pos, position());
+                return BufferIterator(pos, position());
             }
 
             ByteIterator next_bytes()
             {
                 Position pos = position();
                 increment();
-                return ByteIterator(limit_, pos, position());
+                return ByteIterator(pos, position());
             }
 
             Position const & position() const
             {
-                return cur_;
+                return beg_;
             }
 
             Position const & end_position() const
@@ -166,27 +165,26 @@ namespace util
             void increment()
             {
                 if (!reset_postion_)
-                    cur_.increment_byte(limit_);
-                detail::buffers_char(limit_, cur_, end_, chr_);
+                    beg_.increment_byte(end_);
+                detail::buffers_char(beg_, end_, chr_);
                 reset_postion_ = false;
             }
 
             bool equal(
                 const BuffersCharIterator & other) const
             {
-                return cur_.equal(other.cur_);
+                return beg_.equal(other.beg_);
             }
 
             Position const & dereference() const
             {
-                return cur_;
+                return beg_;
             }
 
         protected:
-            Limit limit_;
-            char chr_;
-            Position cur_;
+            Position beg_;
             Position end_;
+            char chr_;
             bool reset_postion_;
         };
 
@@ -202,8 +200,6 @@ namespace util
                 boost::forward_traversal_tag>
         {
         public:
-            typedef BuffersLimit<BufferIterator> Limit;
-
             typedef BuffersPosition<Buffer, BufferIterator> Position;
 
             typedef BuffersBufferIterator<Buffer, BufferIterator> BuffersIterator;
@@ -212,7 +208,7 @@ namespace util
 
             typedef typename ConstBufferSequence2::value_type  Buffer2;
 
-            typedef BuffersLimit<typename ConstBufferSequence2::const_iterator> Limit2;
+            typedef typename ConstBufferSequence2::const_iterator  BufferIterator2;
 
             typedef BuffersCharIterator<Buffer, BufferIterator> CharIterator;
 
@@ -223,11 +219,12 @@ namespace util
                 ConstBufferSequence2 const & find)
                 : char_iter_(beg, end, first_char(find))
                 , reset_postion_(false)
-                , limit2_(find.begin(), find.end())
+                , beg2_(find.begin())
+                , end2_(find.end())
                 , size_find_(buffers_size(find))
             {
                 CharIterator end1;
-                while (char_iter_ != end1 && char_iter_.template compare_continue<Buffer2>(limit2_, size_find_) != 0)
+                while (char_iter_ != end1 && char_iter_.template compare_continue<Buffer2>(beg2_, end2_, size_find_) != 0)
                     ++char_iter_;
             }
 
@@ -302,7 +299,7 @@ namespace util
                     char_iter_.skip_bytes(size_find_);
                 ++char_iter_;
                 CharIterator end;
-                while (char_iter_ != end && char_iter_.template compare_continue<Buffer2>(limit2_, size_find_) != 0) {
+                while (char_iter_ != end && char_iter_.template compare_continue<Buffer2>(beg2_, end2_, size_find_) != 0) {
                     ++char_iter_;
                 }
                 reset_postion_ = false;
@@ -322,7 +319,8 @@ namespace util
         private:
             CharIterator char_iter_;
             bool reset_postion_;
-            Limit2 const limit2_;
+            BufferIterator2 beg2_;
+            BufferIterator2 end2_;
             size_t size_find_;
         };
 

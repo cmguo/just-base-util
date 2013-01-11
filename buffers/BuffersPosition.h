@@ -26,27 +26,6 @@ namespace util
         };
 
         template <
-            typename BufferIterator
-        >
-        struct BuffersLimit
-        {
-            BuffersLimit(
-                BufferIterator const & beg, 
-                BufferIterator const & end)
-                : beg(beg)
-                , end(end)
-            {
-            }
-
-            BuffersLimit()
-            {
-            }
-
-            BufferIterator beg;
-            BufferIterator end;
-        };
-
-        template <
             typename Buffer, 
             typename BufferIterator
         >
@@ -55,62 +34,31 @@ namespace util
         public:
             typedef typename BufferByteType<Buffer>::type Byte;
 
-            typedef BuffersLimit<BufferIterator> Limit;
-
         public:
             BuffersPosition(
-                Limit const & limit, 
                 BufferIterator const & iter, 
-                size_t off, 
-                bool has_end = false)
+                BufferIterator const & end, 
+                size_t off = 0)
                 : iter_(iter)
                 , skipped_bytes_(0)
                 , at_end_(false)
             {
-                if (iter_ == limit.end) {
+                if (iter == end) {
                     at_end_ = true;
                 } else {
                     buf_ = *iter_;
                     buf_ = buf_ + off;
-                    if (!has_end) {
-                        set_end(limit);
-                    }
+                    if (boost::asio::buffer_size(buf_) == 0)
+                        normalize(BuffersPosition(end));
                 }
             }
 
             BuffersPosition(
-                Limit const & limit, 
-                BufferIterator const & iter, 
-                bool has_end = false)
-                : iter_(iter)
+                BufferIterator const & end)
+                : iter_(end)
                 , skipped_bytes_(0)
-                , at_end_(false)
+                , at_end_(true)
             {
-                if (iter_ == limit.end) {
-                    at_end_ = true;
-                } else {
-                    buf_ = *iter_;
-                    if (!has_end) {
-                        set_end(limit);
-                    }
-                }
-            }
-
-            BuffersPosition(
-                Limit const & limit, 
-                bool has_end = false)
-                : iter_(limit.beg)
-                , skipped_bytes_(0)
-                , at_end_(false)
-            {
-                if (iter_ == limit.end) {
-                    at_end_ = true;
-                } else {
-                    buf_ = *iter_;
-                }
-                if (!has_end) {
-                    set_end(limit);
-                }
             }
 
             BuffersPosition()
@@ -121,20 +69,10 @@ namespace util
 
         public:
             void set_end(
-                Limit const & limit)
-            {
-                if (boost::asio::buffer_size(buf_) == 0)
-                    normalize(limit);
-            }
-
-            void set_end(
-                Limit const & limit, 
                 BuffersPosition const & end)
             {
-                if (boost::asio::buffer_size(buf_) == 0)
-                    normalize(limit, end);
                 if (!at_end_ && iter_ == end.iter_) {
-                    std::ptrdiff_t size = boost::asio::buffer_cast<char const *>(end.buf_)
+                    std::ptrdiff_t size = boost::asio::buffer_cast<char const *>(end.buf_) 
                         - boost::asio::buffer_cast<char const *>(buf_);
                     if (size <= 0) {
                         size = 0;
@@ -172,7 +110,6 @@ namespace util
             }
 
             void increment_byte(
-                Limit const & limit, 
                 BuffersPosition const & end)
             {
                 assert(!at_end_);
@@ -180,24 +117,11 @@ namespace util
                 buf_ = buf_ + 1;
                 ++skipped_bytes_;
                 if (boost::asio::buffer_size(buf_) == 0) {
-                    normalize(limit, end);
-                }
-            }
-
-            void increment_byte(
-                Limit const & limit)
-            {
-                assert(!at_end_);
-                if (at_end_) return;
-                buf_ = buf_ + 1;
-                ++skipped_bytes_;
-                if (boost::asio::buffer_size(buf_) == 0) {
-                    normalize(limit);
+                    normalize(end);
                 }
             }
 
             void increment_bytes(
-                Limit const & limit, 
                 BuffersPosition const & end, 
                 size_t size)
             {
@@ -212,48 +136,18 @@ namespace util
                     }
                     size -= this_size;
                     skipped_bytes_ += this_size;
-                    this_size = normalize(limit, end);
-                }
-                assert(size == 0);
-            }
-
-            void increment_bytes(
-                Limit const & limit, 
-                size_t size)
-            {
-                assert(!at_end_);
-                size_t this_size = boost::asio::buffer_size(buf_);
-                assert(this_size > 0);
-                while (size > 0 && this_size > 0) {
-                    if (this_size > size) {
-                        buf_ = buf_ + size;
-                        skipped_bytes_ += size;
-                        return;
-                    }
-                    size -= this_size;
-                    skipped_bytes_ += this_size;
-                    this_size = normalize(limit);
+                    this_size = normalize(end);
                 }
                 assert(size == 0);
             }
 
             void increment_buffer(
-                Limit const & limit, 
                 BuffersPosition const & end)
             {
                 assert(!at_end_);
                 if (at_end_) return;
                 skipped_bytes_ += boost::asio::buffer_size(buf_);
-                normalize(limit, end);
-            }
-
-            void increment_buffer(
-                Limit const & limit)
-            {
-                assert(!at_end_);
-                if (at_end_) return;
-                skipped_bytes_ += boost::asio::buffer_size(buf_);
-                normalize(limit);
+                normalize(end);
             }
 
             size_t skipped_bytes() const
@@ -263,22 +157,6 @@ namespace util
 
         private:
             size_t normalize(
-                Limit const & limit)
-            {
-                while (++iter_ != limit.end) {
-                    buf_ = *iter_;
-                    if (boost::asio::buffer_size(buf_) > 0) {
-                        return boost::asio::buffer_size(buf_);
-                    }
-                }
-                // when at end, we should also clear buf_, because we will use (buf_.size() == 0) as end mark in increment_bytes
-                buf_ = buf_ + boost::asio::buffer_size(buf_);
-                at_end_ = true;
-                return 0;
-            }
-
-            size_t normalize(
-                Limit const & limit, 
                 BuffersPosition const & end)
             {
                 assert(!at_end_);
@@ -287,21 +165,29 @@ namespace util
                     at_end_ = true;
                     return 0;
                 }
-                while (++iter_ != limit.end) {
-                    buf_ = *iter_;
-                    if (iter_ == end.iter_) {
-                        std::ptrdiff_t size = boost::asio::buffer_cast<char const *>(end.buf_)
-                            - boost::asio::buffer_cast<char const *>(buf_);
-                        if (size <= 0) {
-                            size = 0;
+                while (!at_end_) {
+                    if (++iter_ == end.iter_) {
+                        char const * end_ptr = boost::asio::buffer_cast<char const *>(end.buf_);
+                        if (end_ptr == NULL) {
+                            buf_ = end.buf_;
                             at_end_ = true;
+                            return 0;
+                        } else {
+                            buf_ = *iter_;
+                            std::ptrdiff_t size = end_ptr - boost::asio::buffer_cast<char const *>(buf_);
+                            if (size <= 0) {
+                                size = 0;
+                                at_end_ = true;
+                            }
+                            // when at end, we should also clear buf_, because we will use (buf_.size() == 0) as end mark in increment_bytes
+                            buf_ = boost::asio::buffer(buf_, size);
+                            return size;
                         }
-                        // when at end, we should also clear buf_, because we will use (buf_.size() == 0) as end mark in increment_bytes
-                        buf_ = boost::asio::buffer(buf_, size);
-                        return size;
-                    }
-                    if (boost::asio::buffer_size(buf_) > 0) {
-                        return boost::asio::buffer_size(buf_);
+                    } else {
+                        buf_ = *iter_;
+                        if (boost::asio::buffer_size(buf_) > 0) {
+                            return boost::asio::buffer_size(buf_);
+                        }
                     }
                 }
                 // when at end, we should also clear buf_, because we will use (buf_.size() == 0) as end mark in increment_bytes

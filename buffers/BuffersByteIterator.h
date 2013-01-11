@@ -24,65 +24,26 @@ namespace util
             >
         {
         public:
-            typedef BuffersLimit<BufferIterator> Limit;
-
             typedef BuffersPosition<Buffer, BufferIterator> Position;
 
         public:
             BuffersByteIterator(
                 BufferIterator const & beg, 
-                BufferIterator const & cur, 
                 BufferIterator const & end, 
                 size_t off = 0)
-                : limit_(beg, end)
-                , beg_(limit_, beg)
-                , cur_(limit_, cur, off)
-                , end_(limit_, end)
-            {
-            }
-
-            BuffersByteIterator(
-                BufferIterator const & beg, 
-                BufferIterator const & cur, 
-                BufferIterator const & end)
-                : limit_(beg, end)
-                , beg_(limit_, beg)
-                , cur_(limit_, cur)
-                , end_(limit_, end)
-            {
-            }
-
-            BuffersByteIterator(
-                BufferIterator const & beg, 
-                BufferIterator const & end)
-                : limit_(beg, end)
-                , beg_(limit_, beg)
-                , cur_(limit_, beg)
-                , end_(limit_, end)
+                : beg_(beg, end, off)
+                , end_(end)
             {
             }
 
         public:
             BuffersByteIterator(
-                Limit limit, 
                 Position const & beg, 
                 Position const & end)
-                : limit_(limit)
-                , beg_(beg)
-                , cur_(beg)
+                : beg_(beg)
                 , end_(end)
             {
-                cur_.set_end(limit, end);
-            }
-
-            BuffersByteIterator(
-                Limit limit, 
-                Position const & beg)
-                : limit_(limit)
-                , beg_(beg)
-                , cur_(beg)
-                , end_(limit, limit.end)
-            {
+                beg_.set_end(end);
             }
 
             BuffersByteIterator()
@@ -94,24 +55,22 @@ namespace util
 
             void increment()
             {
-                cur_.increment_byte(limit_, end_);
+                beg_.increment_byte(end_);
             }
 
             bool equal(
                 BuffersByteIterator const & r) const
             {
-                return cur_.equal(r.cur_);
+                return beg_.equal(r.beg_);
             }
 
             typename Position::Byte & dereference() const
             {
-                return cur_.dereference_byte();
+                return beg_.dereference_byte();
             }
 
         private:
-            Limit limit_;
             Position beg_;
-            Position cur_;
             Position end_;
         };
 
