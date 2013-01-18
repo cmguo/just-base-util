@@ -119,12 +119,14 @@ namespace util
                     case transferring_request_data:
                     case sending_response_head:
                     case transferring_response_data:
+                        on_finish();
+                        state_ = exiting;
                         if (watch_state_ == watching) {
                             error_code ec1;
                             cancel(ec1);
+                        } else {
+                            delete this;
                         }
-                        on_finish();
-                        state_ = exiting;
                         break;
                     case local_processing:
                         if (!response_.head().content_length.is_initialized() && bytes_transferred.is_size_t()) {
