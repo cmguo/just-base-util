@@ -1,37 +1,37 @@
-// MmsServerManager.h
+// MmspServerManager.h
 
-#ifndef _UTIL_PROTOCOL_MMS_SERVER_MANAGER_H_
-#define _UTIL_PROTOCOL_MMS_SERVER_MANAGER_H_
-
-#include <boost/bind.hpp>
+#ifndef _UTIL_PROTOCOL_MMSP_MMSP_SERVER_MANAGER_H_
+#define _UTIL_PROTOCOL_MMSP_MMSP_SERVER_MANAGER_H_
 
 #include <framework/network/NetName.h>
 #include <framework/network/Acceptor.h>
+#include <framework/network/TcpSocket.hpp>
 
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/bind.hpp>
 
 namespace util
 {
     namespace protocol
     {
 
-        struct DefaultMmsServerManager;
+        struct DefaultMmspServerManager;
 
         template <
-            typename MmsServer, 
-            typename Manager = DefaultMmsServerManager
+            typename MmspServer, 
+            typename Manager = DefaultMmspServerManager
         >
-        class MmsServerManager
+        class MmspServerManager
         {
         public:
-            MmsServerManager(
+            MmspServerManager(
                 boost::asio::io_service & io_svc) 
                 : acceptor_(io_svc)
                 , server_(NULL)
             {
             }
 
-            MmsServerManager(
+            MmspServerManager(
                 boost::asio::io_service & io_svc, 
                 framework::network::NetName const & addr)
                 : acceptor_(io_svc)
@@ -44,7 +44,7 @@ namespace util
             {
                 server_ = create(this, (Manager *)NULL);
                 server_->async_accept(addr_, acceptor_, 
-                    boost::bind(&MmsServerManager::handle_accept_client, this, _1));
+                    boost::bind(&MmspServerManager::handle_accept_client, this, _1));
             }
 
             boost::system::error_code start(
@@ -55,7 +55,7 @@ namespace util
                     addr_ = addr;
                     server_ = create(this, (Manager *)NULL);
                     server_->async_accept(addr_, acceptor_, 
-                        boost::bind(&MmsServerManager::handle_accept_client, this, _1));
+                        boost::bind(&MmspServerManager::handle_accept_client, this, _1));
                 }
                 return ec;
             }
@@ -73,18 +73,18 @@ namespace util
             }
 
         private:
-            static MmsServer * create(
-                MmsServerManager * mgr, 
-                MmsServerManager * mgr2)
+            static MmspServer * create(
+                MmspServerManager * mgr, 
+                MmspServerManager * mgr2)
             {
-                return new MmsServer(static_cast<Manager &>(*mgr));
+                return new MmspServer(static_cast<Manager &>(*mgr));
             }
 
-            static MmsServer * create(
-                MmsServerManager * mgr, 
-                DefaultMmsServerManager * mgr2)
+            static MmspServer * create(
+                MmspServerManager * mgr, 
+                DefaultMmspServerManager * mgr2)
             {
-                return new MmsServer(mgr->io_svc());
+                return new MmspServer(mgr->io_svc());
             }
 
         private:
@@ -95,7 +95,7 @@ namespace util
                     server_->start();
                     server_ = create(this, (Manager *)NULL);
                     server_->async_accept(addr_, acceptor_, 
-                        boost::bind(&MmsServerManager::handle_accept_client, this, _1));
+                        boost::bind(&MmspServerManager::handle_accept_client, this, _1));
                 } else {
                     server_->on_error(ec);
                     delete server_;
@@ -105,10 +105,10 @@ namespace util
         private:
             boost::asio::ip::tcp::acceptor acceptor_;
             framework::network::NetName addr_;
-            MmsServer * server_;
+            MmspServer * server_;
         };
 
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_MMS_SERVER_MANAGER_H_
+#endif // _UTIL_PROTOCOL_MMSP_MMSP_SERVER_MANAGER_H_
