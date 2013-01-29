@@ -368,9 +368,9 @@ namespace util
             {
                 ar & playIncarnation;
                 ar & cookie;
-                ar & cbtoken;
+                ar & cbToken;
 
-                pToken.size(cbtoken);
+                pToken.size(cbToken);
 
                 ar & pToken;
             }

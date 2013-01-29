@@ -268,9 +268,9 @@ namespace util
             {
                 ar & playIncarnation;
                 ar & cookie;
-                ar & cbtoken;
+                ar & cbToken;
 
-                pToken.size(cbtoken);
+                pToken.size(cbToken);
 
                 ar & pToken;
             }
@@ -389,9 +389,9 @@ namespace util
 
             struct STREAM_SWITCH_ENTRY
             {
-                WORD wSrcStreamNumber;
-                WORD wDstStreamNumber;
-                WORD wThinningLevel;
+                boost::uint16_t wSrcStreamNumber;
+                boost::uint16_t wDstStreamNumber;
+                boost::uint16_t wThinningLevel;
 
                 STREAM_SWITCH_ENTRY()
                     : wSrcStreamNumber(0)

@@ -94,7 +94,7 @@ namespace util
             template <typename T>
             bool is() const
             {
-                return destroy_ == &MmspMessage::destroy<T>;
+                return destroy_ == (destroy_t)&MmspMessage::destroy<T>;
             }
 
             template <typename T>
@@ -140,7 +140,8 @@ namespace util
             }
 
         private:
-            void (MmspMessage::* destroy_)();
+            typedef void (MmspMessage::* destroy_t)();
+            destroy_t destroy_;
             char data_[256];
         };
 

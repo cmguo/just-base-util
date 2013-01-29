@@ -31,7 +31,7 @@ namespace util
                 , version(0x00)
                 , versionMinor(0x00)
                 , padding(0x00)
-                , sessionId(2953575118)
+                , sessionId(2953575118u)
                 , messageLength(0)
                 , seal(0x20534d4d)
                 , chunkCount(0)

@@ -101,7 +101,7 @@ namespace util
         }
 
         template <typename T>
-        static void MmspSocket::write_msg_s(
+        void MmspSocket::write_msg_s(
             boost::asio::streambuf & buf, 
             MmspMessage const & msg, 
             boost::system::error_code & ec)
@@ -112,7 +112,7 @@ namespace util
         }
 
         template <typename T>
-        static void MmspSocket::read_msg_s(
+        void MmspSocket::read_msg_s(
             boost::asio::streambuf & buf, 
             MmspMessage & msg, 
             boost::system::error_code & ec)
