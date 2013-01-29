@@ -88,12 +88,12 @@ namespace util
 
         DataViewProxy::DataViewProxy(
             boost::asio::io_service & io_svc)
-            : HttpProxy(io_svc)
+            : HttpServer(io_svc)
             , contentLength_(0)
         {
         }
 
-        bool DataViewProxy::on_receive_request_head(
+        void DataViewProxy::on_receive_request_head(
             HttpRequestHead & request_head)
         {
             // ServerÄ£Ê½£º·µ»Øfalse
@@ -102,7 +102,6 @@ namespace util
             request_head.get_content(std::cout, ec);
             parse_request(request_head.path);
             contentLength_ = response_buffer_.size();
-            return false;
         }
 
         void DataViewProxy::on_receive_response_head( 
@@ -228,11 +227,12 @@ namespace util
             std::cout << ec.message() << std::endl;
         }
 
-        DataViewServer::DataViewServer(boost::asio::io_service & io_srv
-                                       , NetName addr)
-                                       :io_srv_(io_srv)
-                                       , addr_(addr)
-                                       , mgr_(new HttpProxyManager<DataViewProxy>(io_srv_, addr_))
+        DataViewServer::DataViewServer(
+            boost::asio::io_service & io_srv
+            , NetName addr)
+            :io_srv_(io_srv)
+            , addr_(addr)
+            , mgr_(new ServerManager<DataViewProxy>(io_srv_))
         {
         }
 
@@ -247,7 +247,7 @@ namespace util
         error_code DataViewServer::start()
         {
             error_code ec;
-            mgr_->start();
+            mgr_->start(addr_);
             return ec;
         }
 

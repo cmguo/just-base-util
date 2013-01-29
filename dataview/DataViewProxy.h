@@ -3,29 +3,29 @@
 #ifndef _UTIL_DATAVIEW_DATAVIEW_PROXY_H_
 #define _UTIL_DATAVIEW_DATAVIEW_PROXY_H_
 
-#include "util/protocol/http/HttpProxyManager.h"
-#include "util/protocol/http/HttpProxy.h"
+#include "util/protocol/http/HttpServer.h"
 #include "util/protocol/http/HttpRequest.h"
 #include "util/protocol/http/HttpResponse.h"
 #include "util/stream/StreamTransfer.h"
 
 #include "util/dataview/CatalogReg.h"
 
+#include <framework/network/ServerManager.h>
+
 #include <boost/shared_array.hpp>
-#include <framework/network/NetName.h>
 
 namespace util
 {
     namespace dataview
     {
         class DataViewProxy
-            : public util::protocol::HttpProxy
+            : public util::protocol::HttpServer
         {
         public:
             DataViewProxy(
                 boost::asio::io_service & io_svc);
 
-            virtual bool on_receive_request_head(
+            virtual void on_receive_request_head(
                 util::protocol::HttpRequestHead & request_head);
 
             virtual void on_receive_response_head( 
@@ -75,7 +75,7 @@ namespace util
         private:
             boost::asio::io_service & io_srv_;
             framework::network::NetName addr_;
-            util::protocol::HttpProxyManager<DataViewProxy> * mgr_;
+            framework::network::ServerManager<DataViewProxy> * mgr_;
         };
 
     } // namespace dataview

@@ -6,6 +6,8 @@
 #include "util/protocol/mmsp/MmspSocket.h"
 #include "util/protocol/mmsp/MmspMessage.h"
 
+#include <framework/network/ServerManager.h>
+
 #include <boost/function.hpp>
 
 namespace util
@@ -86,8 +88,11 @@ namespace util
                 boost::system::error_code const & ec);
 
         private:
-            template <typename MmspServer, typename Manager>
-            friend class MmspServerManager;
+            template <
+                typename HttpProxy, 
+                typename Manager
+            >
+            friend class framework::network::ServerManager;
 
             size_t id_;
             MmspMessage request_;

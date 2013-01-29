@@ -7,7 +7,7 @@
 #include "util/protocol/http/HttpRequest.h"
 #include "util/protocol/http/HttpResponse.h"
 
-#include <framework/network/NetName.h>
+#include <framework/network/ServerManager.h>
 
 #include <boost/function.hpp>
 
@@ -17,6 +17,7 @@ namespace util
     {
 
         class HttpProxy
+            : public HttpSocket
         {
         public:
             HttpProxy(
@@ -87,7 +88,7 @@ namespace util
 
             HttpSocket & get_client_data_stream()
             {
-                return http_to_client_;
+                return *this;
             }
 
             HttpSocket & get_server_data_stream()
@@ -133,7 +134,7 @@ namespace util
 
             HttpSocket & client_data_stream()
             {
-                return http_to_client_;
+                return *this;
             }
 
             HttpSocket & server_data_stream()
@@ -243,7 +244,7 @@ namespace util
                 typename HttpProxy, 
                 typename Manager
             >
-            friend class HttpProxyManager;
+            friend class framework::network::ServerManager;
 
             enum WatchStateEnum
             {
@@ -255,7 +256,6 @@ namespace util
             size_t id_;
             StateEnum state_;
             WatchStateEnum watch_state_;
-            HttpSocket http_to_client_;
             HttpSocket * http_to_server_;
             HttpRequest request_;
             HttpResponse response_;

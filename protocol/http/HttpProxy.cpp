@@ -61,9 +61,9 @@ namespace util
 
         HttpProxy::HttpProxy(
             boost::asio::io_service & io_svc)
-            : state_(stopped)
+            : HttpSocket(io_svc)
+            , state_(stopped)
             , watch_state_(watch_stopped)
-            , http_to_client_(io_svc)
             , http_to_server_(NULL)
         {
             static size_t gid = 0;
@@ -87,7 +87,7 @@ namespace util
         void HttpProxy::close()
         {
             boost::system::error_code ec;
-            http_to_client_.close(ec);
+            HttpSocket::close(ec);
             if (http_to_server_) {
                 http_to_server_->close(ec);
             }
@@ -97,7 +97,7 @@ namespace util
         {
             if (http_to_server_)
                 http_to_server_->cancel();
-            http_to_client_.cancel();
+            HttpSocket::cancel();
         }
 
         error_code HttpProxy::cancel(
@@ -105,7 +105,7 @@ namespace util
         {
             if (http_to_server_)
                 http_to_server_->cancel(ec);
-            http_to_client_.cancel(ec);
+            HttpSocket::cancel(ec);
             return ec;
         }
         
@@ -150,12 +150,12 @@ namespace util
                 if (state_ == receiving_request_head) {
                     error_code ec1;
                     response_.clear_data();
-                    bool block = !http_to_client_.get_non_block(ec1);
+                    bool block = !get_non_block(ec1);
                     if (block)
-                        http_to_client_.set_non_block(true, ec1);
-                    boost::asio::read(http_to_client_, response_.data(), boost::asio::transfer_at_least(4096), ec1);
+                        set_non_block(true, ec1);
+                    boost::asio::read(*this, response_.data(), boost::asio::transfer_at_least(4096), ec1);
                     if (block)
-                        http_to_client_.set_non_block(false, ec1);
+                        set_non_block(false, ec1);
                     LOG_DATA(framework::logger::Debug, ("receiving_request_head", response_.data().data()));
                 }
                 on_error(ec);
@@ -168,7 +168,7 @@ namespace util
                         state_ = exiting;
                         if (watch_state_ == watching) {
                             error_code ec1;
-                            http_to_client_.cancel(ec1);
+                            HttpSocket::cancel(ec1);
                         } else {
                             delete this;
                         }
@@ -195,7 +195,7 @@ namespace util
                 case stopped:
                     state_ = receiving_request_head;
                     response_.head() = HttpResponseHead();
-                    http_to_client_.async_read(request_.head(), 
+                    async_read(request_.head(), 
                         boost::bind(&HttpProxy::handle_async, this, _1, _2));
                     break;
                 case receiving_request_head:
@@ -203,7 +203,7 @@ namespace util
                     if (watch_state_ == watch_stopped 
                         && request_.head().content_length.get_value_or(0) == 0) {
                             watch_state_ = watching;
-                            http_to_client_.async_read_some(boost::asio::null_buffers(), 
+                            async_read_some(boost::asio::null_buffers(), 
                                 boost::bind(&HttpProxy::handle_watch, this, _1));
                     }
                     on_receive_request_head(
@@ -213,7 +213,7 @@ namespace util
                 case preparing:
                     if (bytes_transferred.get_bool()) {
                         if (!http_to_server_)
-                            http_to_server_ = new HttpSocket(http_to_client_.get_io_service());
+                            http_to_server_ = new HttpSocket(get_io_service());
                         state_ = connectting;
                         http_to_server_->async_connect(request_.head().host.get(), 
                             boost::bind(&HttpProxy::handle_async, this, _1, Size()));
@@ -241,7 +241,7 @@ namespace util
                     state_ = local_processing;
                     if (watch_state_ == watch_stopped) {
                         watch_state_ = watching;
-                        http_to_client_.async_read_some(boost::asio::null_buffers(), 
+                        async_read_some(boost::asio::null_buffers(), 
                             boost::bind(&HttpProxy::handle_watch, this, _1));
                     }
                     response_.head().connection = request_.head().connection;
@@ -278,7 +278,7 @@ namespace util
                             response_.head().err_msg = "OK";
                     }
                     state_ = sending_response_head;
-                    http_to_client_.async_write(response_.head(), 
+                    async_write(response_.head(), 
                         boost::bind(&HttpProxy::handle_async, this, _1, _2));
                     break;
                 case sending_response_head:
@@ -295,8 +295,8 @@ namespace util
                                 delete this;
                             } else {
                                 error_code ec;
-                                http_to_client_.shutdown(boost::asio::socket_base::shutdown_send, ec);
-                                http_to_client_.boost::asio::ip::tcp::socket::cancel(ec);
+                                shutdown(boost::asio::socket_base::shutdown_send, ec);
+                                boost::asio::ip::tcp::socket::cancel(ec);
                             }
                     } else {
                         state_ = stopped;
@@ -306,7 +306,7 @@ namespace util
                             handle_async(ec, Size());
                         } else {
                             error_code ec;
-                            http_to_client_.boost::asio::ip::tcp::socket::cancel(ec);
+                            boost::asio::ip::tcp::socket::cancel(ec);
                         }
                     }
                     break;
@@ -374,7 +374,7 @@ namespace util
             if (!head.content_length.is_initialized())
                 head.content_length.reset(0);
             response_.head().connection = http_field::Connection::close;
-            http_to_client_.async_write(response_.head(), 
+            async_write(response_.head(), 
                 boost::bind(resp, _1, _2));
         }
 

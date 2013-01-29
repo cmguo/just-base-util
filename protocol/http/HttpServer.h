@@ -7,7 +7,7 @@
 #include "util/protocol/http/HttpRequest.h"
 #include "util/protocol/http/HttpResponse.h"
 
-#include <framework/network/NetName.h>
+#include <framework/network/ServerManager.h>
 
 #include <boost/function.hpp>
 
@@ -187,7 +187,7 @@ namespace util
                 typename HttpServer, 
                 typename Manager
             >
-            friend class HttpServerManager;
+            friend class framework::network::ServerManager;
 
             enum WatchStateEnum
             {

@@ -27,7 +27,7 @@ namespace util
             if (is_local()) {
                 if (content_length) {
                     boost::asio::async_read(
-                        http_to_client_, 
+                        *this, 
                         transfer_buf_, 
                         boost::asio::transfer_at_least(content_length), 
                         resp);
@@ -37,7 +37,7 @@ namespace util
             } else {
                 if (content_length) {
                     async_transfer(
-                        http_to_client_, 
+                        *this, 
                         *http_to_server_, 
                         transfer_buf_.prepare(DATA_BUFFER_SIZE), 
                         transfer_at_least(content_length), 
@@ -55,7 +55,7 @@ namespace util
             if (is_local()) {
                 on_receive_response_data(transfer_buf_);
                 if (transfer_buf_.size()) {
-                    boost::asio::async_write(http_to_client_, transfer_buf_, resp);
+                    boost::asio::async_write(*this, transfer_buf_, resp);
                 } else {
                     resp(boost::system::error_code(), Size());
                 }
@@ -65,7 +65,7 @@ namespace util
                     if (content_length) {
                         async_transfer(
                             *http_to_server_, 
-                            http_to_client_, 
+                            *this, 
                             transfer_buf_.prepare(DATA_BUFFER_SIZE), 
                             transfer_at_least(content_length), 
                             resp);
@@ -75,7 +75,7 @@ namespace util
                 } else {
                     async_transfer(
                         *http_to_server_, 
-                        http_to_client_, 
+                        *this, 
                         transfer_buf_.prepare(DATA_BUFFER_SIZE), 
                         resp);
                 }

@@ -8,10 +8,9 @@
 #include "util/protocol/rtsp/RtspResponse.h"
 #include "util/stream/StreamTransfer.h"
 
-#include <framework/network/NetName.h>
+#include <framework/network/ServerManager.h>
 
-#include <boost/function/function1.hpp>
-#include <boost/function/function2.hpp>
+#include <boost/function.hpp>
 
 namespace util
 {
@@ -28,9 +27,9 @@ namespace util
             virtual ~RtspServer();
 
         protected:
-            typedef boost::function1<void, 
+            typedef boost::function<void ( 
                 boost::system::error_code const &
-            > response_type;
+            )> response_type;
 
         protected:
             RtspRequest & request()
@@ -106,8 +105,11 @@ namespace util
                 boost::system::error_code const & ec);
 
         private:
-            template <typename RtspServer, typename Manager>
-            friend class RtspServerManager;
+            template <
+                typename HttpProxy, 
+                typename Manager
+            >
+            friend class framework::network::ServerManager;
 
             size_t id_;
             RtspRequest request_;
