@@ -65,8 +65,13 @@ namespace util
         >
         struct MmspMessageData
         {
-            static boost::uint32_t const StaticId = ID;
+            static boost::uint32_t const StaticId;
         };
+
+        template <
+            boost::uint32_t ID
+        >
+        boost::uint32_t const MmspMessageData<ID>::StaticId = ID;
 
         class MmspMessage
             : MmspMessageHeader

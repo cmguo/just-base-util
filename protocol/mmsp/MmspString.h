@@ -5,6 +5,7 @@
 
 #include "util/serialization/SplitMember.h"
 #include "util/serialization/Array.h"
+#include "util/serialization/Collection.h"
 
 namespace util
 {
