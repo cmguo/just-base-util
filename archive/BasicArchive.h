@@ -24,6 +24,7 @@ namespace util
             BasicArchive()
                 : state_(0)
                 , version_(0)
+                , context_(NULL)
             {
             }
 
@@ -45,6 +46,18 @@ namespace util
                 version_ = v;
             }
 
+            void * context() const
+            {
+                return context_;
+            }
+
+            void context(
+                void * c)
+            {
+                context_ = c;
+            }
+
+        public:
             operator bool () const
             {
                 return state_ == 0;
@@ -119,6 +132,7 @@ namespace util
         private:
             int state_;
             size_t version_;
+            void * context_;
             std::vector<std::string> path_;
         }; // class basic_iarchive
 
