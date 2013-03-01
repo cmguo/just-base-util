@@ -22,6 +22,12 @@ namespace util
             typedef typename MsgT::header_type header_type;
 
         public:
+            Message();
+
+            Message(
+                Message const & r);
+
+        public:
             template <typename T>
             T & get();
 
@@ -43,6 +49,12 @@ namespace util
             static void reg_msg(
                 MessageDefine & def);
 
+            static MessageDefine const * find_msg(
+                id_type id)
+            {
+                return msg_defs()[id];
+            }
+
         private:
             template <typename T>
             static void s_construct(
@@ -56,21 +68,21 @@ namespace util
             template <typename T>
             static void s_from_data(
                 MessageBase *, 
-                boost::asio::streambuf & buf, 
-                MessageParser & parser);
+                StreamBuffer & buf, 
+                void *);
 
             template <typename T>
             static void s_to_data(
                 MessageBase const *, 
-                boost::asio::streambuf & buf, 
-                MessageParser & parser);
+                StreamBuffer & buf, 
+                void *);
 
             template <typename T>
             static void s_destroy(
                 MessageBase *);
 
         private:
-            static std::map<id_type, MessageDefine const *> msg_defs_;
+            static std::map<id_type, MessageDefine const *> & msg_defs();
 
         private:
             char data_[MsgT::max_size];

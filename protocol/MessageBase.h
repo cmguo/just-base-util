@@ -3,7 +3,7 @@
 #ifndef _UTIL_PROTOCOL_MESSAGE_BASE_H_
 #define _UTIL_PROTOCOL_MESSAGE_BASE_H_
 
-#include "util/protocol/MessageTraits.h"
+#include "util/protocol/MessageDefine.h"
 
 namespace util
 {
@@ -26,12 +26,12 @@ namespace util
 
         public:
             void from_data(
-                boost::asio::streambuf & buf, 
-                MessageParser &);
+                StreamBuffer & buf, 
+                void *);
 
             void to_data(
-                boost::asio::streambuf & buf, 
-                MessageParser &) const;
+                StreamBuffer & buf, 
+                void *) const;
 
             void reset();
 

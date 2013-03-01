@@ -1,4 +1,4 @@
-// MessageTraits.h
+// MessageParser.h
 
 #ifndef _UTIL_PROTOCOL_MESSAGE_PARSER_H_
 #define _UTIL_PROTOCOL_MESSAGE_PARSER_H_
@@ -16,7 +16,8 @@ namespace util
         {
         public:
             MessageParser()
-                : step_(0)
+                : ok_(false)
+                , step_(0)
                 , size_(0)
                 , msg_def_(NULL)
             {
@@ -47,6 +48,7 @@ namespace util
                 step_ = 0;
                 size_ = 0;
                 msg_def_ = NULL;
+                parse(boost::asio::const_buffer(this, 0));
             }
 
         protected:

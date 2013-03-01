@@ -4,6 +4,7 @@
 #define _UTIL_PROTOCOL_MESSAGE_HPP_
 
 #include "util/protocol/Message.h"
+#include "util/protocol/MessageTraits.h"
 
 namespace util
 {
@@ -13,7 +14,25 @@ namespace util
         template <
             typename MsgT
         >
-        std::map<typename Message<MsgT>::id_type, MessageDefine const *> Message<MsgT>::msg_defs_;
+        std::map<typename Message<MsgT>::id_type, MessageDefine const *> & Message<MsgT>::msg_defs()
+        {
+            static std::map<typename Message<MsgT>::id_type, MessageDefine const *> smap;
+            return smap;
+        }
+
+        template <typename MsgT>
+        Message<MsgT>::Message()
+        {
+        }
+
+        template <typename MsgT>
+        Message<MsgT>::Message(
+            Message const & r)
+            : MessageBase(r)
+            , header_type(r)
+        {
+            // default copy constructor will copy member "data_", which is not expected to 
+        }
 
         template <typename MsgT>
         template <typename T>
@@ -34,6 +53,8 @@ namespace util
             reset();
             header_type::id(T::static_id);
             def_ = &T::msg_def;
+            assert(sizeof(T) <= sizeof(data_));
+            new (data_) T(t);
         }
 
         template <typename MsgT>
@@ -70,7 +91,7 @@ namespace util
             def.from_data = &s_from_data<T>;
             def.to_data = &s_to_data<T>;
             def.destroy = &s_destroy<T>;
-            msg_defs_[T::static_id] = &def;
+            msg_defs()[T::static_id] = &def;
         }
 
         template <typename MsgT>
@@ -98,32 +119,34 @@ namespace util
         template <typename T>
         void Message<MsgT>::s_from_data(
             MessageBase * mb, 
-            boost::asio::streambuf & buf, 
-            MessageParser & parser)
+            StreamBuffer & buf, 
+            void * vctx)
         {
             Message * m = static_cast<Message *>(mb);
             typename MsgT::i_archive_t ia(buf);
-            void * ctx = ia.context();
-            ia.context(&parser);
-            ia >> (header_type &)(m);
+            typename MsgT::context_t * ctx = 
+                reinterpret_cast<typename MsgT::context_t *>(vctx);
+            typename MsgT::helper_t hlp(ia, *m, ctx);
+            ia >> (header_type &)(*m);
+            hlp.begin_data();
             ia >> m->as<T>();
-            ia.context(ctx);
         }
 
         template <typename MsgT>
         template <typename T>
         void Message<MsgT>::s_to_data(
             MessageBase const * mb, 
-            boost::asio::streambuf & buf, 
-            MessageParser & parser)
+            StreamBuffer & buf, 
+            void * vctx)
         {
             Message const * m = static_cast<Message const *>(mb);
             typename MsgT::o_archive_t oa(buf);
-            void * ctx = oa.context();
-            oa.context(&parser);
-            oa << (header_type const &)(m);
+            typename MsgT::context_t * ctx = 
+                reinterpret_cast<typename MsgT::context_t *>(vctx);
+            typename MsgT::helper_t hlp(oa, *m, ctx);
+            oa << (header_type const &)(*m);
+            hlp.begin_data();
             oa << m->as<T>();
-            oa.context(ctx);
         }
 
         template <typename MsgT>

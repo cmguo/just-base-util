@@ -3,9 +3,10 @@
 #ifndef _UTIL_PROTOCOL_MESSAGE_SOCKET_H_
 #define _UTIL_PROTOCOL_MESSAGE_SOCKET_H_
 
+#include <util/buffers/StreamBuffer.h>
+
 #include <framework/network/TcpSocket.h>
 
-#include <boost/asio/streambuf.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
 
@@ -15,6 +16,8 @@ namespace util
     {
 
         class MessageParser;
+
+        typedef util::buffers::StreamBuffer<boost::uint8_t> StreamBuffer;
 
         namespace detail
         {
@@ -51,7 +54,8 @@ namespace util
         public:
             MessageSocket(
                 boost::asio::io_service & io_svc, 
-                MessageParser & parser);
+                MessageParser & parser, 
+                void * ctx = NULL);
 
             ~MessageSocket();
 
@@ -197,8 +201,17 @@ namespace util
                 boost::system::error_code ec, 
                 size_t bytes_transferred);
 
+        protected:
+            boost::mutex mutex_;
+            boost::condition_variable cond_;
+
+            StreamBuffer snd_buf_;
+            StreamBuffer rcv_buf_;
+            std::deque<size_t> pend_rcv_sizes_;
+
         private:
             MessageParser & parser_;
+            void * ctx_;
 
             typedef boost::function<void (
                 boost::system::error_code ec, 
@@ -207,6 +220,13 @@ namespace util
 
             struct MessageStatus
             {
+                MessageStatus()
+                    : size(0)
+                    , pos(0)
+                    , wait(0)
+                {
+                }
+
                 size_t size;
                 size_t pos;
                 size_t wait;
@@ -218,15 +238,6 @@ namespace util
                 }
             };
 
-        protected:
-            boost::mutex mutex_;
-            boost::condition_variable cond_;
-
-            boost::asio::streambuf snd_buf_;
-            boost::asio::streambuf rcv_buf_;
-            std::deque<size_t> pend_rcv_sizes_;
-
-        private:
             MessageStatus read_status_;
             MessageStatus write_status_;
 

@@ -93,6 +93,7 @@ namespace util
         {
             assert(read_parallel_);
             if (read_status_.size == 0) {
+                parser_.reset();
                 read_status_.size = parser_.size();
                 read_status_.pos = 0;
             }
@@ -117,15 +118,13 @@ namespace util
                             read_status_.resp(ec, read_status_.pos);
                         }
                     } else {
-                        parser_.reset();
                         read_status_.size = 0;
-                        break;
+                        return read_status_.pos;
                     }
                 } else if (ec) {
-                    break;
+                    return 0;
                 }
             }
-            return ec ? 0 : read_status_.pos;
         }
 
         template <
@@ -138,6 +137,7 @@ namespace util
         {
             assert(read_parallel_);
             assert(read_status_.size == 0);
+            parser_.reset();
             read_status_.size = parser_.size();
             read_status_.pos = 0;
             async_read_some(
@@ -172,7 +172,6 @@ namespace util
                         read_status_.resp(ec, read_status_.pos);
                     }
                 } else {
-                    parser_.reset();
                     read_status_.size = 0;
                     handler(ec, read_status_.pos);
                     return;
@@ -195,31 +194,34 @@ namespace util
         {
             assert(write_parallel_);
             if (write_status_.size == 0) {
-                if (snd_buf_.size()) {
-                    boost::mutex::scoped_lock lc(mutex_);
+                while (snd_buf_.size()) {
                     size_t bytes_write = write_some(snd_buf_.data(), ec);
+                    boost::mutex::scoped_lock lc(mutex_);
                     snd_buf_.consume(bytes_write);
-                    if (snd_buf_.size()) {
-                        return 0;
-                    } else {
+                    if (snd_buf_.size() == 0) {
                         cond_.notify_all();
                         if (!write_status_.resp.empty()) {
                             write_status_.resp(ec, read_status_.pos);
                         }
+                        break;
+                    } else if (ec) {
+                        return 0;
                     }
                 }
                 write_status_.size = util::buffers::buffers_size(buffers);
                 write_status_.pos = 0;
             }
-            size_t bytes_write = write_some(
-                util::buffers::sub_buffers(buffers, write_status_.pos, write_status_.left()), 
-                ec);
-            write_status_.pos += bytes_write;
-            if (write_status_.left() == 0) {
-                write_status_.size = 0;
-                return write_status_.pos;
-            } else {
-                return 0;
+            while (true) {
+                size_t bytes_write = write_some(
+                    util::buffers::sub_buffers(buffers, write_status_.pos, write_status_.left()), 
+                    ec);
+                write_status_.pos += bytes_write;
+                if (write_status_.pos == write_status_.size) {
+                    write_status_.size = 0;
+                    return write_status_.pos;
+                } else if (ec) {
+                    return 0;
+                }
             }
         }
 
@@ -260,18 +262,21 @@ namespace util
                 boost::mutex::scoped_lock lc(mutex_);
                 snd_buf_.consume(bytes_transferred);
                 bytes_transferred = 0;
-                if (snd_buf_.size()) {
-                    async_write_some(
-                        snd_buf_.data(), 
-                        detail::raw_msg_write_handler<ConstBufferSequence, Handler>(*this, buffers, handler));
-                    return;
-                } else {
+                if (snd_buf_.size() == 0) {
                     cond_.notify_all();
                     if (!write_status_.resp.empty()) {
                         write_status_.resp(ec, read_status_.pos);
                     }
                     write_status_.size = util::buffers::buffers_size(buffers);
                     write_status_.pos = 0;
+                } else if (ec) {
+                    handler(ec, 0);
+                    return;
+                } else {
+                    async_write_some(
+                        snd_buf_.data(), 
+                        detail::raw_msg_write_handler<ConstBufferSequence, Handler>(*this, buffers, handler));
+                    return;
                 }
             }
             write_status_.pos += bytes_transferred;
@@ -370,7 +375,7 @@ namespace util
                     assert(size <= rcv_buf_.size());
                     size_t left = rcv_buf_.size() - size;
                     msg.reset(parser_.msg_def());
-                    msg.from_data(rcv_buf_, parser_);
+                    msg.from_data(rcv_buf_, ctx_);
                     assert(left == rcv_buf_.size());
                     ec.clear();
                     return size;
@@ -380,6 +385,7 @@ namespace util
                 }
             }
             if (read_status_.size == 0) {
+                parser_.reset();
                 read_status_.size = parser_.size();
                 read_status_.pos = 0;
             }
@@ -399,7 +405,9 @@ namespace util
                         read_status_.size = parser_.size();
                         read_status_.pos = 0;
                     } else {
-                        parser_.reset();
+                        msg.reset(parser_.msg_def());
+                        msg.from_data(rcv_buf_, ctx_);
+                        assert(rcv_buf_.size() == 0);
                         read_status_.size = 0;
                         break;
                     }
@@ -426,7 +434,7 @@ namespace util
                     assert(size <= rcv_buf_.size());
                     size_t left = rcv_buf_.size() - size;
                     msg.reset(parser_.msg_def());
-                    msg.from_data(rcv_buf_, parser_);
+                    msg.from_data(rcv_buf_, ctx_);
                     assert(left == rcv_buf_.size());
                     get_io_service().post(
                         boost::asio::detail::bind_handler(handler, boost::system::error_code(), size));
@@ -436,6 +444,7 @@ namespace util
                 return;
             }
             assert(read_status_.size == 0);
+            parser_.reset();
             read_status_.size = parser_.size();
             read_status_.pos = 0;
             async_read_some(
@@ -460,7 +469,7 @@ namespace util
                 } else {
                     assert(rcv_buf_.size() == bytes_transferred);
                     msg.reset(parser_.msg_def());
-                    msg.from_data(rcv_buf_, parser_);
+                    msg.from_data(rcv_buf_, ctx_);
                     assert(rcv_buf_.size() == 0);
                     get_io_service().post(
                         boost::asio::detail::bind_handler(handler, ec, bytes_transferred));
@@ -478,7 +487,9 @@ namespace util
                     read_status_.size = parser_.size();
                     read_status_.pos = 0;
                 } else {
-                    parser_.reset();
+                    msg.reset(parser_.msg_def());
+                    msg.from_data(rcv_buf_, ctx_);
+                    assert(rcv_buf_.size() == 0);
                     read_status_.size = 0;
                     handler(ec, read_status_.pos);
                     return;
@@ -513,26 +524,30 @@ namespace util
                     }
                 } else {
                     assert(snd_buf_.size() == 0);
-                    msg.to_data(snd_buf_, parser_);
+                    msg.to_data(snd_buf_, ctx_);
                     ec = boost::asio::error::would_block;
                     return 0;
                 }
             }
             if (write_status_.size == 0) {
                 assert(snd_buf_.size() == 0);
-                msg.to_data(snd_buf_, parser_);
+                msg.to_data(snd_buf_, ctx_);
                 write_status_.size = snd_buf_.size();
             }
-            size_t bytes_write = write_some(
-                snd_buf_.data(), 
-                ec);
-            write_status_.pos += bytes_write;
-            snd_buf_.consume(bytes_write);
-            if (write_status_.pos == write_status_.size) {
-                assert(snd_buf_.size() == 0);
-                write_status_.size = 0;
+            while (true) {
+                size_t bytes_write = write_some(
+                    snd_buf_.data(), 
+                    ec);
+                write_status_.pos += bytes_write;
+                snd_buf_.consume(bytes_write);
+                if (write_status_.pos == write_status_.size) {
+                    assert(snd_buf_.size() == 0);
+                    write_status_.size = 0;
+                    return write_status_.pos;
+                } else if (ec) {
+                    return 0;
+                }
             }
-            return ec ? 0 : write_status_.pos;
         }
 
         template <
@@ -547,14 +562,14 @@ namespace util
                 assert(write_status_.wait == 0);
                 assert(snd_buf_.size() == 0);
                 boost::mutex::scoped_lock lc(mutex_);
-                msg.to_data(snd_buf_, parser_);
+                msg.to_data(snd_buf_, ctx_);
                 write_status_.wait = snd_buf_.size();
                 write_status_.resp = detail::msg_write_handler<Message, Handler>(*this, msg, handler);
                 return;
             }
             assert(write_status_.size == 0);
             assert(snd_buf_.size() == 0);
-            msg.to_data(snd_buf_, parser_);
+            msg.to_data(snd_buf_, ctx_);
             write_status_.size = snd_buf_.size();
             async_write_some(
                 snd_buf_.data(), 

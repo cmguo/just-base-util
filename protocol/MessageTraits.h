@@ -3,57 +3,20 @@
 #ifndef _UTIL_PROTOCOL_MESSAGE_TRAITS_H_
 #define _UTIL_PROTOCOL_MESSAGE_TRAITS_H_
 
-#include <boost/asio/streambuf.hpp>
-
 namespace util
 {
     namespace protocol
     {
 
-        class MessageBase;
-        class MessageParser;
+        template <
+            typename MsgT
+        >
+        class MessageHelper;
 
-        struct MessageDefine
-        {
-            enum ClassEnum
-            {
-                control_message, 
-                data_message, 
-            };
-
-            typedef void (* constuct_t)(
-                MessageBase *);
-            typedef void (* copy_t)(
-                MessageBase *, 
-                MessageBase const *);
-            typedef void (* from_data_t)(
-                MessageBase *, 
-                boost::asio::streambuf &, 
-                MessageParser &);
-            typedef void (* to_data_t)(
-                MessageBase const *, 
-                boost::asio::streambuf &, 
-                MessageParser &);
-            typedef void (* destroy_t)(
-                MessageBase *);
-
-            MessageDefine()
-                : cls(control_message)
-                , construct(NULL)
-                , copy(NULL)
-                , from_data(NULL)
-                , to_data(NULL)
-                , destroy(NULL)
-            {
-            }
-
-            ClassEnum cls;
-            constuct_t construct;
-            copy_t copy;
-            from_data_t from_data;
-            to_data_t to_data;
-            destroy_t destroy;
-        };
+        template <
+            typename MsgT
+        >
+        class MessageDataHelper;
 
         class MessageTraits
         {
@@ -67,6 +30,10 @@ namespace util
             typedef void o_archive_t; // 必须重新定义
 
             static size_t const max_size = 0; // 必须重新定义
+
+            typedef void context_t;
+
+            typedef MessageHelper<MessageTraits> helper_t;
         };
 
     } // namespace protocol

@@ -1,8 +1,7 @@
 // MessageBase.cpp
 
 #include "util/Util.h"
-#include "util/protocol/Message.h"
-#include "util/protocol/Message.hpp"
+#include "util/protocol/MessageBase.h"
 
 namespace util
 {
@@ -40,17 +39,17 @@ namespace util
         }
 
         void MessageBase::from_data(
-            boost::asio::streambuf & buf, 
-            MessageParser & parser)
+            StreamBuffer & buf, 
+            void * ctx)
         {
-            def_->from_data(this, buf, parser);
+            def_->from_data(this, buf, ctx);
         }
 
         void MessageBase::to_data(
-            boost::asio::streambuf & buf, 
-            MessageParser & parser) const
+            StreamBuffer & buf, 
+           void * ctx) const
         {
-            def_->to_data(this, buf, parser);
+            def_->to_data(this, buf, ctx);
         }
 
         void MessageBase::reset()

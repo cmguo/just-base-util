@@ -13,9 +13,11 @@ namespace util
 
         MessageSocket::MessageSocket(
             boost::asio::io_service & io_svc, 
-            MessageParser & parser)
+            MessageParser & parser, 
+            void * ctx)
             : framework::network::TcpSocket(io_svc)
             , parser_(parser)
+            , ctx_(ctx)
             , non_block_(false)
             , read_parallel_(false)
             , write_parallel_(false)
