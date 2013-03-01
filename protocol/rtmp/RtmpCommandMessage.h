@@ -37,9 +37,15 @@ namespace util
 
                 RtmpAmfValue Argument;
                 OptionalArguments.clear();
+
+                if (!ar) {
+                    return;
+                }
+
                 while (ar & Argument) {
                     OptionalArguments.push_back(Argument);
                 }
+                ar.clear();
             }
 
             template <typename Archive>

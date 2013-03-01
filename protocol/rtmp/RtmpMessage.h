@@ -43,6 +43,17 @@ namespace util
                 return type;
             }
 
+            boost::uint32_t data_size() const
+            {
+                return length;
+            }
+
+            void data_size(
+                boost::uint32_t n)
+            {
+                length = n;
+            }
+
             SERIALIZATION_SPLIT_MEMBER();
 
             template <typename Archive>

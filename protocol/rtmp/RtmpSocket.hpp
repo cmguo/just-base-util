@@ -6,7 +6,7 @@
 #include "util/protocol/MessageSocket.hpp"
 #include "util/protocol/rtmp/RtmpSocket.h"
 #include "util/protocol/rtmp/RtmpFormat.h"
-#include "util/archive/ArchiveBuffer.h"
+#include "util/protocol/rtmp/RtmpMessageHelper.h"
 
 #include <framework/network/AsioHandlerHelper.h>
 #include <framework/network/TcpSocket.hpp>
@@ -28,11 +28,11 @@ namespace util
             }
 
             void to_data(
-                boost::asio::streambuf & buf, 
-                MessageParser & parser) const
+                StreamBuffer & buf, 
+                void * ctx) const
             {
                 for (size_t i = 0; i < msgs_.size(); ++i) {
-                    msgs_[i].to_data(buf, parser);
+                    msgs_[i].to_data(buf, ctx);
                 }
             }
 
@@ -135,25 +135,28 @@ namespace util
                 case closed:
                     make_c01();
                     status_ = handshake1;
-                    boost::asio::async_write(*this, rcv_buf_, 
+                    boost::asio::async_write(*this, snd_buf_.data(), 
                         boost::asio::transfer_all(), 
                         detail::rtmp_connect_handler<Handler>(*this, handler));
                     break;
                 case handshake1:
+                    snd_buf_.consume(snd_buf_.size());
                     status_ = handshake2;
-                    boost::asio::async_read(*this, rcv_buf_, 
-                        boost::asio::transfer_at_least(1 + HANDSHAKE_SIZE * 2), 
+                    boost::asio::async_read(*this, rcv_buf_.prepare(1 + HANDSHAKE_SIZE * 2), 
+                        boost::asio::transfer_all(), 
                         detail::rtmp_connect_handler<Handler>(*this, handler));
                     break;
                 case handshake2:
+                    rcv_buf_.commit(1 + HANDSHAKE_SIZE * 2);
                     status_ = handshake3;
                     make_c2();
                     rcv_buf_.consume(1 + HANDSHAKE_SIZE * 2);
-                    boost::asio::async_write(*this, rcv_buf_, 
+                    boost::asio::async_write(*this, snd_buf_.data(), 
                         boost::asio::transfer_all(), 
                         detail::rtmp_connect_handler<Handler>(*this, handler));
                     break;
                 case handshake3:
+                    snd_buf_.consume(snd_buf_.size());
                     status_ = established;
                     handler(ec);
                     break;
@@ -185,25 +188,28 @@ namespace util
             switch (status_) {
                 case closed:
                     status_ = handshake1;
-                    boost::asio::async_read(*this, rcv_buf_, 
-                        boost::asio::transfer_at_least(1 + HANDSHAKE_SIZE), 
-                        detail::rtmp_connect_handler<Handler>(*this, handler));
+                    boost::asio::async_read(*this, rcv_buf_.prepare(1 + HANDSHAKE_SIZE), 
+                        boost::asio::transfer_all(), 
+                        detail::rtmp_accept_handler<Handler>(*this, handler));
                     break;
                 case handshake1:
+                    rcv_buf_.commit(1 + HANDSHAKE_SIZE);
                     make_s012();
                     status_ = handshake2;
                     rcv_buf_.consume(1 + HANDSHAKE_SIZE);
-                    boost::asio::async_write(*this, rcv_buf_, 
+                    boost::asio::async_write(*this, snd_buf_.data(), 
                         boost::asio::transfer_all(), 
-                        detail::rtmp_connect_handler<Handler>(*this, handler));
+                        detail::rtmp_accept_handler<Handler>(*this, handler));
                     break;
                 case handshake2:
+                    snd_buf_.consume(snd_buf_.size());
                     status_ = handshake3;
-                    boost::asio::async_read(*this, rcv_buf_, 
-                        boost::asio::transfer_at_least(HANDSHAKE_SIZE), 
-                        detail::rtmp_connect_handler<Handler>(*this, handler));
+                    boost::asio::async_read(*this, rcv_buf_.prepare(HANDSHAKE_SIZE), 
+                        boost::asio::transfer_all(), 
+                        detail::rtmp_accept_handler<Handler>(*this, handler));
                     break;
                 case handshake3:
+                    rcv_buf_.commit(HANDSHAKE_SIZE);
                     status_ = established;
                     rcv_buf_.consume(HANDSHAKE_SIZE);
                     handler(ec);

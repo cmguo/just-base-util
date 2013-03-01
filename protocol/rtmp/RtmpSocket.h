@@ -4,6 +4,7 @@
 #define _UTIL_PROTOCOL_RTMP_RTMP_SOCKET_H_
 
 #include "util/protocol/rtmp/RtmpMessage.h"
+#include "util/protocol/rtmp/RtmpMessageContext.h"
 #include "util/protocol/rtmp/RtmpMessageParser.h"
 #include "util/protocol/MessageSocket.h"
 
@@ -118,8 +119,8 @@ namespace util
 
         private:
             StatusEnum status_;
+            RtmpMessageContext context_;
             RtmpMessageParser read_parser_;
-            RtmpMessageParser write_parser_;
         };
 
     } // namespace protocol

@@ -30,6 +30,8 @@ namespace util
 
         struct RtmpAmfString
         {
+            enum {TYPE = RtmpAmfType::STRING};
+
             boost::uint16_t StringLength;
             std::string StringData;
 
@@ -70,6 +72,8 @@ namespace util
 
         struct RtmpAmfDate
         {
+            enum {TYPE = RtmpAmfType::DATE};
+
             double DateTime;
             boost::int16_t LocalDateTimeOffset;
 
@@ -84,6 +88,8 @@ namespace util
 
         struct RtmpAmfLongString
         {
+            enum {TYPE = RtmpAmfType::LONG_STRING};
+
             boost::uint32_t StringLength;
             std::vector<boost::uint8_t> StringData;
 
@@ -115,6 +121,8 @@ namespace util
 
         struct RtmpAmfObject
         {
+            enum {TYPE = RtmpAmfType::OBJECT};
+
             std::vector<RtmpAmfObjectProperty> ObjectProperties;
 
             SERIALIZATION_SPLIT_MEMBER();
@@ -145,6 +153,8 @@ namespace util
 
         struct RtmpAmfECMAArray
         {
+            enum {TYPE = RtmpAmfType::MIXEDARRAY};
+
             boost::uint32_t ECMAArrayLength;
             std::vector<RtmpAmfObjectProperty> Variables;
 
@@ -181,6 +191,8 @@ namespace util
 
         struct RtmpAmfStrictArray
         {
+            enum {TYPE = RtmpAmfType::ARRAY};
+
             boost::uint32_t StrictArrayLength;
             std::vector<RtmpAmfValue> StrictArrayValue;
 
@@ -195,6 +207,8 @@ namespace util
 
         struct RtmpAmfValue
         {
+            enum {union_size = 48};
+
             boost::uint8_t Type;
             union {
                 double Double;
@@ -206,17 +220,20 @@ namespace util
                 boost::uint16_t Reference;
                 boost::uint16_t ObjectEndMarker;
                 RtmpAmfDate Date;
+                boost::uint8_t _union[union_size];
             };
-            RtmpAmfString String;
-            RtmpAmfLongString LongString;
-            RtmpAmfObject Object;
-            RtmpAmfECMAArray ECMAArray;
-            RtmpAmfStrictArray StrictArray;
+
+            BOOST_STATIC_ASSERT(sizeof(RtmpAmfString) <= union_size);
+            BOOST_STATIC_ASSERT(sizeof(RtmpAmfLongString) <= union_size);
+            BOOST_STATIC_ASSERT(sizeof(RtmpAmfObject) <= union_size);
+            BOOST_STATIC_ASSERT(sizeof(RtmpAmfECMAArray) <= union_size);
+            BOOST_STATIC_ASSERT(sizeof(RtmpAmfECMAArray) <= union_size);
 
             RtmpAmfValue(
                 RtmpAmfType::Enum type = RtmpAmfType::UNDEFINED)
-                : Type(type)
+                : Type(RtmpAmfType::UNDEFINED)
             {
+                reset(type);
             }
 
             RtmpAmfValue(
@@ -236,29 +253,204 @@ namespace util
             RtmpAmfValue(
                 char const * str)
                 : Type(RtmpAmfType::STRING)
-                , String(str)
             {
+                construct<RtmpAmfString>(str);
             }
 
             RtmpAmfValue(
                 std::string const & str)
                 : Type(RtmpAmfType::STRING)
-                , String(str)
             {
+                construct<RtmpAmfString>(str);
             }
 
             RtmpAmfValue(
                 std::vector<boost::uint8_t> const & data)
                 : Type(RtmpAmfType::LONG_STRING)
-                , LongString(data)
             {
+                construct<RtmpAmfLongString>(data);
+            }
+
+            RtmpAmfValue(
+                RtmpAmfValue const & r)
+                : Type(RtmpAmfType::UNDEFINED)
+            {
+                (*this) = r;
+            }
+
+            ~RtmpAmfValue()
+            {
+                reset();
+            }
+
+            RtmpAmfValue & operator=(
+                RtmpAmfValue const & r)
+            {
+                reset();
+                Type = r.Type;
+                switch (Type) {
+                    case RtmpAmfType::STRING:
+                        copy<RtmpAmfString>(r);
+                        break;
+                    case RtmpAmfType::OBJECT:
+                        copy<RtmpAmfObject>(r);
+                        break;
+                    case RtmpAmfType::MIXEDARRAY:
+                        copy<RtmpAmfECMAArray>(r);
+                        break;
+                    case RtmpAmfType::ARRAY:
+                        copy<RtmpAmfStrictArray>(r);
+                        break;
+                    case RtmpAmfType::DATE:
+                        copy<RtmpAmfDate>(r);
+                        break;
+                    case RtmpAmfType::LONG_STRING:
+                        copy<RtmpAmfLongString>(r);
+                        break;
+                    default:
+                        _Double = r._Double;
+                        break;
+                }
+                return *this;
+            }
+
+        private:
+            template <
+                typename T
+            >
+            void construct()
+            {
+                assert(sizeof(T) <= sizeof(_union));
+                new (_union)T;
+            }
+
+            template <
+                typename T, 
+                typename Arg
+            >
+            void construct(
+                Arg & arg)
+            {
+                assert(sizeof(T) <= sizeof(_union));
+                new (_union) T(arg);
+            }
+
+            template <
+                typename T
+            >
+            void destroy()
+            {
+                ((T *)_union)->~T();
+            }
+
+            template <
+                typename T
+            >
+            void copy(
+            RtmpAmfValue const & r)
+            {
+                construct<T>(r.as<T>());
+            }
+
+        public:
+            template <
+                typename T
+            >
+            T & as()
+            {
+                assert(Type == T::TYPE);
+                return *(T *)_union;
+            }
+
+            template <
+                typename T
+            >
+            T const & as() const
+            {
+                assert(Type == T::TYPE);
+                return *(T const *)_union;
+            }
+
+            void reset()
+            {
+                switch (Type) {
+                    case RtmpAmfType::STRING:
+                        destroy<RtmpAmfString>();
+                        break;
+                    case RtmpAmfType::OBJECT:
+                        destroy<RtmpAmfObject>();
+                        break;
+                    case RtmpAmfType::MIXEDARRAY:
+                        destroy<RtmpAmfECMAArray>();
+                        break;
+                    case RtmpAmfType::ARRAY:
+                        destroy<RtmpAmfStrictArray>();
+                        break;
+                    case RtmpAmfType::DATE:
+                        destroy<RtmpAmfDate>();
+                        break;
+                    case RtmpAmfType::LONG_STRING:
+                        destroy<RtmpAmfLongString>();
+                        break;
+                    default:
+                        break;
+                }
+                Type = RtmpAmfType::UNDEFINED;
+            }
+
+            void reset(
+                boost::uint8_t t)
+            {
+                if (t == Type) {
+                    return;
+                }
+                reset();
+                Type = t;
+                switch (Type) {
+                    case RtmpAmfType::STRING:
+                        construct<RtmpAmfString>();
+                        break;
+                    case RtmpAmfType::OBJECT:
+                        construct<RtmpAmfObject>();
+                        break;
+                    case RtmpAmfType::MIXEDARRAY:
+                        construct<RtmpAmfECMAArray>();
+                        break;
+                    case RtmpAmfType::ARRAY:
+                        construct<RtmpAmfStrictArray>();
+                        break;
+                    case RtmpAmfType::DATE:
+                        construct<RtmpAmfDate>();
+                        break;
+                    case RtmpAmfType::LONG_STRING:
+                        construct<RtmpAmfLongString>();
+                        break;
+                    default:
+                        _Double = 0;
+                        break;
+                }
+            }
+
+            template <
+                typename T
+            >
+            T & get()
+            {
+                if (T::TYPE != Type) {
+                    reset();
+                    Type = T::TYPE;
+                    construct<T>();
+                }
+                return as<T>();
             }
 
             template <typename Archive>
             void serialize(
                 Archive & ar)
             {
-                ar & Type;
+                boost::uint8_t t = Type;
+                ar & t;
+                reset(t);
                 switch (Type) {
                     case RtmpAmfType::NUMBER:
                         ar & _Double;
@@ -267,10 +459,10 @@ namespace util
                         ar & Bool;
                         break;
                     case RtmpAmfType::STRING:
-                        ar & String;
+                        ar & as<RtmpAmfString>();
                         break;
                     case RtmpAmfType::OBJECT:
-                        ar & Object;
+                        ar & as<RtmpAmfObject>();
                         break;
                     case RtmpAmfType::MOVIECLIP:
                         ar.fail();
@@ -283,18 +475,18 @@ namespace util
                         ar & Reference;
                         break;
                     case RtmpAmfType::MIXEDARRAY:
-                        ar & ECMAArray;
+                        ar & as<RtmpAmfECMAArray>();
                         break;
                     case RtmpAmfType::OBJECT_END:
                         break;
                     case RtmpAmfType::ARRAY:
-                        ar & StrictArray;
+                        ar & as<RtmpAmfStrictArray>();
                         break;
                     case RtmpAmfType::DATE:
-                        ar & Date;
+                        ar & as<RtmpAmfDate>();
                         break;
                     case RtmpAmfType::LONG_STRING:
-                        ar & LongString;
+                        ar & as<RtmpAmfLongString>();
                         break;
                     default:
                         ar.fail();

@@ -1,10 +1,12 @@
-// RtmpMessage.h
+// RtmpMessage.hpp
 
 #ifndef _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_HPP_
 #define _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_HPP_
 
+#include "util/protocol/rtmp/RtmpMessage.h"
+#include "util/protocol/rtmp/RtmpMessageContext.h"
+#include "util/protocol/rtmp/RtmpMessageHelper.h"
 #include "util/protocol/Message.hpp"
-#include "util/protocol/rtmp/RtmpMessageParser.h"
 
 namespace util
 {
@@ -15,9 +17,9 @@ namespace util
         void RtmpMessageHeader::save(
             Archive & ar) const
         {
-            RtmpMessageParser * parser = (RtmpMessageParser *)ar.context();
+            RtmpMessageContext * ctx = (RtmpMessageContext *)ar.context();
             RtmpChunkHeader chunk;
-            parser->to_chunk(*this, chunk);
+            ctx->to_chunk(*this, chunk);
             ar & chunk;
         }
 
@@ -25,10 +27,10 @@ namespace util
         void RtmpMessageHeader::load(
             Archive & ar)
         {
-            RtmpMessageParser * parser = (RtmpMessageParser *)ar.context();
+            RtmpMessageContext * ctx = (RtmpMessageContext *)ar.context();
             RtmpChunkHeader chunk;
             ar & chunk;
-            parser->from_chunk(*this, chunk);
+            ctx->from_chunk(*this, chunk);
         }
 
     } // namespace protocol

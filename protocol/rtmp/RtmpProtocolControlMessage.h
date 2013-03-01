@@ -95,7 +95,7 @@ namespace util
         };
 
         struct RtmpProtocolControlMessageSetPeerBandwidth
-            : RtmpChunkMessageData<RtmpProtocolControlMessageWindowAcknowledgementSize, RCMT_SetPeerBandwidth>
+            : RtmpChunkMessageData<RtmpProtocolControlMessageSetPeerBandwidth, RCMT_SetPeerBandwidth>
         {
         public:
             boost::uint32_t acknowledgement_window_size;

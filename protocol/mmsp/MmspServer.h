@@ -63,6 +63,12 @@ namespace util
             }
 
         private:
+            template <
+                typename Server, 
+                typename Manager
+            >
+            friend class framework::network::ServerManager;
+
             void start();
 
         private:
@@ -88,12 +94,6 @@ namespace util
                 boost::system::error_code const & ec);
 
         private:
-            template <
-                typename HttpProxy, 
-                typename Manager
-            >
-            friend class framework::network::ServerManager;
-
             size_t id_;
             MmspMessage request_;
             MmspMessage response_;

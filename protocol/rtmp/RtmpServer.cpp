@@ -25,6 +25,7 @@ namespace util
         RtmpServer::RtmpServer(
             boost::asio::io_service & io_svc)
             : RtmpSocket(io_svc)
+            , window_send_(false)
         {
             static size_t gid = 0;
             id_ = gid++;

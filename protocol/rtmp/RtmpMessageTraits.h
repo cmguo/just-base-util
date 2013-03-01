@@ -14,6 +14,8 @@ namespace util
     {
 
         class RtmpMessageHeader;
+        class RtmpMessageHelper;
+        class RtmpMessageContext;
 
         struct RtmpMessageTraits
             : MessageTraits
@@ -22,11 +24,15 @@ namespace util
 
             typedef RtmpMessageHeader header_type;
 
-            typedef util::archive::BigEndianBinaryIArchive<> i_archive_t;
+            typedef util::archive::BigEndianBinaryIArchive<boost::uint8_t> i_archive_t;
 
-            typedef util::archive::BigEndianBinaryOArchive<> o_archive_t;
+            typedef util::archive::BigEndianBinaryOArchive<boost::uint8_t> o_archive_t;
 
-            static size_t const max_size = 128;
+            static size_t const max_size = 200;
+
+            typedef RtmpMessageContext context_t;
+
+            typedef RtmpMessageHelper helper_t;
         };
 
     } // namespace protocol

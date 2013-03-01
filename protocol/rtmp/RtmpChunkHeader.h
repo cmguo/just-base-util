@@ -17,13 +17,15 @@ namespace util
         public:
             union
             {
+                struct {
 #ifdef   BOOST_BIG_ENDIAN
-                boost::uint8_t cs_id0 : 6;
-                boost::uint8_t fmt : 2;
+                    boost::uint8_t fmt : 2;
+                    boost::uint8_t cs_id0 : 6;
 #else
-                boost::uint8_t fmt : 2;
-                boost::uint8_t cs_id0 : 6;
+                    boost::uint8_t cs_id0 : 6;
+                    boost::uint8_t fmt : 2;
 #endif
+                };
                 boost::uint8_t one_byte;
             };
             boost::uint8_t cs_id1;
@@ -32,21 +34,12 @@ namespace util
         public:
             RtmpChunkBasicHeader(
                 boost::uint8_t fmt = 0, 
-                boost::uint16_t cs_id = 2)
-                : one_byte((fmt << 6) | ((boost::uint8_t)cs_id & 0x3f))
+                boost::uint16_t id = 2)
+                : one_byte((fmt << 6) | ((boost::uint8_t)id & 0x3f))
                 , cs_id1(0)
                 , cs_id2(0)
             {
-                if (cs_id0 != cs_id) {
-                    cs_id1 = (boost::uint8_t)cs_id;
-                    if (cs_id1 != cs_id) {
-                        cs_id0 = 1;
-                        cs_id1 = 0;
-                        cs_id2 = cs_id;
-                    } else {
-                        cs_id0 = 0;
-                    }
-                }
+                cs_id(id);
             }
             
             boost::uint8_t size() const
@@ -54,9 +47,32 @@ namespace util
                 return cs_id0 == 0 ? 2 : (cs_id0 == 1 ? 3 : 1);
             }
 
+            boost::uint8_t msgh_size() const
+            {
+                boost::uint8_t n[4] = {11, 7, 3, 0};
+                return n[fmt];
+            }
+
             boost::uint16_t cs_id() const
             {
-                return cs_id0 == 0 ? cs_id1 : (cs_id0 == 1 ? cs_id2 : cs_id0);
+                return cs_id0 < 2 ? ((cs_id0 == 0 ? cs_id1 : cs_id2) + 64) : cs_id0;
+            }
+
+            void cs_id(
+                boost::uint16_t id)
+            {
+                cs_id0 = id;
+                if (cs_id0 != id) {
+                    id -= 64;
+                    cs_id1 = (boost::uint8_t)id;
+                    if (cs_id1 != id) {
+                        cs_id0 = 1;
+                        cs_id1 = 0;
+                        cs_id2 = id;
+                    } else {
+                        cs_id0 = 0;
+                    }
+                }
             }
 
             template <typename Archive>
@@ -81,7 +97,7 @@ namespace util
 
             RtmpChunkMessageHeader()
                 : message_type_id(0)
-                , message_stream_id(0)
+                , message_stream_id(boost::uint32_t(-1))
             {
 
             }
@@ -133,70 +149,10 @@ namespace util
             }
 
             RtmpChunkHeader const & add(
-                RtmpChunkHeader const & r)
-            {
-                switch (r.fmt) {
-                case 0:
-                    timestamp = r.timestamp;
-                    message_length = r.message_length;
-                    message_type_id = r.message_type_id;
-                    message_stream_id = r.message_stream_id;
-                    extended_timestamp = r.extended_timestamp;
-                    calc_timestamp = r.real_timestamp();
-                    break;
-                case 1:
-                    timestamp = r.timestamp;
-                    message_length = r.message_length;
-                    message_type_id = r.message_type_id;
-                    extended_timestamp = r.extended_timestamp;
-                    calc_timestamp += r.real_timestamp();
-                    break;
-                case 2:
-                    timestamp = r.timestamp;
-                    extended_timestamp = r.extended_timestamp;
-                    calc_timestamp += r.real_timestamp();
-                    break;
-                case 3:
-                    calc_timestamp += real_timestamp();
-                    break;
-                }
-                return *this;
-            }
+                RtmpChunkHeader const & r);
 
             RtmpChunkHeader const & dec(
-                RtmpChunkHeader const & r)
-            {
-                if (r.message_stream_id == message_stream_id) {
-                    if (r.message_type_id == message_type_id) {
-                        if (r.message_length == message_length) {
-                            if (r.calc_timestamp == calc_timestamp + real_timestamp()) {
-                                fmt = 3;
-                            } else {
-                                fmt = 2;
-                                extended_timestamp = r.calc_timestamp - calc_timestamp;
-                            }
-                        }
-                    } else {
-                        fmt = 1;
-                        message_length = r.message_length;
-                        message_type_id = r.message_type_id;
-                        extended_timestamp = r.calc_timestamp - calc_timestamp;
-                    }
-                } else {
-                    fmt = 0;
-                    message_length = r.message_length;
-                    message_type_id = r.message_type_id;
-                    message_stream_id = r.message_stream_id;
-                    extended_timestamp = r.calc_timestamp;
-                }
-                calc_timestamp = r.calc_timestamp;
-                if (extended_timestamp & 0xff000000) {
-                    timestamp = 0x00ffffff;
-                } else {
-                    timestamp = extended_timestamp;
-                }
-                return *this;
-            }
+                RtmpChunkHeader const & r);
 
             template <typename Archive>
             void serialize(

@@ -11,37 +11,22 @@ namespace util
     namespace protocol
     {
 
-        class RtmpMessageHeader;
+        class RtmpMessageContext;
 
         class RtmpMessageParser
             : public MessageParser
         {
         public:
-            RtmpMessageParser();
-
-        public:
-            void set_chunk_size(
-                boost::uint32_t n);
-
-            void acknowledgement(
-                boost::uint32_t n);
-
-        public:
-            void to_chunk(
-                RtmpMessageHeader const & msg, 
-                RtmpChunkHeader & chunk);
-
-            void from_chunk(
-                RtmpMessageHeader & msg, 
-                RtmpChunkHeader const & chunk);
+            RtmpMessageParser(
+                RtmpMessageContext * ctx);
 
         public:
             virtual void parse(
                 boost::asio::const_buffer const & buf);
 
         private:
-            std::vector<RtmpChunkHeader> chunks_;
-            boost::uint32_t chunk_size_;
+            RtmpMessageContext * ctx_;
+            RtmpChunkHeader chunk_;
         };
 
     } // namespace protocol
