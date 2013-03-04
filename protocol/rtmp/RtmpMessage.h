@@ -5,7 +5,6 @@
 
 #include "util/protocol/Message.h"
 #include "util/protocol/rtmp/RtmpMessageTraits.h"
-#include "util/protocol/rtmp/RtmpProtocolControlMessage.h"
 
 #include <util/serialization/SplitMember.h>
 

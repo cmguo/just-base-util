@@ -1,47 +1,23 @@
-// RtmpUserControlMessage.h
+// RtmpMessageDataProtocolControl.h
 
-#ifndef _UTIL_PROTOCOL_RTMP_RTMP_USER_CONTRIMESSAGE_H_
-#define _UTIL_PROTOCOL_RTMP_RTMP_USER_CONTRIMESSAGE_H_
+#ifndef _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_DATA_PROTOCOL_CONTROL_H_
+#define _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_DATA_PROTOCOL_CONTROL_H_
+
+#include "util/protocol/rtmp/RtmpMessageData.h"
 
 namespace util
 {
     namespace protocol
     {
 
-        // Section 6.2
-        // Section 6.2
-
-        enum RtmpUserControlEventType
-        {
-            RUCE_Use = 1, 
-            RUCE_Release = 2, 
-            RUCE_RequestChange = 3, 
-            RUCE_Change = 4, 
-            RUCE_Success = 5, 
-            RUCE_SendMessage = 6, 
-            RUCE_Status = 7, 
-            RUCE_Clear = 8, 
-            RUCE_Remove = 9, 
-            RUCE_RequestRemove = 10, 
-            RUCE_UseSuccess = 11, 
-        };
-
-        template <
-            boost::uint32_t ID
-        >
-        struct RtmpUserControlEventData
-        {
-            static boost::uint32_t const StaticId = ID;
-        };
-
-        struct RtmpSetChunkSize
-            : RtmpMessageData<RMT_SetChunkSize>
+        struct RtmpMessageDataSetChunkSize
+            : RtmpMessageData<RtmpMessageDataSetChunkSize, RCMT_SetChunkSize>
         {
         public:
             boost::uint32_t chunk_size;
 
         public:
-            RtmpSetChunkSize(
+            RtmpMessageDataSetChunkSize(
                 boost::uint32_t chunk_size = 128)
                 : chunk_size(chunk_size)
             {
@@ -55,14 +31,14 @@ namespace util
             }
         };
 
-        struct RtmpAbortMessage
-            : RtmpMessageData<RMT_AbortMessage>
+        struct RtmpMessageDataAbortMessage
+            : RtmpMessageData<RtmpMessageDataAbortMessage, RCMT_AbortMessage>
         {
         public:
             boost::uint32_t chunk_stream_id;
 
         public:
-            RtmpAbortMessage(
+            RtmpMessageDataAbortMessage(
                 boost::uint32_t chunk_stream_id = 0)
                 : chunk_stream_id(chunk_stream_id)
             {
@@ -76,14 +52,14 @@ namespace util
             }
         };
 
-        struct Acknowledgement
-            : RtmpMessageData<RMT_Acknowledgement>
+        struct RtmpMessageDataAcknowledgement
+            : RtmpMessageData<RtmpMessageDataAcknowledgement, RCMT_Acknowledgement>
         {
         public:
             boost::uint32_t sequence_number;
 
         public:
-            RtmpAbortMessage(
+            RtmpMessageDataAcknowledgement(
                 boost::uint32_t sequence_number = 0)
                 : sequence_number(sequence_number)
             {
@@ -97,14 +73,14 @@ namespace util
             }
         };
 
-        struct WindowAcknowledgementSize
-            : RtmpMessageData<RMT_WindowAcknowledgementSize>
+        struct RtmpMessageDataWindowAcknowledgementSize
+            : RtmpMessageData<RtmpMessageDataWindowAcknowledgementSize, RCMT_WindowAcknowledgementSize>
         {
         public:
             boost::uint32_t acknowledgement_window_size;
 
         public:
-            RtmpAbortMessage(
+            RtmpMessageDataWindowAcknowledgementSize(
                 boost::uint32_t acknowledgement_window_size = 0)
                 : acknowledgement_window_size(acknowledgement_window_size)
             {
@@ -118,15 +94,15 @@ namespace util
             }
         };
 
-        struct SetPeerBandwidth
-            : RtmpMessageData<RMT_SetPeerBandwidth>
+        struct RtmpMessageDataSetPeerBandwidth
+            : RtmpMessageData<RtmpMessageDataSetPeerBandwidth, RCMT_SetPeerBandwidth>
         {
         public:
             boost::uint32_t acknowledgement_window_size;
             boost::uint8_t limit_type;
 
         public:
-            RtmpAbortMessage(
+            RtmpMessageDataSetPeerBandwidth(
                 boost::uint32_t acknowledgement_window_size = 0, 
                 boost::uint8_t limit_type = 0)
                 : acknowledgement_window_size(acknowledgement_window_size)
@@ -146,4 +122,4 @@ namespace util
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_RTMP_RTMP_CHUNK_MESSAGE_H_
+#endif // _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_DATA_PROTOCOL_CONTROL_H_

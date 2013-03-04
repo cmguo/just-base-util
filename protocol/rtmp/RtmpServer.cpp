@@ -5,6 +5,8 @@
 #include "util/protocol/rtmp/RtmpMessage.hpp"
 #include "util/protocol/rtmp/RtmpSocket.hpp"
 #include "util/protocol/rtmp/RtmpError.h"
+#include "util/protocol/rtmp/RtmpMessageDataProtocolControl.h"
+#include "util/protocol/rtmp/RtmpMessageDataUserControl.h"
 
 #include <framework/logger/Logger.h>
 #include <framework/logger/FormatRecord.h>
@@ -53,7 +55,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_DEBUG("[handle_receive_request_head] id =%u, ec = %s, bytes_transferred = %d" 
+            LOG_DEBUG("[handle_receive_request_head] id = %u, ec = %s, bytes_transferred = %d" 
                 % id_ % ec % bytes_transferred);
 
             if (ec) {
@@ -72,9 +74,9 @@ namespace util
             // pre process
             if (!window_send_) {
                 RtmpMessage msg;
-                msg.set(RtmpProtocolControlMessageWindowAcknowledgementSize(250000));
+                msg.reset(RtmpMessageDataWindowAcknowledgementSize(250000));
                 response_.push_back(msg);
-                msg.set(RtmpProtocolControlMessageSetPeerBandwidth(250000, 2)); //Dynamic
+                msg.reset(RtmpMessageDataSetPeerBandwidth(250000, 2)); //Dynamic
                 response_.push_back(msg);
                 window_send_ = true;
             }
@@ -88,7 +90,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_DEBUG("[handle_local_process] id =%u, ec = %s" % id_ % ec);
+            LOG_DEBUG("[handle_local_process] id = %u, ec = %s" % id_ % ec);
 
             if (ec) {
                 handle_error(ec);
@@ -110,7 +112,7 @@ namespace util
         {
             LOG_SECTION();
 
-            LOG_DEBUG("[handle_send_response] id =%u, ec = %s, bytes_transferred = %d" 
+            LOG_DEBUG("[handle_send_response] id = %u, ec = %s, bytes_transferred = %d" 
                 % id_ % ec % bytes_transferred);
 
             if (ec) {
@@ -131,7 +133,7 @@ namespace util
        void RtmpServer::handle_error(
             error_code const & ec)
         {
-            LOG_DEBUG("[handle_error] id =%u, ec = %s" % id_ % ec);
+            LOG_DEBUG("[handle_error] id = %u, ec = %s" % id_ % ec);
 
             on_error(ec);
 

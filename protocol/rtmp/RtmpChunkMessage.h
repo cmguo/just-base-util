@@ -4,45 +4,71 @@
 #define _UTIL_PROTOCOL_RTMP_RTMP_CHUNK_MESSAGE_H_
 
 #include "util/protocol/rtmp/RtmpChunkHeader.h"
-#include "util/protocol/rtmp/RtmpMessageTraits.h"
-#include "util/protocol/MessageData.h"
+#include "util/protocol/MessageDefine.h"
 
-#include <boost/asio/buffer.hpp>
+#include <util/buffers/BuffersCopy.h>
 
 namespace util
 {
     namespace protocol
     {
 
-        enum RtmpChunkMessageType
+        struct RtmpChunkMessage
+            : RtmpChunkHeader
         {
-            RCMT_SetChunkSize = 1, 
-            RCMT_AbortMessage = 2, 
-            RCMT_Acknowledgement = 3, 
-            RCMT_UserControl = 4, 
-            RCMT_WindowAcknowledgementSize = 5, 
-            RCMT_SetPeerBandwidth = 6, 
+            StreamBuffer data;
+            boost::uint32_t left;
 
-            RCMT_AudioMessage = 8, 
-            RCMT_VideoMessage = 9, 
+            RtmpChunkMessage()
+                : left(0)
+            {
+            }
 
-            RCMT_DataMessage3 = 15, 
-            RCMT_SharedObjectMessage3 = 16, 
-            RCMT_CommandMessage3 = 17, 
-            RCMT_DataMessage = 18, 
-            RCMT_SharedObjectMessage = 19, 
-            RCMT_CommandMessage = 20, 
+            bool put_data(
+                StreamBuffer & buf, 
+                boost::uint32_t chunk_size)
+            {
+                boost::uint32_t size = buf.size();
+                util::buffers::buffers_copy(data.prepare(size), buf.data());
+                buf.consume(size);
+                data.commit(size);
+                return put_data(chunk_size);
+            }
 
-            RCMT_AggregateMessage = 22, 
-        };
+            bool put_data(
+                boost::uint32_t chunk_size)
+            {
+                if (left <= chunk_size) {
+                    left = 0;
+                } else {
+                    left -= chunk_size;
+                }
+                return left == 0;
+            }
 
-        template <
-            typename T, 
-            boost::uint8_t id
-        >
-        struct RtmpChunkMessageData
-            : MessageData<RtmpMessageTraits, T, id>
-        {
+            // return size of next chunk, not contain the chunk head
+            boost::uint32_t left_size(
+                boost::uint32_t new_size, 
+                boost::uint8_t new_type, 
+                boost::uint32_t chunk_size)
+            {
+                boost::uint32_t size = left;
+                if (size == 0) {
+                    left = new_size;
+                    message_type_id = new_type;
+                    size = new_size;
+                } else {
+                    assert(new_size == 0);
+                }
+                if (size == 0) {
+                    left = message_length;
+                    size = message_length;
+                }
+                if (size > chunk_size) {
+                    size = chunk_size;
+                }
+                return size;
+            }
         };
 
     } // namespace protocol

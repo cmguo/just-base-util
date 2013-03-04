@@ -4,7 +4,8 @@
 #include "util/protocol/rtmp/RtmpSocket.h"
 #include "util/protocol/rtmp/RtmpMessage.hpp"
 #include "util/protocol/rtmp/RtmpSocket.hpp"
-#include "util/protocol/rtmp/RtmpMessageParser.h "
+#include "util/protocol/rtmp/RtmpMessageDataProtocolControl.h"
+#include "util/protocol/rtmp/RtmpMessageDataUserControl.h"
 
 #include "util/serialization/Array.h"
 
@@ -50,6 +51,22 @@ namespace util
             return ec;
         }
 
+        size_t RtmpSocket::read_msg(
+            RtmpMessage & msg, 
+            boost::system::error_code & ec)
+        {
+            RtmpChunk chunk;
+            while (MessageSocket::read_msg(chunk, ec)) {
+                if (chunk.finish) {
+                    RtmpChunkMessage & cm(context_.read_chunk(chunk.cs_id));
+                    boost::uint32_t size = cm.data.size();
+                    msg.from_data(cm.data, &context_);
+                    return size;
+                }
+            }
+            return 0;
+        }
+
         size_t RtmpSocket::write_msgs(
             std::vector<RtmpMessage> const & msgs, 
             boost::system::error_code & ec)
@@ -63,19 +80,19 @@ namespace util
         {
             switch (msg.type) {
                 case RCMT_SetChunkSize:
-                    context_.read_chunk_size(msg.as<RtmpProtocolControlMessageSetChunkSize>().chunk_size);
+                    context_.read_chunk_size(msg.as<RtmpMessageDataSetChunkSize>().chunk_size);
                     break;
                 case RCMT_AbortMessage:
                     //write_parser_.acknowledgement(msg.as<RtmpProtocolControlMessageAbortMessage>().sequence_number);
                     break;
                 case RCMT_Acknowledgement:
-                    context_.read_acknowledgement(msg.as<RtmpProtocolControlMessageAcknowledgement>().sequence_number);
+                    context_.read_acknowledgement(msg.as<RtmpMessageDataAcknowledgement>().sequence_number);
                     break;
                 case RCMT_UserControl:
-                    //write_parser_.acknowledgement(msg.as<RtmpProtocolControlMessageWindowAcknowledgementSize>().sequence_number);
+                    context_.read_acknowledgement(msg.as<RtmpMessageUserControl>()._union[0]);
                     break;
                 case RCMT_WindowAcknowledgementSize:
-                    //write_parser_.acknowledgement(msg.as<RtmpProtocolControlMessageWindowAcknowledgementSize>().sequence_number);
+                    context_.read_acknowledgement(msg.as<RtmpMessageDataWindowAcknowledgementSize>().acknowledgement_window_size);
                     break;
                 case RCMT_SetPeerBandwidth:
                     //write_parser_.acknowledgement(msg.as<RtmpProtocolControlMessageSetPeerBandwidth>().sequence_number);

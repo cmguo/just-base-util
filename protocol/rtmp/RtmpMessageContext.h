@@ -5,6 +5,7 @@
 
 #include "util/protocol/MessageHelper.h"
 #include "util/protocol/rtmp/RtmpChunkHeader.h"
+#include "util/protocol/rtmp/RtmpChunkMessage.h"
 
 namespace util
 {
@@ -42,7 +43,7 @@ namespace util
                 return write_chunk_size_;
             }
 
-            RtmpChunkHeader & read_chunk(
+            RtmpChunkMessage & read_chunk(
                 boost::uint16_t cs_id);
 
             RtmpChunkHeader & write_chunk(
@@ -58,7 +59,7 @@ namespace util
                 RtmpChunkHeader const & chunk);
 
         private:
-            std::vector<RtmpChunkHeader> read_chunks_;
+            std::vector<RtmpChunkMessage> read_chunks_;
             std::vector<RtmpChunkHeader> write_chunks_;
             boost::uint32_t read_chunk_size_;
             boost::uint32_t write_chunk_size_;

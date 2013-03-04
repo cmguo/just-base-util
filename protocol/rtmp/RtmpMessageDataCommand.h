@@ -1,8 +1,9 @@
 // RtmpCommandMessage.h
 
-#ifndef _UTIL_PROTOCOL_RTMP_RTMP_USER_CONTROL_MESSAGE_H_
-#define _UTIL_PROTOCOL_RTMP_RTMP_USER_CONTROL_MESSAGE_H_
+#ifndef _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_DATA_COMMAND_H_
+#define _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_DATA_COMMAND_H_
 
+#include "util/protocol/rtmp/RtmpMessageData.h"
 #include "util/protocol/rtmp/RmtpAmfType.h"
 
 namespace util
@@ -18,9 +19,8 @@ namespace util
          */
 
         struct RtmpCommandMessage
-            : RtmpChunkMessageData<RtmpCommandMessage, RCMT_CommandMessage>
         {
-            RtmpAmfValue ComandName;
+            RtmpAmfValue CommandName;
             RtmpAmfValue TransactionID;
             RtmpAmfValue CommandObject;
             std::vector<RtmpAmfValue> OptionalArguments;
@@ -31,7 +31,7 @@ namespace util
             void load(
                 Archive & ar)
             {
-                ar & ComandName;
+                ar & CommandName;
                 ar & TransactionID;
                 ar & CommandObject;
 
@@ -52,7 +52,7 @@ namespace util
             void save(
                 Archive & ar) const
             {
-                ar & ComandName;
+                ar & CommandName;
                 ar & TransactionID;
                 ar & CommandObject;
 
@@ -62,7 +62,33 @@ namespace util
             }
         };
 
+        struct RtmpCommandMessage0
+            : RtmpMessageData<RtmpCommandMessage0, RCMT_CommandMessage0>
+            , RtmpCommandMessage
+        {
+        };
+
+        struct RtmpCommandMessage3
+            : RtmpMessageData<RtmpCommandMessage3, RCMT_CommandMessage3>
+            , RtmpCommandMessage
+        {
+            boost::uint8_t _undefined;
+
+            RtmpCommandMessage3()
+                : _undefined(0)
+            {
+            }
+
+            template <typename Archive>
+            void serialize(
+                Archive & ar)
+            {
+                ar & _undefined;
+                RtmpCommandMessage::serialize(ar);
+            }
+        };
+
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_RTMP_RTMP_USER_CONTROL_MESSAGE_H_
+#endif // _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_DATA_COMMAND_H_

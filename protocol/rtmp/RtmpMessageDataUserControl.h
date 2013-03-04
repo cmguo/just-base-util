@@ -1,9 +1,9 @@
-// RtmpUserControlMessage.h
+// RtmpMessageDataUserControl.h
 
-#ifndef _UTIL_PROTOCOL_RTMP_RTMP_USER_CONTROL_MESSAGE_H_
-#define _UTIL_PROTOCOL_RTMP_RTMP_USER_CONTROL_MESSAGE_H_
+#ifndef _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_DATA_USER_CONTROL_H_
+#define _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_DATA_USER_CONTROL_H_
 
-#include "util/protocol/rtmp/RtmpChunkMessage.h"
+#include "util/protocol/rtmp/RtmpMessageData.h"
 
 namespace util
 {
@@ -107,7 +107,7 @@ namespace util
             boost::uint32_t buffer_length; // milliseconds
 
         public:
-            RtmpUserControlStreamDry(
+            RtmpUserControlSetBufferLength(
                 boost::uint32_t stream_id = 0, 
                 boost::uint32_t buffer_length = 0)
                 : stream_id(stream_id)
@@ -187,28 +187,45 @@ namespace util
             }
         };
 
-        struct RtmpUserControlMessage
-            : RtmpChunkMessageData<RCMT_UserControl>
+        struct RtmpMessageUserControl
+            : RtmpMessageData<RtmpMessageUserControl, RCMT_UserControl>
         {
             boost::uint16_t event_type;
-            boost::uint16_t event_size;
-            boost::uint8_t event_data[2];
+            union {
+                boost::uint64_t _u64;
+                boost::uint32_t _union[2];
+            };
 
-            RtmpUserControlMessage()
+            RtmpMessageUserControl()
             {
             }
 
-            template
             template <typename Archive>
             void serialize(
                 Archive & ar)
             {
                 ar & event_type;
-                ar & framework::;
+
+                switch (event_type) {
+                    case RUCE_StreamBegin:
+                    case RUCE_StreamDry:
+                    case RUCE_StreamIsRecorded:
+                    case RUCE_PingRequest:
+                    case RUCE_PingResponse:
+                        ar & _union[0];
+                        break;
+                    case RUCE_SetBufferLength:
+                        ar & _union[0];
+                        ar & _union[1];
+                        break;
+                    default:
+                        assert(false);
+                        ar.fail();
+                }
             }
         };
 
     } // namespace protocol
 } // namespace util
 
-#endif // _UTIL_PROTOCOL_RTMP_RTMP_USER_CONTROL_MESSAGE_H_
+#endif // _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_DATA_USER_CONTROL_H_

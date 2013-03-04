@@ -37,11 +37,15 @@ namespace util
         {
         }
 
-        RtmpChunkHeader & RtmpMessageContext::read_chunk(
+        RtmpChunkMessage & RtmpMessageContext::read_chunk(
             boost::uint16_t cs_id)
         {
             if (read_chunks_.size() <= cs_id) {
+                size_t n = read_chunks_.size();
                 read_chunks_.resize(cs_id + 1);
+                for (size_t i = n; i < read_chunks_.size(); ++i) {
+                    read_chunks_[i].cs_id(i);
+                }
             }
             return read_chunks_[cs_id];
         }
@@ -50,7 +54,11 @@ namespace util
             boost::uint16_t cs_id)
         {
             if (write_chunks_.size() <= cs_id) {
+                size_t n = write_chunks_.size();
                 write_chunks_.resize(cs_id + 1);
+                for (size_t i = n; i < write_chunks_.size(); ++i) {
+                    write_chunks_[i].cs_id(i);
+                }
             }
             return write_chunks_[cs_id];
         }

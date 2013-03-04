@@ -5,7 +5,7 @@
 
 #include "util/protocol/rtmp/RtmpMessage.h"
 #include "util/protocol/rtmp/RtmpMessageContext.h"
-#include "util/protocol/rtmp/RtmpMessageParser.h"
+#include "util/protocol/rtmp/RtmpChunkParser.h"
 #include "util/protocol/MessageSocket.h"
 
 #include <framework/network/TcpSocket.h>
@@ -17,7 +17,8 @@ namespace util
     namespace protocol
     {
 
-        class RtmpMessageParser;
+        class RtmpChunk;
+        class RtmpRawChunk;
 
         namespace detail
         {
@@ -27,6 +28,17 @@ namespace util
 
             template <typename Handler>
             struct rtmp_accept_handler;
+
+            template <
+                typename MutableBufferSequence, 
+                typename Handler
+            >
+            struct rtmp_raw_msg_read_handler;
+
+            template <
+                typename Handler
+            >
+            struct rtmp_msg_read_handler;
 
         }
 
@@ -76,6 +88,33 @@ namespace util
                 Handler const & handler);
 
         public:
+            template <
+                typename MutableBufferSequence
+            >
+            size_t read_raw_msg(
+                MutableBufferSequence const & buffers, 
+                boost::system::error_code & ec);
+
+            template <
+                typename MutableBufferSequence, 
+                typename Handler
+            >
+            void async_read_raw_msg(
+                MutableBufferSequence const & buffers, 
+                Handler const & handler);
+
+            size_t read_msg(
+                RtmpMessage & msg, 
+                boost::system::error_code & ec);
+
+            template <
+                typename Handler
+            >
+            void async_read_msg(
+                RtmpMessage & msg, 
+                Handler const & handler);
+
+        public:
             size_t write_msgs(
                 std::vector<RtmpMessage> const & msgs, 
                 boost::system::error_code & ec);
@@ -89,6 +128,39 @@ namespace util
             bool process_protocol_message(
                 RtmpMessage const & msg, 
                 std::vector<RtmpMessage> & resp);
+
+        private:
+            template <
+                typename MutableBufferSequence, 
+                typename Handler
+            >
+            friend struct detail::rtmp_raw_msg_read_handler;
+
+            template <
+                typename Handler
+            >
+            friend struct detail::rtmp_msg_read_handler;
+
+            template <
+                typename MutableBufferSequence, 
+                typename Handler
+            >
+            void handle_read_raw_msg(
+                MutableBufferSequence const & buffers, 
+                Handler const & handler, 
+                RtmpRawChunk & chunk, 
+                boost::system::error_code ec, 
+                size_t bytes_transferred);
+
+            template <
+                typename Handler
+            >
+            void handle_read_msg(
+                RtmpMessage & msg, 
+                Handler const & handler, 
+                RtmpChunk & chunk, 
+                boost::system::error_code ec, 
+                size_t bytes_transferred);
 
         private:
             static boost::uint32_t const RANDOM_SIZE = 1528;
@@ -120,7 +192,7 @@ namespace util
         private:
             StatusEnum status_;
             RtmpMessageContext context_;
-            RtmpMessageParser read_parser_;
+            RtmpChunkParser read_parser_;
         };
 
     } // namespace protocol

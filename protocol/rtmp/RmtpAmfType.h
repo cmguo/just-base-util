@@ -115,6 +115,7 @@ namespace util
         };
 
         struct RtmpAmfObjectProperty;
+        struct RtmpAmfValue;
 
         static inline bool FLV_Property_End(
             RtmpAmfObjectProperty const & Property);
@@ -124,6 +125,9 @@ namespace util
             enum {TYPE = RtmpAmfType::OBJECT};
 
             std::vector<RtmpAmfObjectProperty> ObjectProperties;
+
+            RtmpAmfValue & operator[](
+                std::string const & key);
 
             SERIALIZATION_SPLIT_MEMBER();
 
@@ -157,6 +161,9 @@ namespace util
 
             boost::uint32_t ECMAArrayLength;
             std::vector<RtmpAmfObjectProperty> Variables;
+
+            RtmpAmfValue & operator[](
+                std::string const & key);
 
             SERIALIZATION_SPLIT_MEMBER();
 
@@ -219,7 +226,6 @@ namespace util
                 boost::uint16_t Undefined;
                 boost::uint16_t Reference;
                 boost::uint16_t ObjectEndMarker;
-                RtmpAmfDate Date;
                 boost::uint8_t _union[union_size];
             };
 
@@ -522,6 +528,30 @@ namespace util
                     & PropertyData;
             }
         };
+
+        RtmpAmfValue & RtmpAmfObject::operator[](
+            std::string const & key)
+        {
+            for (size_t i = 0; i < ObjectProperties.size(); ++i) {
+                if (ObjectProperties[i].PropertyName.StringData == key) {
+                    return ObjectProperties[i].PropertyData;
+                }
+            }
+            ObjectProperties.push_back(RtmpAmfObjectProperty(key, RtmpAmfValue()));
+            return ObjectProperties.back().PropertyData;
+        }
+
+        RtmpAmfValue & RtmpAmfECMAArray::operator[](
+            std::string const & key)
+        {
+            for (size_t i = 0; i < Variables.size(); ++i) {
+                if (Variables[i].PropertyName.StringData == key) {
+                    return Variables[i].PropertyData;
+                }
+            }
+            Variables.push_back(RtmpAmfObjectProperty(key, RtmpAmfValue()));
+            return Variables.back().PropertyData;
+        }
 
         static inline bool FLV_Property_End(
             RtmpAmfObjectProperty const & Property)
