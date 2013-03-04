@@ -45,6 +45,42 @@ namespace util
                 setp(&buffer_[0], &buffer_[0] + pend);
             }
 
+            StreamBuffer(
+                StreamBuffer const & r)
+                : max_size_(r.max_size_)
+                , buffer_(r.buffer_)
+                , pos_(r.pos_)
+            {
+
+                std::size_t gnext = r.gptr() - &r.buffer_[0];
+                std::size_t gend = r.egptr() - &r.buffer_[0];
+                std::size_t pnext = r.pptr() - &r.buffer_[0];
+                std::size_t pend = r.epptr() - &r.buffer_[0];
+                // Update stream positions.
+                setg(&buffer_[0], &buffer_[0] + gnext, &buffer_[0] + gend);
+                setp(&buffer_[0] + pnext, &buffer_[0] + pend);
+            }
+
+        public:
+            StreamBuffer & operator=(
+                StreamBuffer const & r)
+            {
+                max_size_ = r.max_size_;
+                buffer_ = r.buffer_;
+                pos_ = r.pos_;
+
+                std::size_t gnext = r.gptr() - &r.buffer_[0];
+                std::size_t gend = r.egptr() - &r.buffer_[0];
+                std::size_t pnext = r.pptr() - &r.buffer_[0];
+                std::size_t pend = r.epptr() - &r.buffer_[0];
+                // Update stream positions.
+                setg(&buffer_[0], &buffer_[0] + gnext, &buffer_[0] + gend);
+                setp(&buffer_[0] + pnext, &buffer_[0] + pend);
+
+                return *this;
+            }
+
+        public:
             std::size_t size()
             {
                 return this->pptr() - this->gptr();
