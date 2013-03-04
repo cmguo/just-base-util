@@ -39,7 +39,7 @@ namespace util
         T & Message<MsgT>::get()
         {
             if (!is<T>()) {
-                reset(&T::msg_def);
+                MessageBase::reset(&T::msg_def);
                 header_type::id(T::static_id);
             }
             return as<T>();
@@ -47,7 +47,7 @@ namespace util
 
         template <typename MsgT>
         template <typename T>
-        void Message<MsgT>::set(
+        void Message<MsgT>::reset(
             T const & t)
         {
             reset();
@@ -78,6 +78,40 @@ namespace util
         {
             assert(is<T>());
             return *(T *)data_;
+        }
+
+        template <typename MsgT>
+        void Message<MsgT>::reset()
+        {
+            MessageBase::reset();
+            (header_type &)(*this) = header_type();
+        }
+
+        template <typename MsgT>
+        void Message<MsgT>::from_data(
+            StreamBuffer & buf, 
+            void * vctx)
+        {
+            typename MsgT::i_archive_t ia(buf);
+            typename MsgT::context_t * ctx = 
+                reinterpret_cast<typename MsgT::context_t *>(vctx);
+            typename MsgT::helper_t hlp(ia, *this, ctx);
+            ia >> (header_type &)(*this);
+            MessageBase::reset(find_msg(header_type::id()));
+            MessageBase::from_data(&ia, &hlp);
+        }
+
+        template <typename MsgT>
+        void Message<MsgT>::to_data(
+            StreamBuffer & buf, 
+            void * vctx) const
+        {
+            typename MsgT::o_archive_t oa(buf);
+            typename MsgT::context_t * ctx = 
+                reinterpret_cast<typename MsgT::context_t *>(vctx);
+            typename MsgT::helper_t hlp(oa, *this, ctx);
+            oa << (header_type const &)(*this);
+            MessageBase::to_data(&oa, &hlp);
         }
 
         template <typename MsgT>
@@ -119,34 +153,32 @@ namespace util
         template <typename T>
         void Message<MsgT>::s_from_data(
             MessageBase * mb, 
-            StreamBuffer & buf, 
+            void * ar, 
             void * vctx)
         {
             Message * m = static_cast<Message *>(mb);
-            typename MsgT::i_archive_t ia(buf);
-            typename MsgT::context_t * ctx = 
-                reinterpret_cast<typename MsgT::context_t *>(vctx);
-            typename MsgT::helper_t hlp(ia, *m, ctx);
-            ia >> (header_type &)(*m);
-            hlp.begin_data();
-            ia >> m->as<T>();
+            typename MsgT::i_archive_t * ia = 
+                reinterpret_cast<typename MsgT::i_archive_t *>(ar);
+            typename MsgT::helper_t * hlp = 
+                reinterpret_cast<typename MsgT::helper_t *>(vctx);
+            hlp->begin_data();
+            (*ia) >> m->as<T>();
         }
 
         template <typename MsgT>
         template <typename T>
         void Message<MsgT>::s_to_data(
             MessageBase const * mb, 
-            StreamBuffer & buf, 
+            void * ar, 
             void * vctx)
         {
             Message const * m = static_cast<Message const *>(mb);
-            typename MsgT::o_archive_t oa(buf);
-            typename MsgT::context_t * ctx = 
-                reinterpret_cast<typename MsgT::context_t *>(vctx);
-            typename MsgT::helper_t hlp(oa, *m, ctx);
-            oa << (header_type const &)(*m);
-            hlp.begin_data();
-            oa << m->as<T>();
+            typename MsgT::o_archive_t * oa = 
+                reinterpret_cast<typename MsgT::o_archive_t *>(ar);
+            typename MsgT::helper_t * hlp = 
+                reinterpret_cast<typename MsgT::helper_t *>(vctx);
+            hlp->begin_data();
+            (*oa) << m->as<T>();
         }
 
         template <typename MsgT>

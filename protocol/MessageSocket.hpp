@@ -9,9 +9,6 @@
 
 #include <framework/network/AsioHandlerHelper.h>
 
-#include <boost/bind.hpp>
-#include <boost/ref.hpp>
-
 namespace util
 {
     namespace protocol
@@ -364,7 +361,7 @@ namespace util
             typename Message
         >
         size_t MessageSocket::read_msg(
-            Message const & msg, 
+            Message & msg, 
             boost::system::error_code & ec)
         {
             if (read_parallel_) {
@@ -374,8 +371,9 @@ namespace util
                     pend_rcv_sizes_.pop_front();
                     assert(size <= rcv_buf_.size());
                     size_t left = rcv_buf_.size() - size;
-                    msg.reset(parser_.msg_def());
+                    rcv_buf_.pubseekoff(-(std::streamoff)left, std::ios::cur, std::ios::out);
                     msg.from_data(rcv_buf_, ctx_);
+                    rcv_buf_.pubseekoff((std::streamoff)left, std::ios::cur, std::ios::out);
                     assert(left == rcv_buf_.size());
                     ec.clear();
                     return size;
@@ -405,7 +403,6 @@ namespace util
                         read_status_.size = parser_.size();
                         read_status_.pos = 0;
                     } else {
-                        msg.reset(parser_.msg_def());
                         msg.from_data(rcv_buf_, ctx_);
                         assert(rcv_buf_.size() == 0);
                         read_status_.size = 0;
@@ -433,8 +430,9 @@ namespace util
                     pend_rcv_sizes_.pop_front();
                     assert(size <= rcv_buf_.size());
                     size_t left = rcv_buf_.size() - size;
-                    msg.reset(parser_.msg_def());
+                    rcv_buf_.pubseekoff(-(std::streamoff)left, std::ios::cur, std::ios::out);
                     msg.from_data(rcv_buf_, ctx_);
+                    rcv_buf_.pubseekoff((std::streamoff)left, std::ios::cur, std::ios::out);
                     assert(left == rcv_buf_.size());
                     get_io_service().post(
                         boost::asio::detail::bind_handler(handler, boost::system::error_code(), size));
@@ -468,7 +466,6 @@ namespace util
                         boost::asio::detail::bind_handler(handler, ec, 0));
                 } else {
                     assert(rcv_buf_.size() == bytes_transferred);
-                    msg.reset(parser_.msg_def());
                     msg.from_data(rcv_buf_, ctx_);
                     assert(rcv_buf_.size() == 0);
                     get_io_service().post(
@@ -487,7 +484,6 @@ namespace util
                     read_status_.size = parser_.size();
                     read_status_.pos = 0;
                 } else {
-                    msg.reset(parser_.msg_def());
                     msg.from_data(rcv_buf_, ctx_);
                     assert(rcv_buf_.size() == 0);
                     read_status_.size = 0;
@@ -533,6 +529,7 @@ namespace util
                 assert(snd_buf_.size() == 0);
                 msg.to_data(snd_buf_, ctx_);
                 write_status_.size = snd_buf_.size();
+                write_status_.pos = 0;
             }
             while (true) {
                 size_t bytes_write = write_some(
@@ -571,6 +568,7 @@ namespace util
             assert(snd_buf_.size() == 0);
             msg.to_data(snd_buf_, ctx_);
             write_status_.size = snd_buf_.size();
+            write_status_.pos = 0;
             async_write_some(
                 snd_buf_.data(), 
                 detail::msg_write_handler<Message, Handler>(*this, msg, handler));
@@ -601,8 +599,8 @@ namespace util
             write_status_.pos += bytes_transferred;
             snd_buf_.consume(bytes_transferred);
             if (write_status_.pos == write_status_.size) {
-                read_status_.size = 0;
-                handler(ec, read_status_.pos);
+                write_status_.size = 0;
+                handler(ec, write_status_.pos);
                 return;
             } else if (ec) {
                 handler(ec, 0);

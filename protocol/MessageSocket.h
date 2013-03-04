@@ -109,7 +109,7 @@ namespace util
                 typename Message
             >
             size_t read_msg(
-                Message const & msg, 
+                Message & msg, 
                 boost::system::error_code & ec);
 
             template <

@@ -29,11 +29,11 @@ namespace util
                 MessageBase const *);
             typedef void (* from_data_t)(
                 MessageBase *, 
-                StreamBuffer &, 
+                void * ar, 
                 void *);
             typedef void (* to_data_t)(
                 MessageBase const *, 
-                StreamBuffer &, 
+                void * ar, 
                 void *);
             typedef void (* destroy_t)(
                 MessageBase *);

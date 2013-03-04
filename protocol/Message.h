@@ -32,7 +32,7 @@ namespace util
             T & get();
 
             template <typename T>
-            void set(
+            void reset(
                 T const & t);
 
             template <typename T>
@@ -43,6 +43,17 @@ namespace util
 
             template <typename T>
             T & as();
+
+            void reset();
+
+        public:
+            void from_data(
+                StreamBuffer & buf, 
+                void *);
+
+            void to_data(
+                StreamBuffer & buf, 
+                void *) const;
 
         public:
             template <typename T>
@@ -68,13 +79,13 @@ namespace util
             template <typename T>
             static void s_from_data(
                 MessageBase *, 
-                StreamBuffer & buf, 
+                void * ar, 
                 void *);
 
             template <typename T>
             static void s_to_data(
                 MessageBase const *, 
-                StreamBuffer & buf, 
+                void * ar, 
                 void *);
 
             template <typename T>
@@ -85,7 +96,10 @@ namespace util
             static std::map<id_type, MessageDefine const *> & msg_defs();
 
         private:
-            char data_[MsgT::max_size];
+            union {
+                boost::uint64_t _u64;
+                boost::uint8_t data_[MsgT::max_size];
+            };
         };
 
         template <

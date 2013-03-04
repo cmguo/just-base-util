@@ -39,17 +39,17 @@ namespace util
         }
 
         void MessageBase::from_data(
-            StreamBuffer & buf, 
+            void * ar, 
             void * ctx)
         {
-            def_->from_data(this, buf, ctx);
+            def_->from_data(this, ar, ctx);
         }
 
         void MessageBase::to_data(
-            StreamBuffer & buf, 
-           void * ctx) const
+            void * ar, 
+            void * ctx) const
         {
-            def_->to_data(this, buf, ctx);
+            def_->to_data(this, ar, ctx);
         }
 
         void MessageBase::reset()

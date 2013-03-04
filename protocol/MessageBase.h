@@ -25,20 +25,21 @@ namespace util
                 MessageBase const & r);
 
         public:
+            bool empty() const;
+
+        protected:
             void from_data(
-                StreamBuffer & buf, 
+                void * ar, 
                 void *);
 
             void to_data(
-                StreamBuffer & buf, 
+                void * ar, 
                 void *) const;
 
             void reset();
 
             void reset(
                 MessageDefine const * def);
-
-            bool empty() const;
 
         protected:
             MessageDefine const * def_;
