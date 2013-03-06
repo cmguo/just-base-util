@@ -90,9 +90,9 @@ namespace util
                         h.cs_id2 = (boost::uint16_t)b1 << 8 | b2;
                     }
                 }
-                assert(pos == 0 || cs_id == h.cs_id);
+                assert(pos == 0 || cs_id == h.cs_id());
                 cs_id = h.cs_id();
-                finish = ctx->read_chunk(cs_id).put_data(size, ctx->read_chunk_size());
+                finish = ctx->read_chunk(cs_id).put_data(ctx->read_chunk_size());
                 pos += size;
             }
 

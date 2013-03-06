@@ -111,7 +111,7 @@ namespace util
         {
             MessageDefineT()
             {
-                Message<MsgT>::reg_msg<T>(*this);
+                Message<MsgT>::template reg_msg<T>(*this);
             }
         };
 

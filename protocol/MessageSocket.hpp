@@ -6,6 +6,7 @@
 #include "util/protocol/MessageSocket.h"
 #include "util/protocol/MessageParser.h"
 #include "util/protocol/MessageTraits.h"
+#include "util/protocol/MessageDefine.h"
 
 #include <util/buffers/BuffersCopy.h>
 #include <util/buffers/BuffersSize.h>

@@ -5,6 +5,7 @@
 
 #include <streambuf>
 #include <stdexcept>
+#include <limits>
 
 #include <boost/asio/buffer.hpp>
 
@@ -173,9 +174,9 @@ namespace util
             {
                 if (!traits_type::eq_int_type(c, traits_type::eof()))
                 {
-                    if (pptr() == epptr())
+                    if (this->pptr() == this->epptr())
                     {
-                        std::size_t buffer_size = pptr() - gptr();
+                        std::size_t buffer_size = this->pptr() - this->gptr();
                         if (buffer_size < max_size_ && max_size_ - buffer_size < buffer_delta)
                         {
                             reserve(max_size_ - buffer_size);
@@ -186,8 +187,8 @@ namespace util
                         }
                     }
 
-                    *pptr() = traits_type::to_char_type(c);
-                    pbump(1);
+                    *this->pptr() = traits_type::to_char_type(c);
+                    this->pbump(1);
                     return c;
                 }
 
@@ -253,10 +254,10 @@ namespace util
             void reserve(std::size_t n)
             {
                 // Get current stream positions as offsets.
-                std::size_t gnext = gptr() - &buffer_[0];
-                std::size_t gend = egptr() - &buffer_[0];
-                std::size_t pnext = pptr() - &buffer_[0];
-                std::size_t pend = epptr() - &buffer_[0];
+                std::size_t gnext = this->gptr() - &buffer_[0];
+                std::size_t gend = this->egptr() - &buffer_[0];
+                std::size_t pnext = this->pptr() - &buffer_[0];
+                std::size_t pend = this->epptr() - &buffer_[0];
 
                 // Check if there is already enough space in the put area.
                 if (n <= pend - pnext)

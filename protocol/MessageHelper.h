@@ -57,7 +57,7 @@ namespace util
             {
                 if (ia_) {
                     std::streamsize end = ia_->tellg();
-                    assert(header_.data_size() == end - data_beg_ - filling_);
+                    assert(header_.data_size() == (boost::uint32_t)(end - data_beg_ - filling_));
                     ia_->context(ctx_);
                 } else {
                     std::streamsize end = oa_->tellp();
