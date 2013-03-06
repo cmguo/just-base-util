@@ -152,8 +152,8 @@ namespace util
                     }
                 } else if (mode == std::ios_base::out) {
                     if (position >= this->gptr() - buf_) {
-                        setp(this->pptr(), this->epptr());
-                        this->pbump(buf_ + position - this->pptr());
+                        setp(this->gptr(), this->epptr());
+                        this->pbump(buf_ + position - this->gptr());
                     } else {
                         return pos_type(-1);
                     }
