@@ -158,7 +158,6 @@ namespace util
                 std::string const & name)
             {
                 Value & vp = value_stack_.back();
-                assert(vp.type == Value::t_elem || vp.type == Value::t_set || vp.type == Value::t_set2);
                 Value v;
                 if (vp.type == Value::t_elem) {
                     TiXmlElement * elem = vp.elem->FirstChildElement(name.c_str());
@@ -206,7 +205,7 @@ namespace util
                     if (v.elem == NULL) {
                         v.type = Value::t_none;
                     }
-                } else { // vp.type == Value::t_set2
+                } else if (vp.type == Value::t_set2) {
                     Value & vpp = *(&vp - 1);
                     Value & vppp = *(&vpp - 1);
                     if (name == "count") {
@@ -222,6 +221,14 @@ namespace util
                             v.type = Value::t_elem;
                             v.elem = vpp.item->ToElement();
                         }
+                    }
+                } else { // vp.type == Value::t_none, maybe empty collection
+                    if (name == "count") {
+                        v.type = Value::t_count;
+                        v.count = 0;
+                        Value v2;
+                        v2.type = Value::t_set;
+                        value_stack_.push_back(v2);
                     }
                 }
                 //if (v.type == Value::t_none) {
