@@ -98,7 +98,7 @@ namespace util
             并不移动读指针。
             */
             const_buffers_type data(
-                std::size_t n = std::size_t(-1))
+                std::size_t n = std::size_t(-1)) const
             {
                 if (n > (size_t)(this->pptr() - this->gptr()))
                     n = this->pptr() - this->gptr();

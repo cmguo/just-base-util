@@ -7,8 +7,6 @@
 #include "util/protocol/rtmp/RtmpMessageDataProtocolControl.h"
 #include "util/protocol/rtmp/RtmpMessageDataUserControl.h"
 
-#include "util/serialization/Array.h"
-
 namespace util
 {
     namespace protocol
@@ -39,12 +37,13 @@ namespace util
             boost::system::error_code & ec)
         {
             TcpSocket::connect(addr ,ec);
-            make_c01();
+            make_c01(snd_buf_);
             boost::asio::write(*this, snd_buf_.data(), boost::asio::transfer_all(), ec);
             snd_buf_.consume(snd_buf_.size());
             boost::asio::read(*this, rcv_buf_.prepare(1 + HANDSHAKE_SIZE * 2), boost::asio::transfer_all(), ec);
             rcv_buf_.commit(1 + HANDSHAKE_SIZE * 2);
-            make_c2();
+            check_s012(rcv_buf_);
+            make_c2(snd_buf_);
             rcv_buf_.consume(1 + HANDSHAKE_SIZE * 2);
             boost::asio::write(*this, snd_buf_.data(), boost::asio::transfer_all(), ec);
             snd_buf_.consume(snd_buf_.size());
@@ -109,26 +108,45 @@ namespace util
              v = (boost::uint8_t)rand();
          }
 
-        void RtmpSocket::make_c01()
+        void RtmpMessageVector::to_data(
+            StreamBuffer & buf, 
+            void * vctx) const
         {
-            boost::uint8_t * c01 = boost::asio::buffer_cast<boost::uint8_t *>(snd_buf_.prepare(1 + HANDSHAKE_SIZE));
-            *c01++ = 3; // version
-            std::for_each(c01, c01 + HANDSHAKE_SIZE, assgin_rand);
-            snd_buf_.commit(1 + HANDSHAKE_SIZE);
+            RtmpMessageContext * ctx = 
+                reinterpret_cast<RtmpMessageContext *>(vctx);
+            for (size_t i = 0; i < msgs_.size(); ++i) {
+                boost::uint32_t stream = msgs_[i].stream;
+                if (!ctx->write_stream(stream)) {
+                    RtmpMessage msg;
+                    RtmpMessageUserControl ctrl;
+                    ctrl.event_type = RUCE_StreamBegin;
+                    ctrl._union[0] = stream;
+                    msg.reset(ctrl);
+                    ctx->write_stream(stream, true);
+                    msg.to_data(buf, ctx);
+                }
+                msgs_[i].to_data(buf, ctx);
+            }
         }
 
-        void RtmpSocket::make_c2()
+        void RtmpChunk::from_data(
+            StreamBuffer & buf, 
+            void * vctx)
         {
-            boost::uint8_t * c2 = boost::asio::buffer_cast<boost::uint8_t *>(snd_buf_.prepare(HANDSHAKE_SIZE));
-            std::for_each(c2, c2 + HANDSHAKE_SIZE, assgin_rand);
-        }
-
-        void RtmpSocket::make_s012()
-        {
-            boost::uint8_t * s012 = boost::asio::buffer_cast<boost::uint8_t *>(snd_buf_.prepare(1 + HANDSHAKE_SIZE * 2));
-            *s012++ = 3; // version
-            std::for_each(s012, s012 + HANDSHAKE_SIZE * 2, assgin_rand);
-            snd_buf_.commit(1 + HANDSHAKE_SIZE * 2);
+            RtmpMessageContext * ctx = (RtmpMessageContext *)vctx;
+            boost::uint8_t const * p = 
+                boost::asio::buffer_cast<boost::uint8_t const *>(buf.data());
+            RtmpChunkBasicHeader h;
+            h.one_byte = p[0];
+            if (h.cs_id0 < 2) {
+                if (h.cs_id0 == 0) {
+                    h.cs_id1 = p[1];
+                } else {
+                    h.cs_id2 = (boost::uint16_t)p[1] << 8 | p[2];
+                }
+            }
+            cs_id = h.cs_id();
+            finish = ctx->read_chunk(cs_id).put_data(buf, ctx->read_chunk_size());
         }
 
     } // namespace protocol

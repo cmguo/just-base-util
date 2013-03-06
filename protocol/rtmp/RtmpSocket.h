@@ -6,6 +6,7 @@
 #include "util/protocol/rtmp/RtmpMessage.h"
 #include "util/protocol/rtmp/RtmpMessageContext.h"
 #include "util/protocol/rtmp/RtmpChunkParser.h"
+#include "util/protocol/rtmp/RtmpHandshake.h"
 #include "util/protocol/MessageSocket.h"
 
 #include <framework/network/TcpSocket.h>
@@ -17,8 +18,8 @@ namespace util
     namespace protocol
     {
 
-        class RtmpChunk;
-        class RtmpRawChunk;
+        struct RtmpChunk;
+        struct RtmpRawChunk;
 
         namespace detail
         {
@@ -44,6 +45,7 @@ namespace util
 
         class RtmpSocket
             : public MessageSocket
+            , private RtmpHandshake
         {
         public:
             RtmpSocket(
@@ -161,16 +163,6 @@ namespace util
                 RtmpChunk & chunk, 
                 boost::system::error_code ec, 
                 size_t bytes_transferred);
-
-        private:
-            static boost::uint32_t const RANDOM_SIZE = 1528;
-            static boost::uint32_t const HANDSHAKE_SIZE = 8 + RANDOM_SIZE;
-
-            void make_c01();
-            
-            void make_c2();
-
-            void make_s012();
 
         private:
             template <typename Handler>

@@ -13,6 +13,8 @@ namespace util
             : read_chunk_size_(128)
             , write_chunk_size_(128)
         {
+            read_streams_.resize(1, true);
+            write_streams_.resize(1, true);
         }
 
         void RtmpMessageContext::read_chunk_size(
@@ -35,6 +37,26 @@ namespace util
         void RtmpMessageContext::write_acknowledgement(
             boost::uint32_t & n)
         {
+        }
+
+        void RtmpMessageContext::read_stream(
+            boost::uint32_t i, 
+            bool b)
+        {
+            if (read_streams_.size() <= i) {
+                read_streams_.resize(i + 1, false);
+            }
+            read_streams_[i] = b;
+        }
+
+        void RtmpMessageContext::write_stream(
+            boost::uint32_t i, 
+            bool b)
+        {
+            if (write_streams_.size() <= i) {
+                write_streams_.resize(i + 1, false);
+            }
+            write_streams_[i] = b;
         }
 
         RtmpChunkMessage & RtmpMessageContext::read_chunk(
@@ -61,6 +83,24 @@ namespace util
                 }
             }
             return write_chunks_[cs_id];
+        }
+
+        bool RtmpMessageContext::read_stream(
+            boost::uint32_t i)
+        {
+            if (read_streams_.size() <= i) {
+                read_streams_.resize(i + 1, false);
+            }
+            return read_streams_[i];
+        }
+
+        bool RtmpMessageContext::write_stream(
+            boost::uint32_t i)
+        {
+            if (write_streams_.size() <= i) {
+                write_streams_.resize(i + 1, false);
+            }
+            return write_streams_[i];
         }
 
         void RtmpMessageContext::to_chunk(

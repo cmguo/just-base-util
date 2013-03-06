@@ -29,12 +29,7 @@ namespace util
 
             void to_data(
                 StreamBuffer & buf, 
-                void * ctx) const
-            {
-                for (size_t i = 0; i < msgs_.size(); ++i) {
-                    msgs_[i].to_data(buf, ctx);
-                }
-            }
+                void * ctx) const;
 
         private:
             std::vector<RtmpMessage> const & msgs_;
@@ -42,25 +37,15 @@ namespace util
 
         struct RtmpChunk
         {
+            RtmpChunk()
+                : finish(false)
+                , cs_id(0)
+            {
+            }
+
             void from_data(
                 StreamBuffer & buf, 
-                void * vctx)
-            {
-                RtmpMessageContext * ctx = (RtmpMessageContext *)vctx;
-                boost::uint8_t const * p = 
-                    boost::asio::buffer_cast<boost::uint8_t const *>(buf.data());
-                RtmpChunkBasicHeader h;
-                h.one_byte = p[0];
-                if (h.cs_id0 < 2) {
-                    if (h.cs_id0 == 0) {
-                        h.cs_id1 = p[1];
-                    } else {
-                        h.cs_id2 = (boost::uint16_t)p[1] << 8 | p[2];
-                    }
-                }
-                cs_id = h.cs_id();
-                finish = ctx->read_chunk(cs_id).put_data(buf, ctx->read_chunk_size());
-            }
+                void * vctx);
 
             bool finish;
             boost::uint16_t cs_id;
@@ -68,6 +53,13 @@ namespace util
 
         struct RtmpRawChunk
         {
+            RtmpRawChunk()
+                : finish(false)
+                , pos(0)
+                , cs_id(0)
+            {
+            }
+
             template <
                 typename MutableBufferSequence
             >
@@ -221,7 +213,7 @@ namespace util
 
             switch (status_) {
                 case closed:
-                    make_c01();
+                    make_c01(snd_buf_);
                     status_ = handshake1;
                     boost::asio::async_write(*this, snd_buf_.data(), 
                         boost::asio::transfer_all(), 
@@ -236,8 +228,9 @@ namespace util
                     break;
                 case handshake2:
                     rcv_buf_.commit(1 + HANDSHAKE_SIZE * 2);
+                    check_s012(rcv_buf_);
                     status_ = handshake3;
-                    make_c2();
+                    make_c2(snd_buf_);
                     rcv_buf_.consume(1 + HANDSHAKE_SIZE * 2);
                     boost::asio::async_write(*this, snd_buf_.data(), 
                         boost::asio::transfer_all(), 
@@ -282,9 +275,10 @@ namespace util
                     break;
                 case handshake1:
                     rcv_buf_.commit(1 + HANDSHAKE_SIZE);
-                    make_s012();
-                    status_ = handshake2;
+                    check_c01(rcv_buf_);
                     rcv_buf_.consume(1 + HANDSHAKE_SIZE);
+                    status_ = handshake2;
+                    make_s012(snd_buf_);
                     boost::asio::async_write(*this, snd_buf_.data(), 
                         boost::asio::transfer_all(), 
                         detail::rtmp_accept_handler<Handler>(*this, handler));
@@ -298,8 +292,9 @@ namespace util
                     break;
                 case handshake3:
                     rcv_buf_.commit(HANDSHAKE_SIZE);
-                    status_ = established;
+                    check_c2(rcv_buf_);
                     rcv_buf_.consume(HANDSHAKE_SIZE);
+                    status_ = established;
                     handler(ec);
                     break;
                 default:

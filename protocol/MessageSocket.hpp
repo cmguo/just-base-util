@@ -7,6 +7,10 @@
 #include "util/protocol/MessageParser.h"
 #include "util/protocol/MessageTraits.h"
 
+#include <util/buffers/BuffersCopy.h>
+#include <util/buffers/BuffersSize.h>
+#include <util/buffers/SubBuffers.h>
+
 #include <framework/network/AsioHandlerHelper.h>
 
 namespace util

@@ -6,6 +6,7 @@
 #include <util/serialization/NumberBits24.h>
 
 #include <framework/system/NumberBits24.h>
+#include <framework/system/BytesOrder.h>
 
 namespace util
 {
@@ -99,7 +100,6 @@ namespace util
                 : message_type_id(0)
                 , message_stream_id(boost::uint32_t(-1))
             {
-
             }
 
             template <typename Archive>
@@ -114,7 +114,13 @@ namespace util
                     ar & timestamp;
                     ar & message_length;
                     ar & message_type_id;
-                    ar & message_stream_id;
+                    {
+                        boost::uint32_t message_stream_id = 
+                            framework::system::BytesOrder::rotate(this->message_stream_id);
+                        ar & message_stream_id;
+                        this->message_stream_id = 
+                            framework::system::BytesOrder::rotate(message_stream_id);
+                    }
                     break;
                 case 1:
                     ar & timestamp;

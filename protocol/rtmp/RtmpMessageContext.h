@@ -32,6 +32,14 @@ namespace util
             void write_acknowledgement(
                 boost::uint32_t & n);
 
+            void read_stream(
+                boost::uint32_t i, 
+                bool b);
+
+            void write_stream(
+                boost::uint32_t i, 
+                bool b);
+
         public:
             boost::uint32_t read_chunk_size() const
             {
@@ -49,6 +57,12 @@ namespace util
             RtmpChunkHeader & write_chunk(
                 boost::uint16_t cs_id);
 
+            bool read_stream(
+                boost::uint32_t i);
+
+            bool write_stream(
+                boost::uint32_t i);
+
         public:
             void to_chunk(
                 RtmpMessageHeader const & msg, 
@@ -59,10 +73,12 @@ namespace util
                 RtmpChunkHeader const & chunk);
 
         private:
-            std::vector<RtmpChunkMessage> read_chunks_;
-            std::vector<RtmpChunkHeader> write_chunks_;
             boost::uint32_t read_chunk_size_;
             boost::uint32_t write_chunk_size_;
+            std::vector<RtmpChunkMessage> read_chunks_;
+            std::vector<RtmpChunkHeader> write_chunks_;
+            std::vector<bool> read_streams_;
+            std::vector<bool> write_streams_;
         };
 
     } // namespace protocol
