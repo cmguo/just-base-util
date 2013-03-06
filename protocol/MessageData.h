@@ -20,10 +20,17 @@ namespace util
         public:
             typedef typename MsgT::id_type id_type;
 
-            static id_type const static_id = id;
+            static id_type const static_id;
 
             static MessageDefineT<MsgT, T> const msg_def;
         };
+
+        template <
+            typename MsgT, 
+            typename T, 
+            typename MsgT::id_type id
+        >
+        typename MsgT::id_type const MessageData<MsgT, T, id>::static_id = id;
 
         template <
             typename MsgT, 

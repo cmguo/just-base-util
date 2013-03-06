@@ -43,12 +43,6 @@ namespace util
                 boost::bind(&RtmpServer::handle_receive_request, this, _1, _2));
         }
 
-        static void delete_msg(
-            RtmpMessage * msg)
-        {
-            delete msg;
-        }
-
         void RtmpServer::handle_receive_request(
             error_code const & ec, 
             size_t bytes_transferred)
