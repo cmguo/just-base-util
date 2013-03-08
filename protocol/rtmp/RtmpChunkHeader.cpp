@@ -18,22 +18,22 @@ namespace util
                     message_type_id = r.message_type_id;
                     message_stream_id = r.message_stream_id;
                     extended_timestamp = r.extended_timestamp;
-                    calc_timestamp = r.real_timestamp();
+                    calc_timestamp = r.extended_timestamp;
                     break;
                 case 1:
                     timestamp = r.timestamp;
                     message_length = r.message_length;
                     message_type_id = r.message_type_id;
                     extended_timestamp = r.extended_timestamp;
-                    calc_timestamp += r.real_timestamp();
+                    calc_timestamp += r.extended_timestamp;
                     break;
                 case 2:
                     timestamp = r.timestamp;
                     extended_timestamp = r.extended_timestamp;
-                    calc_timestamp += r.real_timestamp();
+                    calc_timestamp += r.extended_timestamp;
                     break;
                 case 3:
-                    calc_timestamp += real_timestamp();
+                    calc_timestamp += extended_timestamp;
                     break;
             }
             return *this;
@@ -57,7 +57,7 @@ namespace util
             if (r.message_stream_id == message_stream_id) {
                 if (r.message_type_id == message_type_id 
                     && r.message_length == message_length) {
-                        if (r.calc_timestamp == calc_timestamp + real_timestamp()) {
+                        if (r.calc_timestamp == calc_timestamp + extended_timestamp) {
                             fmt = 3;
                         } else {
                             fmt = 2;

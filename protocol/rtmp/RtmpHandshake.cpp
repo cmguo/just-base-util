@@ -72,13 +72,13 @@ namespace util
             boost::uint8_t * s012 = boost::asio::buffer_cast<boost::uint8_t *>(buf.prepare(1 + HANDSHAKE_SIZE * 2));
             *s012++ = 3; // version
             std::for_each(s012, s012 + HANDSHAKE_SIZE * 2, assgin_rand);
-            buf.commit(1 + HANDSHAKE_SIZE * 2);
             if (has_digest_) {
                 boost::uint32_t offset = digest_offset(s012, digest_first_);
                 make_digest(s012, offset, genuineFMSKey, 36, s012 + offset);
                 s012 += HANDSHAKE_SIZE;
                 make_digest2(s012, digest_, genuineFMSKey, 68, s012 + HANDSHAKE_SIZE - 32);
             }
+            buf.commit(1 + HANDSHAKE_SIZE * 2);
         }
 
         bool RtmpHandshake::check_c01(
@@ -117,7 +117,23 @@ namespace util
         bool RtmpHandshake::check_s012(
             StreamBuffer const & buf)
         {
-            return false;
+            boost::uint8_t const * s012 = boost::asio::buffer_cast<boost::uint8_t const *>(buf.data());
+            ++s012;
+            if (!has_digest_) {
+                return true;
+            }
+            boost::uint8_t digest[32];
+            boost::uint32_t offset = 0;
+            offset = digest_offset(s012, digest_first_);
+            make_digest(s012, offset, genuineFMSKey, 36, digest);
+            if (memcmp(digest, s012 + offset, 32) == 0) {
+                memcpy(digest_, s012 + offset, 32);
+                offset = dhkey_offset(s012, false);
+                memcpy(dhkey_, s012 + offset, 128);
+            } else {
+                return false;
+            }
+            return true;
         }
 
         bool RtmpHandshake::check_c2(

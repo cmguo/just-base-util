@@ -149,11 +149,6 @@ namespace util
             {
             }
 
-            boost::uint32_t real_timestamp() const
-            {
-                return timestamp == 0x00ffffff ? extended_timestamp : (boost::uint32_t)timestamp;
-            }
-
             RtmpChunkHeader const & add(
                 RtmpChunkHeader const & r);
 
@@ -170,7 +165,7 @@ namespace util
                 RtmpChunkMessageHeader::serialize(ar);
                 ar.context(ctx);
 
-                if (timestamp == 0x00ffffff) {
+                if (fmt != 3 && timestamp == 0x00ffffff) {
                     ar & extended_timestamp;
                 } else {
                     extended_timestamp = timestamp;
