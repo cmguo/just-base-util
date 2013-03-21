@@ -59,9 +59,9 @@ namespace util
                 }
                 if (skip_)
                     left_ = 0;
-				if (left_ < buffer_size(buf_)) {
-					buf_ = boost::asio::buffer(buf_, left_);
-				}
+                if (left_ < buffer_size(buf_)) {
+                    buf_ = boost::asio::buffer(buf_, left_);
+                }
             }
 
             sub_buffers_iterator(
@@ -134,6 +134,21 @@ namespace util
             {
             }
 
+            SubBuffers(
+                SubBuffers const & r, 
+                size_t beg, 
+                size_t len)
+                : buffers_(r.buffers_)
+                , beg_(beg + r.beg_)
+                , len_(len)
+            {
+                if (beg >= r.len_) {
+                    len_ = 0;
+                } else if (len_ > r.len_ - beg) {
+                    len_ = r.len_ - beg;
+                }
+            }
+
             const_iterator begin() const
             {
                 return const_iterator(buffers_.begin(), buffers_.end(), beg_, len_);
@@ -153,7 +168,19 @@ namespace util
         template <
             typename BufferSequence
         >
-        SubBuffers<BufferSequence> const sub_buffers(BufferSequence const & buffers, 
+        SubBuffers<BufferSequence> const sub_buffers(
+            BufferSequence const & buffers, 
+            size_t beg, 
+            size_t len = (size_t)-1)
+        {
+            return SubBuffers<BufferSequence>(buffers, beg, len);
+        }
+
+        template <
+            typename BufferSequence
+        >
+        SubBuffers<BufferSequence> const sub_buffers(
+            SubBuffers<BufferSequence> const & buffers, 
             size_t beg, 
             size_t len = (size_t)-1)
         {

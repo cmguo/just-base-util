@@ -38,6 +38,44 @@ namespace util
                 this->setp(buf_ + data_size, buf_ + buf_size_);
             }
 
+            ArchiveBuffer(
+                boost::asio::const_buffer const & buf)
+                : buf_((char_type *)boost::asio::buffer_cast<char_type const *>(buf))
+                , buf_size_(boost::asio::buffer_size(buf))
+            {
+                this->setg(buf_, buf_, buf_ + buf_size_);
+                this->setp(buf_ + buf_size_, buf_ + buf_size_);
+            }
+
+            ArchiveBuffer(
+                boost::asio::const_buffer const & buf, 
+                std::size_t data_size)
+                : buf_((char_type *)boost::asio::buffer_cast<char_type const *>(buf))
+                , buf_size_(boost::asio::buffer_size(buf))
+            {
+                this->setg(buf_, buf_, buf_ + data_size);
+                this->setp(buf_ + data_size, buf_ + buf_size_);
+            }
+
+            ArchiveBuffer(
+                boost::asio::mutable_buffer const & buf)
+                : buf_(boost::asio::buffer_cast<char_type *>(buf))
+                , buf_size_(boost::asio::buffer_size(buf))
+            {
+                this->setg(buf_, buf_, buf_);
+                this->setp(buf_, buf_ + buf_size_);
+            }
+
+            ArchiveBuffer(
+                boost::asio::mutable_buffer const & buf, 
+                std::size_t data_size)
+                : buf_(boost::asio::buffer_cast<char_type *>(buf))
+                , buf_size_(boost::asio::buffer_size(buf))
+            {
+                this->setg(buf_, buf_, buf_ + data_size);
+                this->setp(buf_ + data_size, buf_ + buf_size_);
+            }
+
             /**
             返回读缓存的数据
 

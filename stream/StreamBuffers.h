@@ -4,8 +4,10 @@
 #define _UTIL_STREAM_STREAM_BUFFERS_H_
 
 #include <boost/asio/buffer.hpp>
+#include <boost/intrusive_ptr.hpp>
 
 #include <utility>
+#include <deque>
 
 namespace util
 {
@@ -19,11 +21,10 @@ namespace util
         {
         public:
             typedef Buffer value_type;
-            typedef Buffer const * const_iterator;
+            typedef typename std::deque<Buffer>::const_iterator const_iterator;
 
         public:
             StreamBuffers()
-                : buf_(NULL)
             {
             }
 
@@ -32,68 +33,42 @@ namespace util
             >
             StreamBuffers(
                 BufferSequence const & buffers)
-                : buf_(NULL)
             {
                 typename BufferSequence::const_iterator beg = buffers.begin();
                 typename BufferSequence::const_iterator end = buffers.end();
                 size_t count = std::distance(beg, end);
                 if (count > 0) {
-                    reserve(count);
-                    buf_->count = count;
-                    std::copy(beg, end, buf_->buffers);
-                }
-            }
-
-            StreamBuffers(
-                StreamBuffers const & r)
-                : buf_(r.buf_)
-            {
-                if (buf_) {
-                    ++buf_->nref;
-                }
-            }
-
-            ~StreamBuffers()
-            {
-                if (buf_ && --buf_->nref == 0) {
-                    delete [] buf_->buffers;
-                    delete buf_;
+                    buf_.reset(new Buf);
+                    std::copy(beg, end, std::back_inserter(*buf_));
                 }
             }
 
         public:
             const_iterator begin() const
             {
-                return buf_ ? buf_->buffers : NULL;
+                return buf_ ? buf_->begin() : const_iterator();
             }
 
             const_iterator end() const
             {
-                return buf_ ? buf_->buffers + buf_->count : NULL;
+                return buf_ ? buf_->end(): const_iterator();
             }
 
             size_t size() const
             {
-                return buf_ ? buf_->count : 0;
-            }
-
-            size_t capacity() const
-            {
-                return buf_ ? buf_->capacity : 0;
+                return buf_ ? buf_->size() : 0;
             }
 
         public:
             void reset()
             {
-                StreamBuffers tmp;
-                std::swap(tmp.buf_, buf_);
+                buf_.reset();
             }
 
             void reset(
                 StreamBuffers const & r)
             {
-                StreamBuffers tmp(r);
-                std::swap(tmp.buf_, buf_);
+                buf_.reset(r.buf_);
             }
 
             StreamBuffers & operator=(
@@ -104,46 +79,31 @@ namespace util
             }
 
         public:
-            void reserve(
-                size_t count)
+            void push_front(
+                Buffer const & buffer)
             {
-                if (buf_) {
-                    if (buf_->nref > 1) {
-                        StreamBuffers tmp;
-                        std::swap(tmp.buf_, buf_);
-                        buf_ = new Buf;
-                        buf_->nref = 1;
-                        buf_->count = tmp.buf_->count;
-                        buf_->capacity = count;
-                        if (buf_->capacity < buf_->count)
-                            buf_->capacity = buf_->count;
-                        buf_->buffers = new Buffer[buf_->capacity];
-                        if (buf_->count)
-                            std::copy(tmp.begin(), tmp.end(), buf_->buffers);
-                    } else if (count > buf_->capacity) {
-                        Buffer * buffers = NULL;
-                        std::swap(buffers, buf_->buffers);
-                        buf_->capacity = count;
-                        buf_->buffers = new Buffer[buf_->capacity];
-                        if (buf_->count)
-                            std::copy(buffers, buffers + buf_->count, buf_->buffers);
-                        delete [] buffers;
-                    }
-                } else if (count > 0) {
-                    buf_ = new Buf;
-                    buf_->nref = 1;
-                    buf_->count = 0;
-                    buf_->capacity = count;
-                    buf_->buffers = new Buffer[buf_->capacity];
-                }
+                before_modify();
+                buf_->push_front(buffer);
             }
 
             void push_back(
                 Buffer const & buffer)
             {
-                reserve(size() + 1);
-                buf_->buffers[buf_->count] = buffer;
-                ++buf_->count;
+                before_modify();
+                buf_->push_back(buffer);
+            }
+
+            void pop_front()
+            {
+                before_modify();
+                buf_->pop_front();
+            }
+
+            void pop_back(
+                size_t n)
+            {
+                before_modify();
+                buf_->pop_back();
             }
 
             void clear()
@@ -152,22 +112,49 @@ namespace util
                     if (buf_->nref > 1) {
                         reset();
                     } else {
-                        buf_->count = 0;
+                        buf_->clear();
                     }
                 }
             }
 
         private:
-            struct Buf
+            void before_modify()
             {
+                if (!buf_) {
+                    buf_.reset(new Buf);
+                } else if (buf_->nref > 1) {
+                    buf_.reset(new Buf(*buf_));
+                }
+            }
+
+        private:
+            struct Buf
+                : std::deque<Buffer>
+            {
+                Buf()
+                    : nref(0)
+                {
+                }
+
                 size_t nref;
-                size_t count;
-                size_t capacity;
-                Buffer * buffers;
+
+                friend void intrusive_ptr_add_ref(
+                    Buf * p)
+                {
+                    ++p->nref;
+                }
+
+                friend void intrusive_ptr_release(
+                    Buf * p)
+                {
+                    if (--p->nref == 0) {
+                        delete p;
+                    }
+                }
             };
 
         private:
-            Buf * buf_;
+            boost::intrusive_ptr<Buf> buf_;
         };
 
         typedef StreamBuffers<boost::asio::const_buffer> StreamConstBuffers;
