@@ -38,8 +38,9 @@ namespace util
             typedef void (* destroy_t)(
                 MessageBase *);
 
-            MessageDefine()
-                : cls(control_message)
+            MessageDefine(
+                ClassEnum cls = control_message)
+                : cls(cls)
                 , construct(NULL)
                 , copy(NULL)
                 , from_data(NULL)

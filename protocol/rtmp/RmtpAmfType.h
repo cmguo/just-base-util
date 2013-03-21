@@ -77,6 +77,14 @@ namespace util
             double DateTime;
             boost::int16_t LocalDateTimeOffset;
 
+            friend bool operator==(
+                RtmpAmfDate const & l, 
+                RtmpAmfDate const & r)
+            {
+                return l.DateTime == r.DateTime 
+                    && l.LocalDateTimeOffset == r.LocalDateTimeOffset;
+            }
+
             template <typename Archive>
             void serialize(
                 Archive & ar)
@@ -105,6 +113,14 @@ namespace util
             {
             }
 
+            friend bool operator==(
+                RtmpAmfLongString const & l, 
+                RtmpAmfLongString const & r)
+            {
+                return l.StringLength == r.StringLength
+                    && l.StringData == r.StringData;
+            }
+
             template <typename Archive>
             void serialize(
                 Archive & ar)
@@ -128,6 +144,16 @@ namespace util
 
             RtmpAmfValue & operator[](
                 std::string const & key);
+
+            RtmpAmfValue const & operator[](
+                std::string const & key) const;
+
+            friend bool operator==(
+                RtmpAmfObject const & l, 
+                RtmpAmfObject const & r)
+            {
+                return l.ObjectProperties == r.ObjectProperties;
+            }
 
             SERIALIZATION_SPLIT_MEMBER();
 
@@ -164,6 +190,17 @@ namespace util
 
             RtmpAmfValue & operator[](
                 std::string const & key);
+
+            RtmpAmfValue const & operator[](
+                std::string const & key) const;
+
+            friend bool operator==(
+                RtmpAmfECMAArray const & l, 
+                RtmpAmfECMAArray const & r)
+            {
+                return l.ECMAArrayLength == r.ECMAArrayLength
+                    && l.Variables == r.Variables;
+            }
 
             SERIALIZATION_SPLIT_MEMBER();
 
@@ -202,6 +239,14 @@ namespace util
 
             boost::uint32_t StrictArrayLength;
             std::vector<RtmpAmfValue> StrictArrayValue;
+
+            friend bool operator==(
+                RtmpAmfStrictArray const & l, 
+                RtmpAmfStrictArray const & r)
+            {
+                return l.StrictArrayLength == r.StrictArrayLength
+                    && l.StrictArrayValue == r.StrictArrayValue;
+            }
 
             template <typename Archive>
             void serialize(
@@ -320,6 +365,31 @@ namespace util
                 return *this;
             }
 
+            friend bool operator==(
+                RtmpAmfValue const & l, 
+                RtmpAmfValue const & r)
+            {
+                if (l.Type != r.Type) {
+                    return false;
+                }
+                switch (l.Type) {
+                    case RtmpAmfType::STRING:
+                        return l.equal<RtmpAmfString>(r);
+                    case RtmpAmfType::OBJECT:
+                        return l.equal<RtmpAmfObject>(r);
+                    case RtmpAmfType::MIXEDARRAY:
+                        return l.equal<RtmpAmfECMAArray>(r);
+                    case RtmpAmfType::ARRAY:
+                        return l.equal<RtmpAmfStrictArray>(r);
+                    case RtmpAmfType::DATE:
+                        return l.equal<RtmpAmfDate>(r);
+                    case RtmpAmfType::LONG_STRING:
+                        return l.equal<RtmpAmfLongString>(r);
+                    default:
+                        return l._Double == r._Double;
+                }
+            }
+
         private:
             template <
                 typename T
@@ -356,6 +426,15 @@ namespace util
             RtmpAmfValue const & r)
             {
                 construct<T>(r.as<T>());
+            }
+
+            template <
+                typename T
+            >
+            bool equal(
+                RtmpAmfValue const & r) const
+            {
+                return as<T>() == r.as<T>();
             }
 
         public:
@@ -520,6 +599,14 @@ namespace util
             {
             }
 
+            friend bool operator==(
+                RtmpAmfObjectProperty const & l, 
+                RtmpAmfObjectProperty const & r)
+            {
+                return l.PropertyName == r.PropertyName
+                    && l.PropertyData == r.PropertyData;
+            }
+
             template <typename Archive>
             void serialize(
                 Archive & ar)
@@ -529,7 +616,7 @@ namespace util
             }
         };
 
-        RtmpAmfValue & RtmpAmfObject::operator[](
+        inline RtmpAmfValue & RtmpAmfObject::operator[](
             std::string const & key)
         {
             for (size_t i = 0; i < ObjectProperties.size(); ++i) {
@@ -541,7 +628,20 @@ namespace util
             return ObjectProperties.back().PropertyData;
         }
 
-        RtmpAmfValue & RtmpAmfECMAArray::operator[](
+        inline RtmpAmfValue const & RtmpAmfObject::operator[](
+            std::string const & key) const
+        {
+            for (size_t i = 0; i < ObjectProperties.size(); ++i) {
+                if (ObjectProperties[i].PropertyName.StringData == key) {
+                    return ObjectProperties[i].PropertyData;
+                }
+            }
+            assert(false);
+            static RtmpAmfValue v;
+            return v;
+        }
+
+        inline RtmpAmfValue & RtmpAmfECMAArray::operator[](
             std::string const & key)
         {
             for (size_t i = 0; i < Variables.size(); ++i) {
@@ -551,6 +651,19 @@ namespace util
             }
             Variables.push_back(RtmpAmfObjectProperty(key, RtmpAmfValue()));
             return Variables.back().PropertyData;
+        }
+
+        inline RtmpAmfValue const & RtmpAmfECMAArray::operator[](
+            std::string const & key) const
+        {
+            for (size_t i = 0; i < Variables.size(); ++i) {
+                if (Variables[i].PropertyName.StringData == key) {
+                    return Variables[i].PropertyData;
+                }
+            }
+            assert(false);
+            static RtmpAmfValue v;
+            return v;
         }
 
         static inline bool FLV_Property_End(

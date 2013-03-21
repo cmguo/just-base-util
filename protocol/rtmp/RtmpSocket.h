@@ -18,8 +18,54 @@ namespace util
     namespace protocol
     {
 
-        struct RtmpChunk;
-        struct RtmpRawChunk;
+        struct RtmpChunk
+        {
+            RtmpChunk()
+                : finish(false)
+                , cs_id(0)
+            {
+            }
+
+            void from_data(
+                StreamBuffer & buf, 
+                void * vctx);
+
+            bool finish;
+            boost::uint16_t cs_id;
+        };
+
+        struct RtmpRawChunk
+        {
+            RtmpRawChunk()
+                : finish(false)
+                , pos(0)
+                , cs_id(0)
+            {
+            }
+
+            template <
+                typename MutableBufferSequence
+            >
+            void from_data(
+                RtmpMessageHeaderEx & header, 
+                MutableBufferSequence const & buffers, 
+                boost::uint32_t size, 
+                RtmpMessageContext * ctx);
+
+            template <
+                typename MutableBufferSequence
+            >
+            static boost::uint8_t get_char(
+                MutableBufferSequence const & buffers, 
+                typename MutableBufferSequence::const_iterator & iter, 
+                boost::uint8_t const *& p, 
+                size_t & n);
+
+            bool finish;
+            size_t pos;
+            boost::uint16_t cs_id;
+        };
+
 
         namespace detail
         {
@@ -94,6 +140,7 @@ namespace util
                 typename MutableBufferSequence
             >
             size_t read_raw_msg(
+                RtmpMessageHeaderEx & header, 
                 MutableBufferSequence const & buffers, 
                 boost::system::error_code & ec);
 
@@ -102,9 +149,29 @@ namespace util
                 typename Handler
             >
             void async_read_raw_msg(
+                RtmpMessageHeaderEx & header, 
                 MutableBufferSequence const & buffers, 
                 Handler const & handler);
 
+        public:
+            template <
+                typename ConstBufferSequence
+            >
+            size_t write_raw_msg(
+                RtmpMessageHeaderEx const & header, 
+                ConstBufferSequence const & buffers, 
+                boost::system::error_code & ec);
+
+            template <
+                typename MutableBufferSequence, 
+                typename Handler
+            >
+            void async_write_raw_msg(
+                RtmpMessageHeaderEx const & header, 
+                MutableBufferSequence const & buffers, 
+                Handler const & handler);
+
+        public:
             size_t read_msg(
                 RtmpMessage & msg, 
                 boost::system::error_code & ec);
@@ -127,6 +194,16 @@ namespace util
                 Handler const & handler);
 
         public:
+            RtmpMessageContext const & context() const
+            {
+                return context_;
+            }
+
+        protected:
+            void tick(
+                std::vector<RtmpMessage> & resp);
+
+        protected:
             bool process_protocol_message(
                 RtmpMessage const & msg, 
                 std::vector<RtmpMessage> & resp);
@@ -148,9 +225,9 @@ namespace util
                 typename Handler
             >
             void handle_read_raw_msg(
+                RtmpMessageHeaderEx & header, 
                 MutableBufferSequence const & buffers, 
                 Handler const & handler, 
-                RtmpRawChunk & chunk, 
                 boost::system::error_code ec, 
                 size_t bytes_transferred);
 
@@ -160,7 +237,6 @@ namespace util
             void handle_read_msg(
                 RtmpMessage & msg, 
                 Handler const & handler, 
-                RtmpChunk & chunk, 
                 boost::system::error_code ec, 
                 size_t bytes_transferred);
 
@@ -184,6 +260,8 @@ namespace util
         private:
             StatusEnum status_;
             RtmpMessageContext context_;
+            RtmpRawChunk help_raw_chunk_;
+            RtmpChunk help_chunk_;
             RtmpChunkParser read_parser_;
         };
 

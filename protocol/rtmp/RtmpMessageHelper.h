@@ -22,7 +22,7 @@ namespace util
                 header_type & header, 
                 context_t * ctx)
                 : MessageHelper<RtmpMessageTraits>(ar, header, ctx)
-                , buf_(*ar.rdbuf(), header, ctx->read_chunk_size())
+                , buf_(*ar.rdbuf(), header, ctx->read.chunk_size())
             {
             }
 
@@ -31,7 +31,7 @@ namespace util
                 header_type const & header, 
                 context_t * ctx)
                 : MessageHelper<RtmpMessageTraits>(ar, header, ctx)
-                , buf_(*ar.rdbuf(), header, ctx->write_chunk_size())
+                , buf_(*ar.rdbuf(), header, ctx->write.chunk_size())
             {
             }
 

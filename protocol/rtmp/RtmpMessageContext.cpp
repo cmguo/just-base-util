@@ -1,4 +1,4 @@
-// RtmpMessageContext.cpp
+// RtmpMessageOneContext.cpp
 
 #include "util/Util.h"
 #include "util/protocol/rtmp/RtmpMessageContext.h"
@@ -9,124 +9,91 @@ namespace util
     namespace protocol
     {
 
-        RtmpMessageContext::RtmpMessageContext()
-            : read_chunk_size_(128)
-            , write_chunk_size_(128)
+        RtmpMessageOneContext::RtmpMessageOneContext()
+            : chunk_size_(128)
+            , seq_(0)
         {
-            read_streams_.resize(1, true);
-            write_streams_.resize(1, true);
+            streams_.resize(1, true);
         }
 
-        void RtmpMessageContext::read_chunk_size(
+        void RtmpMessageOneContext::chunk_size(
             boost::uint32_t n)
         {
-            read_chunk_size_ = n;
+            chunk_size_ = n;
         }
 
-        void RtmpMessageContext::read_acknowledgement(
+        void RtmpMessageOneContext::acknowledgement(
             boost::uint32_t n)
         {
+            ack_ = n;
         }
 
-        void RtmpMessageContext::write_chunk_size(
-            boost::uint32_t n)
-        {
-            write_chunk_size_ = n;
-        }
-
-        void RtmpMessageContext::write_acknowledgement(
-            boost::uint32_t & n)
-        {
-        }
-
-        void RtmpMessageContext::read_stream(
-            boost::uint32_t i, 
-            bool b)
-        {
-            if (read_streams_.size() <= i) {
-                read_streams_.resize(i + 1, false);
-            }
-            read_streams_[i] = b;
-        }
-
-        void RtmpMessageContext::write_stream(
-            boost::uint32_t i, 
-            bool b)
-        {
-            if (write_streams_.size() <= i) {
-                write_streams_.resize(i + 1, false);
-            }
-            write_streams_[i] = b;
-        }
-
-        RtmpChunkMessage & RtmpMessageContext::read_chunk(
+        RtmpChunkMessage & RtmpMessageOneContext::chunk(
             boost::uint16_t cs_id)
         {
-            if (read_chunks_.size() <= cs_id) {
-                size_t n = read_chunks_.size();
-                read_chunks_.resize(cs_id + 1);
-                for (size_t i = n; i < read_chunks_.size(); ++i) {
-                    read_chunks_[i].cs_id(i);
+            if (chunks_.size() <= cs_id) {
+                size_t n = chunks_.size();
+                chunks_.resize(cs_id + 1);
+                for (size_t i = n; i < chunks_.size(); ++i) {
+                    chunks_[i].cs_id(i);
                 }
             }
-            return read_chunks_[cs_id];
+            return chunks_[cs_id];
         }
 
-        RtmpChunkHeader & RtmpMessageContext::write_chunk(
-            boost::uint16_t cs_id)
-        {
-            if (write_chunks_.size() <= cs_id) {
-                size_t n = write_chunks_.size();
-                write_chunks_.resize(cs_id + 1);
-                for (size_t i = n; i < write_chunks_.size(); ++i) {
-                    write_chunks_[i].cs_id(i);
-                }
-            }
-            return write_chunks_[cs_id];
-        }
-
-        bool RtmpMessageContext::read_stream(
+        void RtmpMessageOneContext::stream_begin(
             boost::uint32_t i)
         {
-            if (read_streams_.size() <= i) {
-                read_streams_.resize(i + 1, false);
+            if (streams_.size() <= i) {
+                streams_.resize(i + 1, false);
             }
-            return read_streams_[i];
+            streams_[i] = true;
         }
 
-        bool RtmpMessageContext::write_stream(
+        void RtmpMessageOneContext::stream_end(
             boost::uint32_t i)
         {
-            if (write_streams_.size() <= i) {
-                write_streams_.resize(i + 1, false);
+            if (streams_.size() <= i) {
+                streams_.resize(i + 1, false);
             }
-            return write_streams_[i];
+            streams_[i] = false;
         }
 
-        void RtmpMessageContext::to_chunk(
+        bool RtmpMessageOneContext::stream_status(
+            boost::uint32_t i)
+        {
+            if (streams_.size() <= i) {
+                streams_.resize(i + 1, false);
+            }
+            return streams_[i];
+        }
+
+        void RtmpMessageWriteContext::to_chunk(
             RtmpMessageHeader const & msg, 
             RtmpChunkHeader & chunk)
         {
-            RtmpChunkHeader & wchunk(write_chunk(msg.chunk));
+            RtmpChunkHeader & wchunk(RtmpMessageOneContext::chunk(msg.chunk));
             chunk.calc_timestamp = msg.timestamp;
             chunk.message_length = msg.length;
             chunk.message_type_id = msg.type;
             chunk.message_stream_id = msg.stream;
             chunk = wchunk.dec(chunk);
+            seq_ += msg.length;
         }
 
-        void RtmpMessageContext::from_chunk(
+        void RtmpMessageReadContext::from_chunk(
             RtmpMessageHeader & msg, 
             RtmpChunkHeader const & chunk)
         {
             msg.chunk = chunk.cs_id();
-            RtmpChunkHeader & rchunk(read_chunk(msg.chunk));
+            RtmpChunkHeader & rchunk(RtmpMessageOneContext::chunk(msg.chunk));
             RtmpChunkHeader const & chunk2 = 
                 rchunk.add(chunk);
             msg.timestamp = chunk2.calc_timestamp;
             msg.type = chunk2.message_type_id;
             msg.length = chunk2.message_length;
             msg.stream = chunk2.message_stream_id;
+            seq_ += msg.length;
         }
 
     } // namespace protocol

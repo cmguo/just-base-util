@@ -64,6 +64,13 @@ namespace util
                 Archive & ar);
         };
 
+        class RtmpMessageHeaderEx
+            : public RtmpMessageHeader
+        {
+        public:
+            boost::uint32_t chunk_size;
+        };
+
         typedef Message<RtmpMessageTraits> RtmpMessage;
 
     } // namespace protocol

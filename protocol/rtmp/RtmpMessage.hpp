@@ -19,7 +19,7 @@ namespace util
         {
             RtmpMessageContext * ctx = (RtmpMessageContext *)ar.context();
             RtmpChunkHeader chunk;
-            ctx->to_chunk(*this, chunk);
+            ctx->write.to_chunk(*this, chunk);
             ar & chunk;
         }
 
@@ -30,7 +30,7 @@ namespace util
             RtmpMessageContext * ctx = (RtmpMessageContext *)ar.context();
             RtmpChunkHeader chunk;
             ar & chunk;
-            ctx->from_chunk(*this, chunk);
+            ctx->read.from_chunk(*this, chunk);
         }
 
     } // namespace protocol

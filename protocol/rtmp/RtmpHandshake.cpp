@@ -12,7 +12,7 @@ namespace util
     {
 
         RtmpHandshake::RtmpHandshake()
-            : has_digest_(false)
+            : has_digest_(true)
             , digest_first_(false)
         {
         }
@@ -56,6 +56,13 @@ namespace util
             boost::uint8_t * c01 = boost::asio::buffer_cast<boost::uint8_t *>(buf.prepare(1 + HANDSHAKE_SIZE));
             *c01++ = 3; // version
             std::for_each(c01, c01 + HANDSHAKE_SIZE, assgin_rand);
+            if (has_digest_) {
+                boost::uint32_t offset = digest_offset(c01, digest_first_);
+                make_digest(c01, offset, genuineFPKey, 30, digest_);
+                memcpy(c01 + offset, digest_, 32);
+            } else {
+
+            }
             buf.commit(1 + HANDSHAKE_SIZE);
         }
 
@@ -64,6 +71,11 @@ namespace util
         {
             boost::uint8_t * c2 = boost::asio::buffer_cast<boost::uint8_t *>(buf.prepare(HANDSHAKE_SIZE));
             std::for_each(c2, c2 + HANDSHAKE_SIZE, assgin_rand);
+            if (has_digest_) {
+                make_digest2(c2, digest_, genuineFPKey, 62, c2 + HANDSHAKE_SIZE - 32);
+            } else {
+            }
+            buf.commit(HANDSHAKE_SIZE);
         }
 
         void RtmpHandshake::make_s012(
@@ -87,26 +99,24 @@ namespace util
             boost::uint8_t const * c01 = boost::asio::buffer_cast<boost::uint8_t const *>(buf.data());
             ++c01;
             if (c01[4] == 0 && c01[5] == 0 && c01[6] == 0 && c01[7] == 0) {
+                has_digest_ = false;
                 return true;
             }
-            boost::uint8_t digest[32];
             boost::uint32_t offset = 0;
             offset = digest_offset(c01, false);
-            make_digest(c01, offset, genuineFPKey, 30, digest);
-            if (memcmp(digest, c01 + offset, 32) == 0) {
+            make_digest(c01, offset, genuineFPKey, 30, digest_);
+            if (memcmp(digest_, c01 + offset, 32) == 0) {
                 has_digest_ = true;
                 digest_first_ = false;
-                memcpy(digest_, c01 + offset, 32);
                 offset = dhkey_offset(c01, false);
                 memcpy(dhkey_, c01 + offset, 128);
                 return true;
             }
             offset = digest_offset(c01, true);
-            make_digest(c01, offset, genuineFPKey, 30, digest);
-            if (memcmp(digest, c01 + offset, 32) == 0) {
+            make_digest(c01, offset, genuineFPKey, 30, digest_);
+            if (memcmp(digest_, c01 + offset, 32) == 0) {
                 has_digest_ = true;
                 digest_first_ = true;
-                memcpy(digest_, c01 + offset, 32);
                 offset = dhkey_offset(c01, true);
                 memcpy(dhkey_, c01 + offset, 128);
                 return true;
@@ -122,12 +132,10 @@ namespace util
             if (!has_digest_) {
                 return true;
             }
-            boost::uint8_t digest[32];
             boost::uint32_t offset = 0;
             offset = digest_offset(s012, digest_first_);
-            make_digest(s012, offset, genuineFMSKey, 36, digest);
-            if (memcmp(digest, s012 + offset, 32) == 0) {
-                memcpy(digest_, s012 + offset, 32);
+            make_digest(s012, offset, genuineFMSKey, 36, digest_);
+            if (memcmp(digest_, s012 + offset, 32) == 0) {
                 offset = dhkey_offset(s012, false);
                 memcpy(dhkey_, s012 + offset, 128);
             } else {

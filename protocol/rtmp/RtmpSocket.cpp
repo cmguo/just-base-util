@@ -54,10 +54,10 @@ namespace util
             RtmpMessage & msg, 
             boost::system::error_code & ec)
         {
-            RtmpChunk chunk;
-            while (MessageSocket::read_msg(chunk, ec)) {
-                if (chunk.finish) {
-                    RtmpChunkMessage & cm(context_.read_chunk(chunk.cs_id));
+            while (MessageSocket::read_msg(help_chunk_, ec)) {
+                if (help_chunk_.finish) {
+                    help_raw_chunk_.finish = false;
+                    RtmpChunkMessage & cm(context_.read.chunk(help_chunk_.cs_id));
                     boost::uint32_t size = cm.data.size();
                     msg.from_data(cm.data, &context_);
                     return size;
@@ -73,28 +73,40 @@ namespace util
             return write_msg(RtmpMessageVector(msgs), ec);
         }
 
+        void RtmpSocket::tick(
+            std::vector<RtmpMessage> & resp)
+        {
+            boost::uint32_t n = context_.read.sequence() - context_.read.acknowledgement();
+            if (n >= 128 * 1024) {
+                n = context_.read.sequence();
+                context_.read.acknowledgement(n);
+                resp.push_back(RtmpMessage());
+                resp.back().reset(RtmpMessageDataAcknowledgement(n));
+            }
+        }
+
         bool RtmpSocket::process_protocol_message(
             RtmpMessage const & msg, 
             std::vector<RtmpMessage> & resp)
         {
             switch (msg.type) {
                 case RCMT_SetChunkSize:
-                    context_.read_chunk_size(msg.as<RtmpMessageDataSetChunkSize>().chunk_size);
+                    context_.read.chunk_size(msg.as<RtmpMessageDataSetChunkSize>().chunk_size);
                     break;
                 case RCMT_AbortMessage:
-                    //write_parser_.acknowledgement(msg.as<RtmpProtocolControlMessageAbortMessage>().sequence_number);
+                    //context_.write.acknowledgement(msg.as<RtmpProtocolControlMessageAbortMessage>().sequence_number);
                     break;
                 case RCMT_Acknowledgement:
-                    context_.read_acknowledgement(msg.as<RtmpMessageDataAcknowledgement>().sequence_number);
+                    context_.write.acknowledgement(msg.as<RtmpMessageDataAcknowledgement>().sequence_number);
                     break;
                 case RCMT_UserControl:
-                    context_.read_acknowledgement(msg.as<RtmpMessageUserControl>()._union[0]);
+                    //context_.write.acknowledgement(msg.as<RtmpMessageUserControl>()._union[0]);
                     break;
                 case RCMT_WindowAcknowledgementSize:
-                    context_.read_acknowledgement(msg.as<RtmpMessageDataWindowAcknowledgementSize>().acknowledgement_window_size);
+                    //context_.write.acknowledgement(msg.as<RtmpMessageDataWindowAcknowledgementSize>().acknowledgement_window_size);
                     break;
                 case RCMT_SetPeerBandwidth:
-                    //write_parser_.acknowledgement(msg.as<RtmpProtocolControlMessageSetPeerBandwidth>().sequence_number);
+                    //context_.write.acknowledgement(msg.as<RtmpProtocolControlMessageSetPeerBandwidth>().sequence_number);
                     break;
                 default:
                     return false;
@@ -116,13 +128,13 @@ namespace util
                 reinterpret_cast<RtmpMessageContext *>(vctx);
             for (size_t i = 0; i < msgs_.size(); ++i) {
                 boost::uint32_t stream = msgs_[i].stream;
-                if (!ctx->write_stream(stream)) {
+                if (!ctx->write.stream_status(stream)) {
                     RtmpMessage msg;
                     RtmpMessageUserControl ctrl;
                     ctrl.event_type = RUCE_StreamBegin;
                     ctrl._union[0] = stream;
                     msg.reset(ctrl);
-                    ctx->write_stream(stream, true);
+                    ctx->write.stream_begin(stream);
                     msg.to_data(buf, ctx);
                 }
                 msgs_[i].to_data(buf, ctx);
@@ -146,7 +158,7 @@ namespace util
                 }
             }
             cs_id = h.cs_id();
-            finish = ctx->read_chunk(cs_id).put_data(buf, ctx->read_chunk_size());
+            finish = ctx->read.chunk(cs_id).put_data(buf, ctx->read.chunk_size());
         }
 
     } // namespace protocol

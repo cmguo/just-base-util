@@ -57,14 +57,14 @@ namespace util
                             t = p[3];
                         } else {
                             boost::uint16_t c = chunk_.cs_id();
-                            RtmpChunkHeader & rchunk(ctx_->read_chunk(c));
+                            RtmpChunkHeader & rchunk(ctx_->read.chunk(c));
                             l = rchunk.message_length;
                             t = rchunk.message_type_id;
                         }
                         e += l;
-                        while (l > ctx_->read_chunk_size()) {
+                        while (l > ctx_->read.chunk_size()) {
                             e += chunk_.size();
-                            l -= ctx_->read_chunk_size();
+                            l -= ctx_->read.chunk_size();
                         }
                         ok_ = true;
                         size_ = e - b;

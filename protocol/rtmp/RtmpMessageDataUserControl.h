@@ -208,6 +208,7 @@ namespace util
 
                 switch (event_type) {
                     case RUCE_StreamBegin:
+                    case RUCE_StreamEOF:
                     case RUCE_StreamDry:
                     case RUCE_StreamIsRecorded:
                     case RUCE_PingRequest:

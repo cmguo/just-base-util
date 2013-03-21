@@ -109,7 +109,9 @@ namespace util
         struct MessageDefineT
             : MessageDefine
         {
-            MessageDefineT()
+            MessageDefineT(
+                ClassEnum cls = T::static_cls)
+                : MessageDefine(cls)
             {
                 Message<MsgT>::template reg_msg<T>(*this);
             }

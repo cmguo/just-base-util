@@ -202,6 +202,17 @@ namespace util
                 size_t bytes_transferred);
 
         protected:
+            bool read_free() const
+            {
+                return read_status_.size == 0;
+            }
+
+            bool write_free() const
+            {
+                return write_status_.size == 0;
+            }
+
+        protected:
             boost::mutex mutex_;
             boost::condition_variable cond_;
 
@@ -229,6 +240,8 @@ namespace util
 
                 size_t size;
                 size_t pos;
+                // 对于 write , wait 用来记录延迟 write 的数据字节数
+                // 对于 read , wait 用来记录 raw buffer 的空间大小
                 size_t wait;
                 wait_resp_t resp;
 

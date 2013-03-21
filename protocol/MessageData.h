@@ -22,6 +22,8 @@ namespace util
 
             static id_type const static_id;
 
+            static MessageDefine::ClassEnum const static_cls;
+
             static MessageDefineT<MsgT, T> const msg_def;
         };
 
@@ -37,7 +39,14 @@ namespace util
             typename T, 
             typename MsgT::id_type id
         >
-        MessageDefineT<MsgT, T> const MessageData<MsgT, T, id>::msg_def;
+        typename MessageDefine::ClassEnum const MessageData<MsgT, T, id>::static_cls = MessageDefine::control_message;
+
+        template <
+            typename MsgT, 
+            typename T, 
+            typename MsgT::id_type id
+        >
+        MessageDefineT<MsgT, T> const MessageData<MsgT, T, id>::msg_def(T::static_cls);
 
     } // namespace protocol
 } // namespace util

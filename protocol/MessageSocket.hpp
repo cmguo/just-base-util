@@ -30,7 +30,7 @@ namespace util
             {
                 raw_msg_read_handler(
                     MessageSocket & socket, 
-                    MutableBufferSequence & buffers, 
+                    MutableBufferSequence const & buffers, 
                     Handler handler)
                     : socket_(socket)
                     , buffers_(buffers)
@@ -49,7 +49,7 @@ namespace util
 
             private:
                 MessageSocket & socket_;
-                MutableBufferSequence & buffers_;
+                MutableBufferSequence buffers_;
                 Handler handler_;
             };
 
@@ -61,7 +61,7 @@ namespace util
             {
                 raw_msg_write_handler(
                     MessageSocket & socket, 
-                    ConstBufferSequence & buffers, 
+                    ConstBufferSequence const & buffers, 
                     Handler handler)
                     : socket_(socket)
                     , buffers_(buffers)
@@ -80,7 +80,7 @@ namespace util
 
             private:
                 MessageSocket & socket_;
-                ConstBufferSequence & buffers_;
+                ConstBufferSequence buffers_;
                 Handler handler_;
             };
 
@@ -94,10 +94,16 @@ namespace util
             boost::system::error_code & ec)
         {
             assert(read_parallel_);
+            if (!pend_rcv_sizes_.empty()) {
+                // control messages should be handle before data messages
+                ec = boost::asio::error::would_block;
+                return 0;
+            }
             if (read_status_.size == 0) {
                 parser_.reset();
                 read_status_.size = parser_.size();
                 read_status_.pos = 0;
+                read_status_.wait = util::buffers::buffers_size(buffers);
             }
             while (true) {
                 size_t bytes_read = read_some(
@@ -106,19 +112,24 @@ namespace util
                 read_status_.pos += bytes_read;
                 if (read_status_.pos == read_status_.size) {
                     if (!parser_.ok()) {
-                        parser_.parse(boost::asio::buffer(buffers.front(), read_status_.pos));
+                        parser_.parse(boost::asio::buffer(*buffers.begin(), read_status_.pos));
                         read_status_.size = parser_.size();
+                        if (read_status_.size > read_status_.wait) {
+                            ec = boost::asio::error::no_buffer_space;
+                            return 0;
+                        }
                     } else if (parser_.msg_def()->cls == MessageDefine::control_message) {
                         boost::mutex::scoped_lock lc(mutex_);
                         util::buffers::buffers_copy(rcv_buf_.prepare(read_status_.size), buffers);
                         rcv_buf_.commit(read_status_.size);
                         pend_rcv_sizes_.push_back(read_status_.size);
-                        parser_.reset();
-                        read_status_.size = parser_.size();
                         cond_.notify_all();
                         if (!read_status_.resp.empty()) {
                             read_status_.resp(ec, read_status_.pos);
                         }
+                        read_status_.size = 0;
+                        ec = boost::asio::error::would_block;
+                        return 0;
                     } else {
                         read_status_.size = 0;
                         return read_status_.pos;
@@ -138,10 +149,16 @@ namespace util
             Handler const & handler)
         {
             assert(read_parallel_);
+            if (!pend_rcv_sizes_.empty()) {
+                // control messages should be handle before data messages
+                handler(boost::asio::error::would_block, 0);
+                return;
+            }
             assert(read_status_.size == 0);
             parser_.reset();
             read_status_.size = parser_.size();
             read_status_.pos = 0;
+            read_status_.wait = util::buffers::buffers_size(buffers);
             async_read_some(
                 util::buffers::sub_buffers(buffers, read_status_.pos, read_status_.left()), 
                 detail::raw_msg_read_handler<MutableBufferSequence, Handler>(*this, buffers, handler));
@@ -160,19 +177,25 @@ namespace util
             read_status_.pos += bytes_transferred;
             if (read_status_.pos == read_status_.size) {
                 if (!parser_.ok()) {
-                    parser_.parse(boost::asio::buffer(buffers.front(), read_status_.pos));
+                    parser_.parse(boost::asio::buffer(*buffers.begin(), read_status_.pos));
                     read_status_.size = parser_.size();
+                    if (read_status_.size > read_status_.wait) {
+                        handler(boost::asio::error::no_buffer_space, 0);
+                        return;
+                    }
                 } else if (parser_.msg_def()->cls == MessageDefine::control_message) {
                     boost::mutex::scoped_lock lc(mutex_);
                     util::buffers::buffers_copy(rcv_buf_.prepare(read_status_.size), buffers);
                     rcv_buf_.commit(read_status_.size);
                     pend_rcv_sizes_.push_back(read_status_.size);
-                    parser_.reset();
-                    read_status_.size = parser_.size();
                     cond_.notify_all();
                     if (!read_status_.resp.empty()) {
                         read_status_.resp(ec, read_status_.pos);
                     }
+                    read_status_.size = 0;
+                    lc.unlock();
+                    handler(boost::asio::error::would_block, 0);
+                    return;
                 } else {
                     read_status_.size = 0;
                     handler(ec, read_status_.pos);
@@ -272,6 +295,7 @@ namespace util
                     write_status_.size = util::buffers::buffers_size(buffers);
                     write_status_.pos = 0;
                 } else if (ec) {
+                    lc.unlock();
                     handler(ec, 0);
                     return;
                 } else {

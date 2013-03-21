@@ -8,6 +8,8 @@
 #include "util/protocol/rtmp/RtmpFormat.h"
 #include "util/protocol/rtmp/RtmpMessageHelper.h"
 
+#include <util/archive/ArchiveBuffer.h>
+
 #include <framework/network/AsioHandlerHelper.h>
 #include <framework/network/TcpSocket.hpp>
 
@@ -18,116 +20,6 @@ namespace util
 {
     namespace protocol
     {
-
-        struct RtmpMessageVector
-        {
-            RtmpMessageVector(
-                std::vector<RtmpMessage> const & msgs)
-                : msgs_(msgs)
-            {
-            }
-
-            void to_data(
-                StreamBuffer & buf, 
-                void * ctx) const;
-
-        private:
-            std::vector<RtmpMessage> const & msgs_;
-        };
-
-        struct RtmpChunk
-        {
-            RtmpChunk()
-                : finish(false)
-                , cs_id(0)
-            {
-            }
-
-            void from_data(
-                StreamBuffer & buf, 
-                void * vctx);
-
-            bool finish;
-            boost::uint16_t cs_id;
-        };
-
-        struct RtmpRawChunk
-        {
-            RtmpRawChunk()
-                : finish(false)
-                , pos(0)
-                , cs_id(0)
-            {
-            }
-
-            template <
-                typename MutableBufferSequence
-            >
-            void from_data(
-                MutableBufferSequence const & buffers, 
-                boost::uint32_t size, 
-                RtmpMessageContext * ctx) const
-            {
-                boost::uint8_t const * p = NULL;
-                size_t n = pos;
-                typename MutableBufferSequence::const_iterator iter = buffers.begin();
-                for (; iter != buffers.end(); ++iter) {
-                    if (n < boost::asio::buffer_size(*iter)) {
-                        p = boost::asio::buffer_cast<boost::uint8_t const *>(*iter) + n;
-                        n = boost::asio::buffer_size(*iter) - n;
-                        break;
-                    }
-                }
-                assert(p);
-                RtmpChunkBasicHeader h;
-                h.one_byte = p[0];
-                if (h.cs_id0 < 2) {
-                    if (h.cs_id0 == 0) {
-                        h.cs_id1 = get_char(buffers, iter, p, n);
-                    } else {
-                        boost::uint8_t b1 = get_char(buffers, iter, p, n);
-                        boost::uint8_t b2 = get_char(buffers, iter, p, n);
-                        h.cs_id2 = (boost::uint16_t)b1 << 8 | b2;
-                    }
-                }
-                assert(pos == 0 || cs_id == h.cs_id());
-                cs_id = h.cs_id();
-                finish = ctx->read_chunk(cs_id).put_data(ctx->read_chunk_size());
-                pos += size;
-            }
-
-            template <
-                typename MutableBufferSequence
-            >
-            static boost::uint8_t get_char(
-                MutableBufferSequence const & buffers, 
-                typename MutableBufferSequence::const_iterator & iter, 
-                boost::uint8_t const *& p, 
-                size_t & n)
-            {
-                while (n == 0) {
-                    ++iter;
-                    assert(iter != buffers.end());
-                    p = boost::asio::buffer_cast<boost::uint8_t const *>(*iter);
-                    n = boost::asio::buffer_size(*iter);
-                }
-                --n;
-                return *p++;
-            }
-
-            bool finish;
-            size_t pos;
-            boost::uint16_t cs_id;
-        };
-
-        template <typename Handler>
-        void RtmpSocket::async_write_msgs(
-            std::vector<RtmpMessage> const & msgs, 
-            Handler const & handler)
-        {
-            async_write_msg(RtmpMessageVector(msgs), handler);
-        }
-
 
         namespace detail
         {
@@ -306,17 +198,90 @@ namespace util
         template <
             typename MutableBufferSequence
         >
+        void RtmpRawChunk::from_data(
+            RtmpMessageHeaderEx & header, 
+            MutableBufferSequence const & buffers, 
+            boost::uint32_t size, 
+            RtmpMessageContext * ctx)
+        {
+            boost::uint8_t const * p = NULL;
+            size_t n = pos;
+            typename MutableBufferSequence::const_iterator iter = buffers.begin();
+            for (; iter != buffers.end(); ++iter) {
+                if (n < boost::asio::buffer_size(*iter)) {
+                    p = boost::asio::buffer_cast<boost::uint8_t const *>(*iter) + n;
+                    n = boost::asio::buffer_size(*iter) - n;
+                    break;
+                }
+            }
+            assert(p);
+            RtmpChunkBasicHeader h;
+            h.one_byte = p[0];
+            if (h.cs_id0 < 2) {
+                if (h.cs_id0 == 0) {
+                    h.cs_id1 = get_char(buffers, iter, p, n);
+                } else {
+                    boost::uint8_t b1 = get_char(buffers, iter, p, n);
+                    boost::uint8_t b2 = get_char(buffers, iter, p, n);
+                    h.cs_id2 = (boost::uint16_t)b1 << 8 | b2;
+                }
+            }
+            assert(pos == 0 || cs_id == h.cs_id());
+            cs_id = h.cs_id();
+            finish = ctx->read.chunk(cs_id).put_data(ctx->read.chunk_size());
+            if (finish) {
+                RtmpChunkHeader chunk;
+                typename MutableBufferSequence::const_iterator iter = buffers.begin();
+                boost::uint8_t * p = boost::asio::buffer_cast<boost::uint8_t *>(*iter);
+                size_t n = boost::asio::buffer_size(*iter);
+                util::archive::ArchiveBuffer<boost::uint8_t> buf(p, n, n);
+                RtmpMessageTraits::i_archive_t ia(buf);
+                ia >> chunk;
+                ctx->read.from_chunk(header, chunk);
+                header.chunk_size = ctx->read.chunk_size();
+            }
+            pos += size;
+        }
+
+        template <
+            typename MutableBufferSequence
+        >
+        static boost::uint8_t RtmpRawChunk::get_char(
+            MutableBufferSequence const & buffers, 
+            typename MutableBufferSequence::const_iterator & iter, 
+            boost::uint8_t const *& p, 
+            size_t & n)
+        {
+            while (n == 0) {
+                ++iter;
+                assert(iter != buffers.end());
+                p = boost::asio::buffer_cast<boost::uint8_t const *>(*iter);
+                n = boost::asio::buffer_size(*iter);
+            }
+            --n;
+            return *p++;
+        }
+
+        template <
+            typename MutableBufferSequence
+        >
         size_t RtmpSocket::read_raw_msg(
+            RtmpMessageHeaderEx & header, 
             MutableBufferSequence const & buffers, 
             boost::system::error_code & ec)
         {
-            RtmpRawChunk chunk;
+            if (help_raw_chunk_.cs_id == 0) {
+                help_raw_chunk_.pos = 0;
+                help_raw_chunk_.cs_id = 1;
+            }
             size_t bytes_read = 0;
             while ((bytes_read = MessageSocket::read_raw_msg(
-                util::buffers::sub_buffers(buffers, chunk.pos), ec))) {
-                    chunk.from_data(buffers, bytes_read, context_);
-                    if (chunk.finish) {
-                        return chunk.pos;
+                util::buffers::sub_buffers(buffers, help_raw_chunk_.pos), ec))) {
+                    help_raw_chunk_.from_data(header, buffers, bytes_read, &context_);
+                    if (help_raw_chunk_.finish) {
+                        help_raw_chunk_.cs_id = 0;
+                        help_raw_chunk_.finish = false;
+                        return help_raw_chunk_.pos;
                     }
             }
             return 0;
@@ -333,13 +298,13 @@ namespace util
             {
                 rtmp_raw_msg_read_handler(
                     RtmpSocket & socket, 
-                    MutableBufferSequence & buffers, 
-                    Handler handler, 
-                    RtmpRawChunk & chunk)
+                    RtmpMessageHeaderEx & header, 
+                    MutableBufferSequence const & buffers, 
+                    Handler handler)
                     : socket_(socket)
+                    , header_(header)
                     , buffers_(buffers)
                     , handler_(handler)
-                    , chunk_(chunk)
                 {
                 }
 
@@ -347,16 +312,16 @@ namespace util
                     boost::system::error_code ec, 
                     size_t bytes_transferred) const
                 {
-                    socket_.handle_read_raw_msg(buffers_, handler_, ec, bytes_transferred);
+                    socket_.handle_read_raw_msg(header_, buffers_, handler_, ec, bytes_transferred);
                 }
 
                 PASS_DOWN_ASIO_HANDLER_FUNCTION(rtmp_raw_msg_read_handler, handler_)
 
             private:
                 RtmpSocket & socket_;
-                MutableBufferSequence & buffers_;
+                RtmpMessageHeaderEx & header_;
+                MutableBufferSequence buffers_;
                 Handler handler_;
-                RtmpRawChunk chunk_;
             };
 
         } // namespace detail
@@ -366,12 +331,16 @@ namespace util
             typename Handler
         >
         void RtmpSocket::async_read_raw_msg(
+            RtmpMessageHeaderEx & header, 
             MutableBufferSequence const & buffers, 
             Handler const & handler)
         {
-            RtmpRawChunk chunk;
-            MessageSocket::async_read_raw_msg(buffers, 
-                detail::rtmp_raw_msg_read_handler<MutableBufferSequence, Handler>(*this, buffers, handler, chunk));
+            assert(help_raw_chunk_.cs_id == 0);
+            help_raw_chunk_.pos = 0;
+            help_raw_chunk_.cs_id = 1;
+            MessageSocket::async_read_raw_msg(
+                util::buffers::sub_buffers(buffers, help_raw_chunk_.pos), 
+                detail::rtmp_raw_msg_read_handler<MutableBufferSequence, Handler>(*this, header, buffers, handler));
         }
 
         template <
@@ -379,22 +348,59 @@ namespace util
             typename Handler
         >
         void RtmpSocket::handle_read_raw_msg(
+            RtmpMessageHeaderEx & header, 
             MutableBufferSequence const & buffers, 
             Handler const & handler, 
-            RtmpRawChunk & chunk, 
             boost::system::error_code ec, 
             size_t bytes_transferred)
         {
             if (ec) {
+                if (ec == boost::asio::error::would_block) {
+                    assert(help_raw_chunk_.pos == 0);
+                    help_raw_chunk_.cs_id = 0;
+                }
                 handler(ec, 0);
                 return;
             }
-            chunk.from_data(buffers, bytes_transferred, context_);
-            if (chunk.finish) {
-                return chunk.pos;
+            help_raw_chunk_.from_data(header, buffers, bytes_transferred, &context_);
+            if (help_raw_chunk_.finish) {
+                help_raw_chunk_.cs_id = 0;
+                help_raw_chunk_.finish = false;
+                handler(ec, help_raw_chunk_.pos);
+                return;
             }
-            MessageSocket::async_read_raw_msg(buffers, 
-                detail::rtmp_raw_msg_read_handler<MutableBufferSequence, Handler>(*this, buffers, handler, chunk));
+            MessageSocket::async_read_raw_msg(
+                util::buffers::sub_buffers(buffers, help_raw_chunk_.pos), 
+                detail::rtmp_raw_msg_read_handler<MutableBufferSequence, Handler>(*this, header, buffers, handler));
+        }
+
+        template <
+            typename ConstBufferSequence
+        >
+        size_t RtmpSocket::write_raw_msg(
+            RtmpMessageHeaderEx const & header, 
+            ConstBufferSequence const & buffers, 
+            boost::system::error_code & ec)
+        {
+            if (MessageSocket::write_free()) {
+                RtmpChunkHeader chunk;
+                context_.write.to_chunk(header, chunk);
+            }
+            return MessageSocket::write_raw_msg(buffers, ec);
+        }
+
+        template <
+            typename MutableBufferSequence, 
+            typename Handler
+        >
+        void RtmpSocket::async_write_raw_msg(
+            RtmpMessageHeaderEx const & header, 
+            MutableBufferSequence const & buffers, 
+            Handler const & handler)
+        {
+            RtmpChunkHeader chunk;
+            context_.write.to_chunk(header, chunk);
+            MessageSocket::async_write_raw_msg(buffers, handler);
         }
 
         namespace detail
@@ -408,12 +414,10 @@ namespace util
                 rtmp_msg_read_handler(
                     RtmpSocket & socket, 
                     RtmpMessage & msg, 
-                    Handler handler, 
-                    RtmpChunk & chunk)
+                    Handler handler)
                     : socket_(socket)
                     , msg_(msg)
                     , handler_(handler)
-                    , chunk_(chunk)
                 {
                 }
 
@@ -421,7 +425,7 @@ namespace util
                     boost::system::error_code ec, 
                     size_t bytes_transferred) const
                 {
-                    socket_.handle_read_msg(msg_, handler_, chunk_, ec, bytes_transferred);
+                    socket_.handle_read_msg(msg_, handler_, ec, bytes_transferred);
                 }
 
                 PASS_DOWN_ASIO_HANDLER_FUNCTION(rtmp_msg_read_handler, handler_)
@@ -430,7 +434,6 @@ namespace util
                 RtmpSocket & socket_;
                 RtmpMessage & msg_;
                 Handler handler_;
-                RtmpChunk & chunk_;
             };
 
         } // namespace detail
@@ -442,9 +445,8 @@ namespace util
             RtmpMessage & msg, 
             Handler const & handler)
         {
-            RtmpChunk * chunk = new RtmpChunk;
-            MessageSocket::async_read_msg(*chunk, 
-                detail::rtmp_msg_read_handler<Handler>(*this, msg, handler, *chunk));
+            MessageSocket::async_read_msg(help_chunk_, 
+                detail::rtmp_msg_read_handler<Handler>(*this, msg, handler));
         }
 
         template <
@@ -453,12 +455,12 @@ namespace util
         void RtmpSocket::handle_read_msg(
             RtmpMessage & msg, 
             Handler const & handler, 
-            RtmpChunk & chunk, 
             boost::system::error_code ec, 
             size_t bytes_transferred)
         {
-            if (chunk.finish) {
-                RtmpChunkMessage & cm(context_.read_chunk(chunk.cs_id));
+            if (help_chunk_.finish) {
+                help_chunk_.finish = false;
+                RtmpChunkMessage & cm(context_.read.chunk(help_chunk_.cs_id));
                 boost::uint32_t size = cm.data.size();
                 msg.from_data(cm.data, &context_);
                 handler(ec, size);
@@ -468,9 +470,34 @@ namespace util
                 handler(ec, 0);
                 return;
             }
-            MessageSocket::async_read_msg(chunk, 
-                detail::rtmp_msg_read_handler<Handler>(*this, msg, handler, chunk));
+            MessageSocket::async_read_msg(help_chunk_, 
+                detail::rtmp_msg_read_handler<Handler>(*this, msg, handler));
         }
+
+        struct RtmpMessageVector
+        {
+            RtmpMessageVector(
+                std::vector<RtmpMessage> const & msgs)
+                : msgs_(msgs)
+            {
+            }
+
+            void to_data(
+                StreamBuffer & buf, 
+                void * ctx) const;
+
+        private:
+            std::vector<RtmpMessage> const & msgs_;
+        };
+
+        template <typename Handler>
+        void RtmpSocket::async_write_msgs(
+            std::vector<RtmpMessage> const & msgs, 
+            Handler const & handler)
+        {
+            async_write_msg(RtmpMessageVector(msgs), handler);
+        }
+
 
     } // namespace protocol
 } // namespace util
