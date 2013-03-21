@@ -246,7 +246,7 @@ namespace util
         template <
             typename MutableBufferSequence
         >
-        static boost::uint8_t RtmpRawChunk::get_char(
+        boost::uint8_t RtmpRawChunk::get_char(
             MutableBufferSequence const & buffers, 
             typename MutableBufferSequence::const_iterator & iter, 
             boost::uint8_t const *& p, 

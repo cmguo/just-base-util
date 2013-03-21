@@ -17,11 +17,71 @@ namespace util
         template <
             typename Buffer
         >
+        struct Buf;
+
+        template <
+            typename Buffer
+        >
+        void intrusive_ptr_add_ref(
+            Buf<Buffer> * p);
+
+        template <
+            typename Buffer
+        >
+        void intrusive_ptr_release(
+            Buf<Buffer>* p);
+
+        template <
+            typename Buffer
+        >
+        struct Buf
+            : std::deque<Buffer>
+        {
+            Buf()
+                : nref(0)
+            {
+            }
+
+            size_t nref;
+
+            template <typename B>
+            friend void intrusive_ptr_add_ref(
+                Buf<B> * p);
+    
+            template <typename B>
+            friend void intrusive_ptr_release(
+                Buf<B> * p);
+        };
+
+        template <
+            typename Buffer
+        >
+        inline void intrusive_ptr_add_ref(
+            Buf<Buffer> * p)
+        {
+            ++p->nref;
+        }
+
+        template <
+            typename Buffer
+        >
+        inline void intrusive_ptr_release(
+            Buf<Buffer> * p)
+        {
+            if (--p->nref == 0) {
+                delete p;
+            }
+        }
+
+        template <
+            typename Buffer
+        >
         class StreamBuffers
         {
         public:
             typedef Buffer value_type;
             typedef typename std::deque<Buffer>::const_iterator const_iterator;
+            typedef Buf<Buffer> buf_t;
 
         public:
             StreamBuffers()
@@ -38,7 +98,7 @@ namespace util
                 typename BufferSequence::const_iterator end = buffers.end();
                 size_t count = std::distance(beg, end);
                 if (count > 0) {
-                    buf_.reset(new Buf);
+                    buf_.reset(new buf_t);
                     std::copy(beg, end, std::back_inserter(*buf_));
                 }
             }
@@ -121,40 +181,14 @@ namespace util
             void before_modify()
             {
                 if (!buf_) {
-                    buf_.reset(new Buf);
+                    buf_.reset(new buf_t);
                 } else if (buf_->nref > 1) {
-                    buf_.reset(new Buf(*buf_));
+                    buf_.reset(new buf_t(*buf_));
                 }
             }
 
         private:
-            struct Buf
-                : std::deque<Buffer>
-            {
-                Buf()
-                    : nref(0)
-                {
-                }
-
-                size_t nref;
-
-                friend void intrusive_ptr_add_ref(
-                    Buf * p)
-                {
-                    ++p->nref;
-                }
-
-                friend void intrusive_ptr_release(
-                    Buf * p)
-                {
-                    if (--p->nref == 0) {
-                        delete p;
-                    }
-                }
-            };
-
-        private:
-            boost::intrusive_ptr<Buf> buf_;
+            boost::intrusive_ptr<buf_t> buf_;
         };
 
         typedef StreamBuffers<boost::asio::const_buffer> StreamConstBuffers;

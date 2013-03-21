@@ -357,10 +357,10 @@ namespace util
         bool RtmpClient::post_response(
             boost::system::error_code & ec)
         {
-            if (response_.type == RtmpMessageType::RCMT_CommandMessage0 || 
-                response_.type == RtmpMessageType::RCMT_CommandMessage3) {
+            if (response_.type == RCMT_CommandMessage0 || 
+                response_.type == RCMT_CommandMessage3) {
                 RtmpCommandMessage const & cmd(
-                    response_.type == RtmpMessageType::RCMT_CommandMessage0 
+                    response_.type == RCMT_CommandMessage0 
                     ? (RtmpCommandMessage const &)response_.as<RtmpCommandMessage0>() 
                     : (RtmpCommandMessage const &)response_.as<RtmpCommandMessage3>());
                 std::string const & cmd_name = cmd.CommandName.as<RtmpAmfString>().StringData;
