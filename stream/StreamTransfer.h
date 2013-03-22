@@ -292,6 +292,8 @@ namespace util
                         high_level_ = capacity_;
                 }
 
+                virtual ~transfer_cycle_buffer_handler() {}
+
                 friend void intrusive_ptr_add_ref(transfer_cycle_buffer_handler * p)
                 {
                     ++p->ref_count_;
@@ -441,7 +443,9 @@ namespace util
                 typename TransferHandler
             >
             class transfer_handler
-                : public transfer_cycle_buffer_handler<
+                : private util::buffers::CycleBuffers<
+                        MutableBufferSequence>
+                , public transfer_cycle_buffer_handler<
                     AsyncReadStream, 
                     AsyncWriteStream, 
                     MutableBufferSequence, 
@@ -461,6 +465,8 @@ namespace util
                     TransferHandler
                 > super;
 
+                typedef typename super::cycle_buffers_type cycle_buffers_type;
+
                 transfer_handler(
                     AsyncReadStream & read_stream, 
                     AsyncWriteStream & write_stream, 
@@ -469,12 +475,10 @@ namespace util
                     TransferHandler handler, 
                     size_t low_level, 
                     size_t high_level)
-                    : super(read_stream, write_stream, cycle_buffers_, completion_condition, handler, low_level, high_level)
-                    , cycle_buffers_(buffers)
+                    : cycle_buffers_type(buffers)
+                    , super(read_stream, write_stream, (cycle_buffers_type &)(*this), completion_condition, handler, low_level, high_level)
                 {
                 }
-
-                typename super::cycle_buffers_type cycle_buffers_;
             };
 
             template <
