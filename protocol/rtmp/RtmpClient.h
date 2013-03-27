@@ -39,11 +39,15 @@ namespace util
                 response_type const & resp);
 
             boost::system::error_code play(
-                std::string const & content, 
                 boost::system::error_code & ec);
 
             void async_play(
-                std::string const & content, 
+                response_type const & resp);
+
+            boost::system::error_code publish(
+                boost::system::error_code & ec);
+
+            void async_publish(
                 response_type const & resp);
 
             void tick(
@@ -80,6 +84,9 @@ namespace util
                 framework::string::Url const & url);
             
             void make_play_requests(
+                std::string const & content);
+
+            void make_publish_requests(
                 std::string const & content);
 
             void resume_connect(
@@ -120,6 +127,7 @@ namespace util
 
         private:
             framework::string::Url url_;
+            std::string content_;
             framework::network::NetName addr_;
             ConnectionStatusEnum status_;
             RequestStatusEnum request_status_;

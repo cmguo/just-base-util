@@ -12,6 +12,7 @@ namespace util
         RtmpMessageOneContext::RtmpMessageOneContext()
             : chunk_size_(128)
             , seq_(0)
+            , ack_(0)
         {
             streams_.resize(1, true);
         }

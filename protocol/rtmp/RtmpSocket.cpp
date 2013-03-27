@@ -114,12 +114,6 @@ namespace util
             return true;
         }
 
-         static void assgin_rand(
-             boost::uint8_t & v)
-         {
-             v = (boost::uint8_t)rand();
-         }
-
         void RtmpMessageVector::to_data(
             StreamBuffer & buf, 
             void * vctx) const

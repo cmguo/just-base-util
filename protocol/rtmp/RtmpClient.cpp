@@ -90,6 +90,10 @@ namespace util
                 % id_ % url.to_string());
 
             url_ = url;
+            std::string::size_type pos = url_.path().find('/', 1);
+            content_ = url_.path().substr(pos + 1);
+            url_.path(url_.path().substr(0, pos));
+
             resp_ = resp;
             addr_.from_string(url_.host_svc());
 
@@ -117,11 +121,10 @@ namespace util
         }
 
         boost::system::error_code RtmpClient::play(
-            std::string const & content, 
             boost::system::error_code & ec)
         {
             if (requests_.empty()) {
-                make_play_requests(content);
+                make_play_requests(content_);
                 request_status_ = send_pending;
             }
             resume_request(ec);
@@ -129,11 +132,29 @@ namespace util
         }
 
         void RtmpClient::async_play(
-            std::string const & content, 
             response_type const & resp)
         {
             resp_ = resp;
-            make_play_requests(content);
+            make_play_requests(content_);
+            async_reqeust();
+        }
+
+        boost::system::error_code RtmpClient::publish(
+            boost::system::error_code & ec)
+        {
+            if (requests_.empty()) {
+                make_publish_requests(content_);
+                request_status_ = send_pending;
+            }
+            resume_request(ec);
+            return ec;
+        }
+
+        void RtmpClient::async_publish(
+            response_type const & resp)
+        {
+            resp_ = resp;
+            make_publish_requests(content_);
             async_reqeust();
         }
 
@@ -156,7 +177,7 @@ namespace util
                 cmd.TransactionID = 1;
                 RtmpAmfObject & obj = 
                     cmd.CommandObject.get<RtmpAmfObject>();
-                obj["app"] = "flvplayback";
+                obj["app"] = url_.path().substr(1);
                 obj["flashVer"] = "WIN 10,0,12,36";
                 obj["swfUrl"]; // = UNDEFINED
                 obj["tcUrl"] = url_.to_string();
@@ -166,6 +187,13 @@ namespace util
                 obj["videoFunction"] = 1;
                 obj["pageUrl"]; // = UNDEFINED
                 obj["objectEncoding"] = (double)0;
+
+                while (url_.param_begin() != url_.param_end()) {
+                    obj[url_.param_begin()->key()] = url_.param_begin()->value();
+                    url_.param(url_.param_begin()->key(), "");
+                }
+
+                obj["tcUrl"] = url_.to_string();
             }
         }
 
@@ -192,6 +220,33 @@ namespace util
                 cmd.TransactionID = (double)0;
                 cmd.CommandObject = RtmpAmfValue(RtmpAmfType::_NULL);
                 cmd.OptionalArguments.push_back(content);
+            }
+        }
+
+        void RtmpClient::make_publish_requests(
+            std::string const & content)
+        {
+            requests_.resize(2);
+
+            {
+                RtmpMessage & msg = requests_[0];
+                msg.chunk = 3;
+                RtmpCommandMessage0 & cmd = msg.get<RtmpCommandMessage0>();
+                cmd.CommandName = "createStream";
+                cmd.TransactionID = (double)0;
+                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::_NULL);
+            }
+
+            {
+                RtmpMessage & msg = requests_[1];
+                msg.chunk = 3;
+                msg.stream = 1;
+                RtmpCommandMessage0 & cmd = msg.get<RtmpCommandMessage0>();
+                cmd.CommandName = "publish";
+                cmd.TransactionID = (double)0;
+                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::_NULL);
+                cmd.OptionalArguments.push_back(content);
+                cmd.OptionalArguments.push_back("live");
             }
         }
 
@@ -377,6 +432,14 @@ namespace util
                         if (cmd_name == "onStatus") {
                             RtmpAmfObject const & arg = cmd.OptionalArguments.front().as<RtmpAmfObject>();
                             if (arg["code"] == "NetStream.Play.Start") {
+                                return true;
+                            }
+                        }
+                    }
+                    if (req_cmd_name == "publish") {
+                        if (cmd_name == "onStatus") {
+                            RtmpAmfObject const & arg = cmd.OptionalArguments.front().as<RtmpAmfObject>();
+                            if (arg["code"] == "NetStream.Publish.Start") {
                                 return true;
                             }
                         }
