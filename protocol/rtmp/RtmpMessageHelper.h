@@ -3,7 +3,6 @@
 #ifndef _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_HELPER_H_
 #define _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_HELPER_H_
 
-#include "util/protocol/rtmp/RtmpMessageHelper.h"
 #include "util/protocol/rtmp/RtmpStreamBuffer.h"
 #include "util/protocol/rtmp/RtmpMessageContext.h"
 #include "util/protocol/MessageHelper.h"

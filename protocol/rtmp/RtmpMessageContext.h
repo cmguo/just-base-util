@@ -3,7 +3,6 @@
 #ifndef _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_CONTEXT_H_
 #define _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_CONTEXT_H_
 
-#include "util/protocol/MessageHelper.h"
 #include "util/protocol/rtmp/RtmpChunkHeader.h"
 #include "util/protocol/rtmp/RtmpChunkMessage.h"
 

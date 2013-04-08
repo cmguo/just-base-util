@@ -5,7 +5,6 @@
 
 #include "util/protocol/MessageSocket.hpp"
 #include "util/protocol/rtmp/RtmpSocket.h"
-#include "util/protocol/rtmp/RtmpFormat.h"
 #include "util/protocol/rtmp/RtmpMessageHelper.h"
 
 #include <util/archive/ArchiveBuffer.h>
