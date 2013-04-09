@@ -211,6 +211,8 @@ namespace util
                     p = boost::asio::buffer_cast<boost::uint8_t const *>(*iter) + n;
                     n = boost::asio::buffer_size(*iter) - n;
                     break;
+                } else {
+                    n -= boost::asio::buffer_size(*iter);
                 }
             }
             assert(p);

@@ -42,6 +42,13 @@ namespace util
             {
             }
 
+            Buf(
+                Buf const & r)
+                : std::deque<Buffer>(r)
+                , nref(0)
+            {
+            }
+
             size_t nref;
 
             template <typename B>
