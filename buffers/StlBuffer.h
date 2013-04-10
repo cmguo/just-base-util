@@ -216,7 +216,7 @@ namespace util
             }
 
             StlBuffer & operator=(
-                StlBuffer const & other) const
+                StlBuffer const & other)
             {
                 char_type * beg = 0;
                 char_type * cur = 0;

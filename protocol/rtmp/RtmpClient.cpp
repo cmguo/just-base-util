@@ -33,7 +33,7 @@ namespace util
 
         FRAMEWORK_LOGGER_DECLARE_MODULE("util.protocol.RtmpClient");
 
-        static char const SERVICE_NAME[] = "rtmp";
+        static char const SERVICE_NAME[] = "1935";
 
         std::string const RtmpClient::con_status_str[] = {
             "closed", 
@@ -74,6 +74,9 @@ namespace util
             framework::string::Url const & url, 
             boost::system::error_code & ec)
         {
+            LOG_DEBUG("[connect] (id = %u, url = %s)" 
+                % id_ % url.to_string());
+
             if (requests_.empty()) {
                 make_connect_requests(url);
                 request_status_ = send_pending;
@@ -86,17 +89,10 @@ namespace util
             framework::string::Url const & url, 
             response_type const & resp)
         {
-            LOG_DEBUG("[async_open] (id = %u, url = %s)" 
+            LOG_DEBUG("[async_connect] (id = %u, url = %s)" 
                 % id_ % url.to_string());
 
-            url_ = url;
-            std::string::size_type pos = url_.path().find('/', 1);
-            content_ = url_.path().substr(pos + 1);
-            url_.path(url_.path().substr(0, pos));
-
             resp_ = resp;
-            addr_.from_string(url_.host_svc());
-
             make_connect_requests(url);
 
             error_code ec;
@@ -123,6 +119,8 @@ namespace util
         boost::system::error_code RtmpClient::play(
             boost::system::error_code & ec)
         {
+            LOG_DEBUG("[play] (id = %u, url = %s)" % id_);
+
             if (requests_.empty()) {
                 make_play_requests(content_);
                 request_status_ = send_pending;
@@ -134,6 +132,8 @@ namespace util
         void RtmpClient::async_play(
             response_type const & resp)
         {
+            LOG_DEBUG("[async_play] (id = %u, url = %s)" % id_);
+
             resp_ = resp;
             make_play_requests(content_);
             async_reqeust();
@@ -142,6 +142,8 @@ namespace util
         boost::system::error_code RtmpClient::publish(
             boost::system::error_code & ec)
         {
+            LOG_DEBUG("[publish] (id = %u, url = %s)" % id_);
+
             if (requests_.empty()) {
                 make_publish_requests(content_);
                 request_status_ = send_pending;
@@ -153,6 +155,8 @@ namespace util
         void RtmpClient::async_publish(
             response_type const & resp)
         {
+            LOG_DEBUG("[async_publish] (id = %u, url = %s)" % id_);
+
             resp_ = resp;
             make_publish_requests(content_);
             async_reqeust();
@@ -167,6 +171,13 @@ namespace util
         void RtmpClient::make_connect_requests(
             framework::string::Url const & url)
         {
+            url_ = url;
+            std::string::size_type pos = url_.path().rfind('/');
+            content_ = url_.path().substr(pos + 1);
+            url_.path(url_.path().substr(0, pos));
+
+            addr_.from_string(url_.host_svc());
+
             requests_.resize(1);
 
             {
@@ -182,11 +193,12 @@ namespace util
                 obj["swfUrl"]; // = UNDEFINED
                 obj["tcUrl"] = url_.to_string();
                 obj["fpad"] = RtmpAmfValue(RtmpAmfType::BOOL);
+                obj["capabilities"] = 15;
                 obj["audioCodecs"] = 3191;
                 obj["videoCodecs"] = 252;
                 obj["videoFunction"] = 1;
                 obj["pageUrl"]; // = UNDEFINED
-                obj["objectEncoding"] = (double)0;
+                obj["objectEncoding"] = (double)3;
 
                 while (url_.param_begin() != url_.param_end()) {
                     obj[url_.param_begin()->key()] = url_.param_begin()->value();

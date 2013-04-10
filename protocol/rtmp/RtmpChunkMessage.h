@@ -52,14 +52,20 @@ namespace util
                 boost::uint8_t new_type, 
                 boost::uint32_t chunk_size)
             {
+                assert(left == 0);
+                left = new_size;
+                message_type_id = new_type;
                 boost::uint32_t size = left;
-                if (size == 0) {
-                    left = new_size;
-                    message_type_id = new_type;
-                    size = new_size;
-                } else {
-                    assert(new_size == 0);
+                if (size > chunk_size) {
+                    size = chunk_size;
                 }
+                return size;
+            }
+
+            boost::uint32_t left_size(
+                boost::uint32_t chunk_size)
+            {
+                boost::uint32_t size = left;
                 if (size == 0) {
                     left = message_length;
                     size = message_length;

@@ -357,83 +357,15 @@ namespace util
             typedef ConstBuffers const_buffers_type;
             typedef MutableBuffers mutable_buffers_type;
 
-            mutable_buffers_type prepare() const
+        public:
+            CycleBuffers()
+                : write_(*this)
+                , read_(*this)
             {
-                return mutable_buffers_type(*this, out_avail());
+                capacity_ = 0;
+                reset();
             }
 
-            mutable_buffers_type prepare(
-                size_t size) const
-            {
-                if (size > this->out_avail()) 
-                    throw std::length_error("util::buffer::CycleStreamBuffers too long");
-                return mutable_buffers_type(*this, size);
-            }
-
-            const_buffers_type data() const
-            {
-                return const_buffers_type(*this, in_avail());
-            }
-
-            const_buffers_type data(
-                size_t size) const
-            {
-                if (size > this->in_avail()) 
-                    throw std::length_error("util::buffer::CycleStreamBuffers too long");
-                return const_buffers_type(*this, size);
-            }
-
-            SnapshotBuffer snapshot() const
-            {
-                return SnapshotBuffer(data(), in_avail());
-            }
-
-            SnapshotBuffer snapshot(
-                size_t size) const
-            {
-                if (size > in_avail())
-                    size = in_avail();
-                return SnapshotBuffer(data(), size);
-            }
-
-            SnapshotBuffer snapshot(
-                size_t offset, 
-                size_t size) const
-            {
-                if (offset >= in_avail()) {
-                    return SnapshotBuffer();
-                } else if (offset + size >= in_avail()) {
-                    size = in_avail() - offset;
-                }
-                return SnapshotBuffer(data(), offset, size);
-            }
-
-            size_t capacity() const
-            {
-                return capacity_;
-            }
-
-            size_t in_avail() const
-            {
-                return write_.position() - read_.position();
-            }
-
-            size_t out_avail() const
-            {
-                return capacity_ - in_avail();
-            }
-
-            size_t in_position() const
-            {
-                return read_.position();
-            }
-
-            size_t out_position() const
-            {
-                return write_.position();
-            }
-
-            // Construct to represent the entire list of buffers.
             CycleBuffers(
                 Buffers const & buffers)
                 : buffers_(buffers)
@@ -448,7 +380,7 @@ namespace util
                 }
                 reset();
             }
-            
+
             // Copy constructor.
             CycleBuffers(
                 const CycleBuffers & other)
@@ -485,6 +417,86 @@ namespace util
                 return *this;
             }
 
+        public:
+            mutable_buffers_type prepare() const
+            {
+                return mutable_buffers_type(*this, out_avail());
+            }
+
+            mutable_buffers_type prepare(
+                size_t size) const
+            {
+                if (size > this->out_avail()) 
+                    throw std::length_error("util::buffer::CycleStreamBuffers too long");
+                return mutable_buffers_type(*this, size);
+            }
+
+            const_buffers_type data() const
+            {
+                return const_buffers_type(*this, in_avail());
+            }
+
+            const_buffers_type data(
+                size_t size) const
+            {
+                if (size > this->in_avail()) 
+                    throw std::length_error("util::buffer::CycleStreamBuffers too long");
+                return const_buffers_type(*this, size);
+            }
+
+        public:
+            SnapshotBuffer snapshot() const
+            {
+                return SnapshotBuffer(data(), in_avail());
+            }
+
+            SnapshotBuffer snapshot(
+                size_t size) const
+            {
+                if (size > in_avail())
+                    size = in_avail();
+                return SnapshotBuffer(data(), size);
+            }
+
+            SnapshotBuffer snapshot(
+                size_t offset, 
+                size_t size) const
+            {
+                if (offset >= in_avail()) {
+                    return SnapshotBuffer();
+                } else if (offset + size >= in_avail()) {
+                    size = in_avail() - offset;
+                }
+                return SnapshotBuffer(data(), offset, size);
+            }
+
+        public:
+            size_t capacity() const
+            {
+                return capacity_;
+            }
+
+            size_t in_avail() const
+            {
+                return write_.position() - read_.position();
+            }
+
+            size_t out_avail() const
+            {
+                return capacity_ - in_avail();
+            }
+
+            size_t in_position() const
+            {
+                return read_.position();
+            }
+
+            size_t out_position() const
+            {
+                return write_.position();
+            }
+
+        public:
             // Get a forward-only iterator to the first element.
             mutable_buffer_iterator wbegin() const
             {
@@ -522,6 +534,51 @@ namespace util
                 return const_buffer_iterator();
             }
 
+        public:
+            // Consume the specified number of bytes from the buffers.
+            void commit(
+                std::size_t size)
+            {
+                size_t rpos = in_position();
+                size_t wpos = out_position();
+                shift(write_, read_, size);
+                check();
+                assert(rpos == in_position());
+                assert(wpos + size == out_position());
+            }
+
+            void consume(
+                std::size_t size)
+            {
+                size_t rpos = in_position();
+                size_t wpos = out_position();
+                shift(read_, write_, size);
+                check();
+                assert(rpos + size == in_position());
+                assert(wpos == out_position());
+            }
+
+            void reset()
+            {
+                write_.at_end = false;
+                write_.begin_remainder = buffers_.begin();
+                read_.at_end = true;
+                read_.begin_remainder = buffers_.begin();
+                if (buffers_.begin() == buffers_.end()) {
+                    write_.at_end = true;
+                } else {
+                    write_.first = boost::asio::buffer(*buffers_.begin());
+                    ++write_.begin_remainder;
+                    if (write_.begin_remainder == buffers_.end())
+                        write_.begin_remainder = buffers_.begin();
+                    read_.first = boost::asio::buffer(*buffers_.begin(), 0);
+                    ++read_.begin_remainder;
+                    if (read_.begin_remainder == buffers_.end())
+                        read_.begin_remainder = buffers_.begin();
+                }
+            }
+
+        private:
             template <
                 typename Witch
             >
@@ -584,49 +641,6 @@ namespace util
                         left.first.limit_size(real_size);
                         right.pos += right.first.drop_back();
                     }
-                }
-            }
-
-            // Consume the specified number of bytes from the buffers.
-            void commit(
-                std::size_t size)
-            {
-                size_t rpos = in_position();
-                size_t wpos = out_position();
-                shift(write_, read_, size);
-                check();
-                assert(rpos == in_position());
-                assert(wpos + size == out_position());
-            }
-
-            void consume(
-                std::size_t size)
-            {
-                size_t rpos = in_position();
-                size_t wpos = out_position();
-                shift(read_, write_, size);
-                check();
-                assert(rpos + size == in_position());
-                assert(wpos == out_position());
-            }
-
-            void reset()
-            {
-                write_.at_end = false;
-                write_.begin_remainder = buffers_.begin();
-                read_.at_end = true;
-                read_.begin_remainder = buffers_.begin();
-                if (buffers_.begin() == buffers_.end()) {
-                    write_.at_end = true;
-                } else {
-                    write_.first = boost::asio::buffer(*buffers_.begin());
-                    ++write_.begin_remainder;
-                    if (write_.begin_remainder == buffers_.end())
-                        write_.begin_remainder = buffers_.begin();
-                    read_.first = boost::asio::buffer(*buffers_.begin(), 0);
-                    ++read_.begin_remainder;
-                    if (read_.begin_remainder == buffers_.end())
-                        read_.begin_remainder = buffers_.begin();
                 }
             }
 

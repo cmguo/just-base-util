@@ -99,7 +99,7 @@ namespace util
                     std::streamsize n = next_layer_.sputn(_Ptr, chk_left_);
                     chk_left_ -= n;
                     _Ptr += n;
-                    _Count -= n;
+                    left -= n;
                     if (chk_left_) {
                         return _Count - left;
                     }

@@ -50,17 +50,17 @@ namespace util
                             }
                             p += 3;
                         }
-                        boost::uint32_t l = 0;
-                        boost::uint8_t t = 0;
                         boost::uint16_t c = chunk_.cs_id();
                         RtmpChunkMessage & rchunk(ctx_->read.chunk(c));
+                        boost::uint8_t t = 0;
                         if (chunk_.fmt < 2) {
-                            l = ((boost::uint32_t)p[0] << 16 | (boost::uint32_t)p[1] << 8 | p[2]);
+                            boost::uint32_t l = ((boost::uint32_t)p[0] << 16 | (boost::uint32_t)p[1] << 8 | p[2]);
                             t = p[3];
+                            e += rchunk.left_size(l, t, ctx_->read.chunk_size());
                         } else {
                             t = rchunk.message_type_id;
+                            e += rchunk.left_size(ctx_->read.chunk_size());
                         }
-                        e += rchunk.left_size(l, t, ctx_->read.chunk_size());
                         ok_ = true;
                         size_ = e - b;
                         msg_def_ = RtmpMessage::find_msg(t);

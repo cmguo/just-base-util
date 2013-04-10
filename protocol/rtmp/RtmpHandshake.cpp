@@ -13,7 +13,7 @@ namespace util
 
         RtmpHandshake::RtmpHandshake()
             : has_digest_(true)
-            , digest_first_(false)
+            , digest_first_(true)
         {
         }
 
@@ -57,6 +57,10 @@ namespace util
             *c01++ = 3; // version
             std::for_each(c01, c01 + HANDSHAKE_SIZE, assgin_rand);
             if (has_digest_) {
+                c01[4] = 10;
+                c01[5] = 0;
+                c01[6] = 12;
+                c01[7] = 2;
                 boost::uint32_t offset = digest_offset(c01, digest_first_);
                 make_digest(c01, offset, genuineFPKey, 30, digest_);
                 memcpy(c01 + offset, digest_, 32);
@@ -157,11 +161,11 @@ namespace util
             boost::uint32_t digest_offset = 0;
             if (digest_first) {
                 digest_offset = data[8] + data[9] + data[10] + data[11];
-                digest_offset %= 632;
+                digest_offset %= 728;
                 digest_offset += 12;
             } else {
                 digest_offset = data[772] + data[773] + data[774] + data[775];
-                digest_offset %= 632;
+                digest_offset %= 728;
                 digest_offset += 776;
             }
             return digest_offset;

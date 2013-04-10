@@ -26,6 +26,10 @@ namespace util
             RUCE_StreamIsRecorded = 4, 
             RUCE_PingRequest = 6, 
             RUCE_PingResponse = 7, 
+            RUCE_RequestVerify = 0x1a, 
+            RUCE_ResponseVerify = 0x1b, 
+            RUCE_BufferEmpty = 0x1f, 
+            RUCE_BufferReady = 0x20, 
         };
 
         template <
@@ -213,6 +217,10 @@ namespace util
                     case RUCE_StreamIsRecorded:
                     case RUCE_PingRequest:
                     case RUCE_PingResponse:
+                    case RUCE_RequestVerify:
+                    case RUCE_ResponseVerify:
+                    case RUCE_BufferEmpty:
+                    case RUCE_BufferReady:
                         ar & _union[0];
                         break;
                     case RUCE_SetBufferLength:

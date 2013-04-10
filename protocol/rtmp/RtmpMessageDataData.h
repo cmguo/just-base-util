@@ -78,6 +78,18 @@ namespace util
             }
         };
 
+        struct RtmpAggregateMessage
+            : RtmpMessageData<RtmpAggregateMessage, RCMT_AggregateMessage>
+        {
+            static MessageDefine::ClassEnum const static_cls = MessageDefine::data_message;
+
+            template <typename Archive>
+            void serialize(
+                Archive & ar)
+            {
+            }
+        };
+
     } // namespace protocol
 } // namespace util
 
