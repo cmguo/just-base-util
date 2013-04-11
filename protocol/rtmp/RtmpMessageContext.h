@@ -12,6 +12,28 @@ namespace util
     {
 
         class RtmpMessageHeader;
+        struct RtmpMessageUserControl;
+
+        struct RtmpStream
+        {
+            enum StatusEnum
+            {
+                stopped, 
+                started, 
+                eof, 
+                dry, 
+                buffering, 
+            };
+
+            RtmpStream()
+                : status(stopped)
+                , is_record(false)
+            {
+            }
+
+            StatusEnum status;
+            bool is_record;
+        };
 
         class RtmpMessageOneContext
         {
@@ -40,6 +62,9 @@ namespace util
                 return ack_;
             }
 
+            void user_control(
+                RtmpMessageUserControl const & msg);
+
         public:
             RtmpChunkMessage & chunk(
                 boost::uint16_t cs_id);
@@ -51,15 +76,26 @@ namespace util
             void stream_end(
                 boost::uint32_t i);
 
-            bool stream_status(
-                boost::uint32_t i);
+            void stream_status(
+                boost::uint32_t i, 
+                RtmpStream::StatusEnum s);
+
+            void stream_is_record(
+                boost::uint32_t i, 
+                bool b);
+
+            RtmpStream::StatusEnum stream_status(
+                boost::uint32_t i) const;
+
+            bool stream_is_record(
+                boost::uint32_t i) const;
 
         protected:
             boost::uint32_t chunk_size_;
             boost::uint32_t seq_;
             boost::uint32_t ack_;
             std::vector<RtmpChunkMessage> chunks_;
-            std::vector<bool> streams_;
+            std::vector<RtmpStream> streams_;
         };
 
         class RtmpMessageReadContext

@@ -3,6 +3,7 @@
 #include "util/Util.h"
 #include "util/protocol/rtmp/RtmpMessageContext.h"
 #include "util/protocol/rtmp/RtmpMessage.h"
+#include "util/protocol/rtmp/RtmpMessageDataUserControl.h"
 
 namespace util
 {
@@ -14,7 +15,7 @@ namespace util
             , seq_(0)
             , ack_(0)
         {
-            streams_.resize(1, true);
+            streams_.resize(1);
         }
 
         void RtmpMessageOneContext::chunk_size(
@@ -27,6 +28,34 @@ namespace util
             boost::uint32_t n)
         {
             ack_ = n;
+        }
+
+        void RtmpMessageOneContext::user_control(
+            RtmpMessageUserControl const & msg)
+        {
+            boost::uint32_t stream = msg._union[0];
+            switch (msg.event_type) {
+                case RUCE_StreamBegin:
+                    stream_status(stream, RtmpStream::started);
+                    break;
+                case RUCE_StreamEOF:
+                    stream_status(stream, RtmpStream::eof);
+                    break;
+                case RUCE_StreamDry:
+                    stream_status(stream, RtmpStream::dry);
+                    break;
+                case RUCE_BufferEmpty:
+                    stream_status(stream, RtmpStream::buffering);
+                    break;
+                case RUCE_BufferReady:
+                    stream_status(stream, RtmpStream::started);
+                    break;
+                case RUCE_StreamIsRecorded:
+                    stream_is_record(stream, true);
+                    break;
+                default:
+                    break;
+            }
         }
 
         RtmpChunkMessage & RtmpMessageOneContext::chunk(
@@ -45,28 +74,51 @@ namespace util
         void RtmpMessageOneContext::stream_begin(
             boost::uint32_t i)
         {
-            if (streams_.size() <= i) {
-                streams_.resize(i + 1, false);
-            }
-            streams_[i] = true;
+            stream_status(i, RtmpStream::started);
         }
 
         void RtmpMessageOneContext::stream_end(
             boost::uint32_t i)
         {
-            if (streams_.size() <= i) {
-                streams_.resize(i + 1, false);
-            }
-            streams_[i] = false;
+            stream_status(i, RtmpStream::eof);
         }
 
-        bool RtmpMessageOneContext::stream_status(
-            boost::uint32_t i)
+        void RtmpMessageOneContext::stream_status(
+            boost::uint32_t i, 
+            RtmpStream::StatusEnum s)
         {
             if (streams_.size() <= i) {
-                streams_.resize(i + 1, false);
+                streams_.resize(i + 1);
             }
-            return streams_[i];
+            streams_[i].status = s;
+        }
+
+        void RtmpMessageOneContext::stream_is_record(
+            boost::uint32_t i, 
+            bool b)
+        {
+            if (streams_.size() <= i) {
+                streams_.resize(i + 1);
+            }
+            streams_[i].is_record = b;
+        }
+
+        RtmpStream::StatusEnum RtmpMessageOneContext::stream_status(
+            boost::uint32_t i) const
+        {
+            if (streams_.size() <= i) {
+                return RtmpStream::stopped;
+            }
+            return streams_[i].status;
+        }
+
+        bool RtmpMessageOneContext::stream_is_record(
+            boost::uint32_t i) const
+        {
+            if (streams_.size() <= i) {
+                return false;
+            }
+            return streams_[i].is_record;
         }
 
         void RtmpMessageWriteContext::to_chunk(

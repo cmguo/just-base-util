@@ -94,19 +94,19 @@ namespace util
                     context_.read.chunk_size(msg.as<RtmpMessageDataSetChunkSize>().chunk_size);
                     break;
                 case RCMT_AbortMessage:
-                    //context_.write.acknowledgement(msg.as<RtmpProtocolControlMessageAbortMessage>().sequence_number);
+                    //context_.read.acknowledgement(msg.as<RtmpProtocolControlMessageAbortMessage>().sequence_number);
                     break;
                 case RCMT_Acknowledgement:
                     context_.write.acknowledgement(msg.as<RtmpMessageDataAcknowledgement>().sequence_number);
                     break;
                 case RCMT_UserControl:
-                    //context_.write.acknowledgement(msg.as<RtmpMessageUserControl>()._union[0]);
+                    context_.read.user_control(msg.as<RtmpMessageUserControl>());
                     break;
                 case RCMT_WindowAcknowledgementSize:
-                    //context_.write.acknowledgement(msg.as<RtmpMessageDataWindowAcknowledgementSize>().acknowledgement_window_size);
+                    //context_.read.acknowledgement(msg.as<RtmpMessageDataWindowAcknowledgementSize>().acknowledgement_window_size);
                     break;
                 case RCMT_SetPeerBandwidth:
-                    //context_.write.acknowledgement(msg.as<RtmpProtocolControlMessageSetPeerBandwidth>().sequence_number);
+                    //context_.read.acknowledgement(msg.as<RtmpProtocolControlMessageSetPeerBandwidth>().sequence_number);
                     break;
                 default:
                     return false;
@@ -122,7 +122,7 @@ namespace util
                 reinterpret_cast<RtmpMessageContext *>(vctx);
             for (size_t i = 0; i < msgs_.size(); ++i) {
                 boost::uint32_t stream = msgs_[i].stream;
-                if (!ctx->write.stream_status(stream)) {
+                if (ctx->write.stream_status(stream) == RtmpStream::stopped) {
                     RtmpMessage msg;
                     RtmpMessageUserControl ctrl;
                     ctrl.event_type = RUCE_StreamBegin;
