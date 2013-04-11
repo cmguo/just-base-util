@@ -414,6 +414,7 @@ namespace util
                 std::advance(write_.begin_remainder, std::distance(first, second));
                 typename Buffers::const_iterator third = other.read_.begin_remainder;
                 std::advance(read_.begin_remainder, std::distance(first, third));
+                capacity_ = other.capacity_;
                 return *this;
             }
 
