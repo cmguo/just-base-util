@@ -3,12 +3,17 @@
 #ifndef _UTIL_PROTOCOL_MMSP_MMSP_MESSAGE_H_
 #define _UTIL_PROTOCOL_MMSP_MMSP_MESSAGE_H_
 
+#include "util/protocol/mmsp/MmspTcpMessage.h"
+#include "util/protocol/mmsp/MmspMessageTraits.h"
+#include "util/protocol/Message.h"
+
 namespace util
 {
     namespace protocol
     {
 
-        struct MmspMessageHeader
+        class MmspMessageHeader
+            : MmspTcpMessageHeader
         {
         public:
             boost::uint32_t chunkLen;              // 当前位置到结束的块的个数 X 8 byte
@@ -32,123 +37,44 @@ namespace util
                 return align_size / 8;
             }
 
+            boost::uint32_t id() const
+            {
+                return MID;
+            }
+
+            void id(
+                boost::uint32_t n)
+            {
+                MID = n;
+            }
+
+            boost::uint32_t data_size() const
+            {
+                return (chunkLen - 1) * 8;
+            }
+
+            void data_size(
+                boost::uint32_t n)
+            {
+                chunkLen = n / 8 + 1;
+                chunkCount = chunkLen + 2;
+                messageLength = chunkCount * 8;
+            }
+
             static boost::uint8_t const HEAD_SIZE = 8;
 
             template <typename Archive>
             void serialize(
                 Archive & ar)
             {
+                MmspTcpMessageHeader::serialize(ar);
+
                 ar & chunkLen;
                 ar & MID;
             }
         };
 
-        struct MmspReportMessageHeader
-        {
-            boost::uint32_t hr;
-
-            MmspReportMessageHeader()
-                : hr(0x00000000)
-            {
-            }
-
-            template <typename Archive>
-            void serialize(
-                Archive & ar)
-            {
-                ar & hr;
-            }
-        };
-
-        template <
-            boost::uint32_t ID
-        >
-        struct MmspMessageData
-        {
-            static boost::uint32_t const StaticId;
-        };
-
-        template <
-            boost::uint32_t ID
-        >
-        boost::uint32_t const MmspMessageData<ID>::StaticId = ID;
-
-        class MmspMessage
-            : MmspMessageHeader
-        {
-        public:
-            MmspMessage();
-
-            ~MmspMessage();
-
-        public:
-            template <typename T>
-            T & get()
-            {
-                if (!is<T>()) {
-                    reset();
-                    construct<T>();
-                }
-                return as<T>();
-            }
-
-            void reset();
-
-            bool empty() const;
-
-            template <typename T>
-            bool is() const
-            {
-                return destroy_ == (destroy_t)&MmspMessage::destroy<T>;
-            }
-
-            template <typename T>
-            T const & as() const
-            {
-                assert(is<T>());
-                return *(T const *)data_;
-            }
-
-            template <typename T>
-            T & as()
-            {
-                assert(is<T>());
-                return *(T *)data_;
-            }
-
-        public:
-            MmspMessageHeader const & header() const
-            {
-                return *this;
-            }
-
-            boost::uint32_t id() const
-            {
-                return MID;
-            }
-
-        private:
-            template <typename T>
-            void construct()
-            {
-                new (data_)T;
-                MID = T::StaticId;
-                destroy_ = &MmspMessage::destroy<T>;
-            }
-
-            template <typename T>
-            void destroy()
-            {
-                ((T *)data_)->~T();
-                MID = 0;
-                destroy_ = NULL;
-            }
-
-        private:
-            typedef void (MmspMessage::* destroy_t)();
-            destroy_t destroy_;
-            char data_[256];
-        };
+        typedef Message<MmspMessageTraits> MmspMessage;
 
     } // namespace protocol
 } // namespace util

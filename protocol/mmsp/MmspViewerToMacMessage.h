@@ -3,7 +3,7 @@
 #ifndef _UTIL_PROTOCOL_MMSP_MMSP_REQUEST_H_
 #define _UTIL_PROTOCOL_MMSP_MMSP_REQUEST_H_
 
-#include "util/protocol/mmsp/MmspMessage.h"
+#include "util/protocol/mmsp/MmspMessageData.h"
 #include "util/protocol/mmsp/MmspString.h"
 
 namespace util
@@ -33,7 +33,7 @@ namespace util
         };
 
         struct MmspDataCancelReadBlock
-            : MmspMessageData<MmspViewerToMacMessage::CANCEL_READ_BLOCK>
+            : MmspMessageData<MmspDataCancelReadBlock, MmspViewerToMacMessage::CANCEL_READ_BLOCK>
         {
             boost::uint32_t playIncarnation;
 
@@ -50,7 +50,7 @@ namespace util
         };
 
         struct MmspDataCloseFile
-            : MmspMessageData<MmspViewerToMacMessage::CLOSE_FILE>
+            : MmspMessageData<MmspDataCloseFile, MmspViewerToMacMessage::CLOSE_FILE>
         {
             boost::uint32_t playIncarnation;
             boost::uint32_t openFileId;
@@ -70,7 +70,7 @@ namespace util
         };
 
         struct MmspDataConnect
-            : MmspMessageData<MmspViewerToMacMessage::CONNECT>
+            : MmspMessageData<MmspDataConnect, MmspViewerToMacMessage::CONNECT>
         {
             boost::uint32_t playIncarnation; // MMS_DISABLE_PACKET_PAIR or MMS_USE_PACKET_PAIR
             boost::uint32_t MacToViewerProtocolRevision;
@@ -95,7 +95,7 @@ namespace util
         };
 
         struct MmspDataConnectFunnel
-            : MmspMessageData<MmspViewerToMacMessage::CONNECT_FUNNEL>
+            : MmspMessageData<MmspDataConnectFunnel, MmspViewerToMacMessage::CONNECT_FUNNEL>
         {
             boost::uint32_t playIncarnation;
             boost::uint32_t maxBlockBytes;
@@ -126,7 +126,7 @@ namespace util
         };
 
         struct MmspDataFunnelInfo
-            : MmspMessageData<MmspViewerToMacMessage::FUNNEL_INFO>
+            : MmspMessageData<MmspDataConnectFunnel, MmspViewerToMacMessage::FUNNEL_INFO>
         {
             // MMS_DISABLE_PACKET_PAIR
             // MMS_USE_PACKET_PAIR
@@ -147,7 +147,7 @@ namespace util
         };
 
         struct MmspDataOpenFile
-            : MmspMessageData<MmspViewerToMacMessage::OPEN_FILE>
+            : MmspMessageData<MmspDataOpenFile, MmspViewerToMacMessage::OPEN_FILE>
         {
             // 0x00000001 to 0x000000FE, inclusive.
             boost::uint32_t playIncarnation;
@@ -184,7 +184,7 @@ namespace util
         };
 
         struct MmspDataPong
-            : MmspMessageData<MmspViewerToMacMessage::PONG>
+            : MmspMessageData<MmspDataPong, MmspViewerToMacMessage::PONG>
         {
             boost::uint32_t dwParam1;
             boost::uint32_t dwParam2;
@@ -204,7 +204,7 @@ namespace util
         };
 
         struct MmspDataReadBlock
-            : MmspMessageData<MmspViewerToMacMessage::READ_BLOCK>
+            : MmspMessageData<MmspDataReadBlock, MmspViewerToMacMessage::READ_BLOCK>
         {
             boost::uint32_t openFileId;
             boost::uint32_t fileBlockId;
@@ -249,7 +249,7 @@ namespace util
         };
 
         struct MmspDataSecurityResponse
-            : MmspMessageData<MmspViewerToMacMessage::SECURITY_RESPONSE>
+            : MmspMessageData<MmspDataSecurityResponse, MmspViewerToMacMessage::SECURITY_RESPONSE>
         {
             boost::uint32_t playIncarnation;
             boost::uint32_t cookie;
@@ -277,7 +277,7 @@ namespace util
         };
 
         struct MmspDataStartPlaying
-            : MmspMessageData<MmspViewerToMacMessage::START_PLAYING>
+            : MmspMessageData<MmspDataStartPlaying, MmspViewerToMacMessage::START_PLAYING>
         {
             boost::uint32_t openFileId;
             boost::uint32_t padding;
@@ -316,14 +316,17 @@ namespace util
                 ar & frameOffset;
                 ar & playIncarnation;
 
-                ar & dwAccelBandwidth;
-                ar & dwAccelDuration;
-                ar & dwLinkBandwidth;
+                if (ar) {
+                    ar & dwAccelBandwidth;
+                    ar & dwAccelDuration;
+                    ar & dwLinkBandwidth;
+                    ar.clear();
+                }
             }
         };
 
         struct MmspDataStartStriding
-            : MmspMessageData<MmspViewerToMacMessage::START_STRIDING>
+            : MmspMessageData<MmspDataStartStriding, MmspViewerToMacMessage::START_STRIDING>
         {
             boost::uint32_t openFileId;
             boost::uint32_t padding;
@@ -362,7 +365,7 @@ namespace util
         };
 
         struct MmspDataStopPlaying
-            : MmspMessageData<MmspViewerToMacMessage::STOP_PLAYING>
+            : MmspMessageData<MmspDataStopPlaying, MmspViewerToMacMessage::STOP_PLAYING>
         {
             boost::uint32_t openFileId;
             // 0x00000001 to 0x000000FE, inclusive.
@@ -383,7 +386,7 @@ namespace util
         };
 
         struct MmspDataStreamSwitch
-            : MmspMessageData<MmspViewerToMacMessage::STREAM_SWITCH>
+            : MmspMessageData<MmspDataStreamSwitch, MmspViewerToMacMessage::STREAM_SWITCH>
         {
             boost::uint32_t cStreamEntries;
 

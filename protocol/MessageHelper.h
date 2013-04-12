@@ -57,11 +57,11 @@ namespace util
             {
                 if (ia_) {
                     std::streamsize end = ia_->tellg();
-                    assert(header_.data_size() == (boost::uint32_t)(end - data_beg_ - filling_));
+                    assert(header_.data_size() == data_size());
                     ia_->context(ctx_);
                 } else {
                     std::streamsize end = oa_->tellp();
-                    header_.data_size(end - data_beg_ - filling_);
+                    header_.data_size(data_size());
                     oa_->seekp(beg_);
                     (*oa_) << header_;
                     oa_->seekp(end);
@@ -76,6 +76,40 @@ namespace util
                     data_beg_ = ia_->tellg();
                 else
                     data_beg_ = oa_->tellp();
+            }
+
+        protected:
+            boost::uint32_t data_size() const
+            {
+                std::streamsize end;
+                if (ia_) {
+                    end = ia_->tellg();
+                } else {
+                    end = oa_->tellp();
+                }
+                return boost::uint32_t(end - data_beg_ - filling_);
+            }
+
+            void pad(
+                std::streamsize n, 
+                boost::uint8_t c = 0)
+            {
+                if (ia_) {
+                    while (n) {
+                        boost::uint8_t c1;
+                        (*ia_) >> c1;
+                        //if (c1 != c) {
+                        //    ia_->fail();
+                        //    break;
+                        //}
+                        --n;
+                    }
+                } else {
+                    while (n) {
+                        (*oa_) << c;
+                        --n;
+                    }
+                }
             }
 
         protected:

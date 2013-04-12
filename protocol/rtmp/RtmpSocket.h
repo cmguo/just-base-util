@@ -9,10 +9,6 @@
 #include "util/protocol/rtmp/RtmpHandshake.h"
 #include "util/protocol/MessageSocket.h"
 
-#include <framework/network/TcpSocket.h>
-
-#include <boost/asio/streambuf.hpp>
-
 namespace util
 {
     namespace protocol

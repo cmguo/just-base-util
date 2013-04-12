@@ -4,6 +4,7 @@
 #define _UTIL_PROTOCOL_MESSAGE_DATA_H_
 
 #include "util/protocol/MessageTraits.h"
+#include "util/protocol/Message.h"
 
 namespace util
 {

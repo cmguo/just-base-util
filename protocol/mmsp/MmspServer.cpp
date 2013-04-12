@@ -30,35 +30,6 @@ namespace util
         {
             static size_t gid = 0;
             id_ = gid++;
-
-            register_message<MmspDataCancelReadBlock>(mc_read);
-            register_message<MmspDataCloseFile>(mc_read);
-            register_message<MmspDataConnect>(mc_read);
-            register_message<MmspDataConnectFunnel>(mc_read);
-            register_message<MmspDataFunnelInfo>(mc_read);
-            register_message<MmspDataOpenFile>(mc_read);
-            register_message<MmspDataPong>(mc_read);
-            register_message<MmspDataReadBlock>(mc_read);
-            //register_message<MmspDataSecurityResponse>(mc_read);
-            register_message<MmspDataStartPlaying>(mc_read);
-            register_message<MmspDataStartStriding>(mc_read);
-            register_message<MmspDataStopPlaying>(mc_read);
-            register_message<MmspDataStreamSwitch>(mc_read);
-
-            register_message<MmspDataPing>(mc_write);
-            register_message<MmspDataReportConnectedEx>(mc_write);
-            register_message<MmspDataReportConnectedFunnel>(mc_write);
-            register_message<MmspDataReportDisconnectedFunnel>(mc_write);
-            register_message<MmspDataReportEndOfStream>(mc_write);
-            register_message<MmspDataReportFunnelInfo>(mc_write);
-            register_message<MmspDataReportOpenFile>(mc_write);
-            register_message<MmspDataReportReadBlock>(mc_write);
-            register_message<MmspDataReportRedirect>(mc_write);
-            //register_message<MmspDataSecurityChallenge>(mc_write);
-            register_message<MmspDataReportStartPlaying>(mc_write);
-            register_message<MmspDataReportStartStriding>(mc_write);
-            register_message<MmspDataReportStreamChange>(mc_write);
-            register_message<MmspDataReportStreamSwitch>(mc_write);
         }
 
         MmspServer::~MmspServer()
@@ -68,7 +39,7 @@ namespace util
 
         void MmspServer::start()
         {
-            async_read(request_, 
+            async_read_msg(request_, 
                 boost::bind(&MmspServer::handle_receive_request, this, _1, _2));
         }
 
@@ -86,7 +57,7 @@ namespace util
                 return;
             }
 
-            if (request_.header().MID == MmspViewerToMacMessage::PONG) {
+            if (request_.MID == MmspViewerToMacMessage::PONG) {
                 start();
                 return;
             }
@@ -113,7 +84,7 @@ namespace util
                 return;
             }
 
-            async_write(response_, 
+            async_write_msg(response_, 
                 boost::bind(&MmspServer::handle_send_response, this, _1, _2));
         }
 

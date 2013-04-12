@@ -3,7 +3,7 @@
 #ifndef _UTIL_PROTOCOL_MMSP_MMSP_MAC_TO_VIEWER_MESSAGE_H_
 #define _UTIL_PROTOCOL_MMSP_MMSP_MAC_TO_VIEWER_MESSAGE_H_
 
-#include "util/protocol/mmsp/MmspMessage.h"
+#include "util/protocol/mmsp/MmspMessageData.h"
 #include "util/protocol/mmsp/MmspString.h"
 
 namespace util
@@ -32,8 +32,25 @@ namespace util
             };
         };
 
+        struct MmspReportMessageHeader
+        {
+            boost::uint32_t hr;
+
+            MmspReportMessageHeader()
+                : hr(0x00000000)
+            {
+            }
+
+            template <typename Archive>
+            void serialize(
+                Archive & ar)
+            {
+                ar & hr;
+            }
+        };
+
         struct MmspDataPing
-            : MmspMessageData<MmspMacToViewerMessage::PING>
+            : MmspMessageData<MmspDataPing, MmspMacToViewerMessage::PING>
         {
             boost::uint32_t dwParam1;
             boost::uint32_t dwParam2;
@@ -54,7 +71,7 @@ namespace util
 
         struct MmspDataReportConnectedEx
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_CONNECTED_EX>
+            , MmspMessageData<MmspDataReportConnectedEx, MmspMacToViewerMessage::REPORT_CONNECTED_EX>
         {
             // MMS_DISABLE_PACKET_PAIR
             // MMS_USE_PACKET_PAIR
@@ -123,7 +140,7 @@ namespace util
 
         struct MmspDataReportConnectedFunnel
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_CONNECTED_FUNNEL>
+            , MmspMessageData<MmspDataReportConnectedFunnel, MmspMacToViewerMessage::REPORT_CONNECTED_FUNNEL>
         {
             boost::uint32_t playIncarnation;
             boost::uint32_t packetPayloadSize;
@@ -148,7 +165,7 @@ namespace util
 
         struct MmspDataReportDisconnectedFunnel
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_DISCONNECTED_FUNNEL>
+            , MmspMessageData<MmspDataReportDisconnectedFunnel, MmspMacToViewerMessage::REPORT_DISCONNECTED_FUNNEL>
         {
             boost::uint32_t playIncarnation;
 
@@ -168,7 +185,7 @@ namespace util
 
         struct MmspDataReportEndOfStream
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_END_OF_STREAM>
+            , MmspMessageData<MmspDataReportEndOfStream, MmspMacToViewerMessage::REPORT_END_OF_STREAM>
         {
             boost::uint32_t playIncarnation;
 
@@ -188,7 +205,7 @@ namespace util
 
         struct MmspDataReportFunnelInfo
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_FUNNEL_INFO>
+            , MmspMessageData<MmspDataReportFunnelInfo, MmspMacToViewerMessage::REPORT_FUNNEL_INFO>
         {
             // MMS_DISABLE_PACKET_PAIR
             // MMS_USE_PACKET_PAIR
@@ -237,7 +254,7 @@ namespace util
 
         struct MmspDataReportOpenFile
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_OPEN_FILE>
+            , MmspMessageData<MmspDataReportOpenFile, MmspMacToViewerMessage::REPORT_OPEN_FILE>
         {
             // 0x00000001 to 0x000000FE, inclusive.
             boost::uint32_t playIncarnation;
@@ -299,7 +316,7 @@ namespace util
 
         struct MmspDataReportReadBlock
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_READ_BLOCK>
+            , MmspMessageData<MmspDataReportReadBlock, MmspMacToViewerMessage::REPORT_READ_BLOCK>
         {
             boost::uint32_t playIncarnation;
             boost::uint32_t playSequence;
@@ -322,7 +339,7 @@ namespace util
 
         struct MmspDataReportRedirect
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_REDIRECT>
+            , MmspMessageData<MmspDataReportRedirect, MmspMacToViewerMessage::REPORT_REDIRECT>
         {
             boost::uint16_t RedirectType;
             boost::uint16_t cbLocation;
@@ -349,7 +366,7 @@ namespace util
         };
 
         struct MmspDataSecurityChallenge
-            : MmspMessageData<MmspMacToViewerMessage::SECURITY_CHALLENGE>
+            : MmspMessageData<MmspDataSecurityChallenge, MmspMacToViewerMessage::SECURITY_CHALLENGE>
         {
             boost::uint32_t playIncarnation;
             boost::uint32_t cookie;
@@ -378,7 +395,7 @@ namespace util
 
         struct MmspDataReportStartPlaying
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_START_PLAYING>
+            , MmspMessageData<MmspDataReportStartPlaying, MmspMacToViewerMessage::REPORT_START_PLAYING>
         {
             boost::uint32_t playIncarnation;
             boost::uint32_t tigerFileId;
@@ -405,7 +422,7 @@ namespace util
 
         struct MmspDataReportStartStriding
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_START_STRIDING>
+            , MmspMessageData<MmspDataReportStartStriding, MmspMacToViewerMessage::REPORT_START_STRIDING>
         {
             boost::uint32_t playIncarnation;
             boost::uint32_t spare;
@@ -429,7 +446,7 @@ namespace util
 
         struct MmspDataReportStreamChange
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_STREAM_CHANGE>
+            , MmspMessageData<MmspDataReportStreamChange, MmspMacToViewerMessage::REPORT_STREAM_CHANGE>
         {
             boost::uint32_t dwTcpHdrIncarnation;
             boost::uint32_t cbPacketSize;
@@ -461,7 +478,7 @@ namespace util
 
         struct MmspDataReportStreamSwitch
             : MmspReportMessageHeader
-            , MmspMessageData<MmspMacToViewerMessage::REPORT_STREAM_SWITCH>
+            , MmspMessageData<MmspDataReportStreamSwitch, MmspMacToViewerMessage::REPORT_STREAM_SWITCH>
         {
             MmspDataReportStreamSwitch()
             {
