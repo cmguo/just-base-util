@@ -4,6 +4,8 @@
 #include "util/protocol/mmsp/MmspSocket.h"
 #include "util/protocol/mmsp/MmspMessage.hpp"
 #include "util/protocol/mmsp/MmspSocket.hpp"
+#include "util/protocol/mmsp/MmspViewerToMacMessage.h"
+#include "util/protocol/mmsp/MmspMacToViewerMessage.h"
 
 namespace util
 {
@@ -27,13 +29,16 @@ namespace util
 
         bool MmspSocket::process_protocol_message(
             MmspMessage const & msg, 
-            std::vector<MmspMessage> & resp)
+            MmspMessage & resp)
         {
             switch (msg.MID) {
+                case MmspMacToViewerMessage::PING:
+                    msg.as<MmspDataPing>();
+                    resp.get<MmspDataPong>();
+                    return true;
                 default:
                     return false;
             }
-            return true;
         }
 
     } // namespace protocol

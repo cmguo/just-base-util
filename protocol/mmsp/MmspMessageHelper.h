@@ -35,6 +35,9 @@ namespace util
                 boost::uint32_t n = data_size();
                 MmspMessageHeader::chunk_size(n);
                 pad(n, 0);
+                if (ia_ && header_.data_size() != data_size()) {
+                    pad(header_.data_size() - data_size());
+                }
             }
         };
 

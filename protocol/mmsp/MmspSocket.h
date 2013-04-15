@@ -28,7 +28,7 @@ namespace util
         protected:
             bool process_protocol_message(
                 MmspMessage const & msg, 
-                std::vector<MmspMessage> & resp);
+                MmspMessage & resp);
 
         private:
             MmspMessageParser read_parser_;

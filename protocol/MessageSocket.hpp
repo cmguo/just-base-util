@@ -13,6 +13,7 @@
 #include <util/buffers/SubBuffers.h>
 
 #include <framework/network/AsioHandlerHelper.h>
+#include <framework/network/TcpSocket.hpp>
 
 namespace util
 {
@@ -99,6 +100,15 @@ namespace util
                 ec = boost::asio::error::would_block;
                 return 0;
             }
+            if (pend_data_sizes_.size() > 0) {
+                size_t size = pend_data_sizes_.front();
+                pend_data_sizes_.pop_front();
+                assert(size <= rcv_data_.size());
+                util::buffers::buffers_copy(buffers, rcv_data_.data(size));
+                rcv_data_.consume(size);
+                ec.clear();
+                return size;
+            }
             if (read_status_.size == 0) {
                 parser_.reset();
                 read_status_.size = parser_.size();
@@ -151,7 +161,18 @@ namespace util
             assert(read_parallel_);
             if (!pend_rcv_sizes_.empty()) {
                 // control messages should be handle before data messages
-                handler(boost::asio::error::would_block, 0);
+                get_io_service().post(
+                    boost::asio::detail::bind_handler(handler, boost::asio::error::would_block, 0));
+                return;
+            }
+            if (pend_data_sizes_.size() > 0) {
+                size_t size = pend_data_sizes_.front();
+                pend_data_sizes_.pop_front();
+                assert(size <= rcv_data_.size());
+                util::buffers::buffers_copy(buffers, rcv_data_.data(size));
+                rcv_data_.consume(size);
+                get_io_service().post(
+                    boost::asio::detail::bind_handler(handler, boost::system::error_code(), size));
                 return;
             }
             assert(read_status_.size == 0);
@@ -427,7 +448,11 @@ namespace util
                         parser_.parse(rcv_buf_.data());
                         read_status_.size = parser_.size();
                     } else if (parser_.msg_def()->cls != MessageDefine::control_message) {
-                        // drop this message
+                        // save this message
+                        util::buffers::buffers_copy(rcv_data_.prepare(read_status_.size), rcv_buf_.data());
+                        rcv_data_.commit(read_status_.size);
+                        rcv_buf_.consume(read_status_.size);
+                        pend_data_sizes_.push_back(read_status_.size);
                         parser_.reset();
                         read_status_.size = parser_.size();
                         read_status_.pos = 0;
@@ -509,6 +534,11 @@ namespace util
                     parser_.parse(rcv_buf_.data());
                     read_status_.size = parser_.size();
                 } else if (parser_.msg_def()->cls != MessageDefine::control_message) {
+                    // save this message
+                    util::buffers::buffers_copy(rcv_data_.prepare(read_status_.size), rcv_buf_.data());
+                    rcv_data_.commit(read_status_.size);
+                    rcv_buf_.consume(read_status_.size);
+                    pend_data_sizes_.push_back(read_status_.size);
                     parser_.reset();
                     read_status_.size = parser_.size();
                     read_status_.pos = 0;

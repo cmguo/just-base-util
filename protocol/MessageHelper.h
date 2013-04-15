@@ -56,12 +56,11 @@ namespace util
             ~MessageHelper()
             {
                 if (ia_) {
-                    std::streamsize end = ia_->tellg();
                     assert(header_.data_size() == data_size());
                     ia_->context(ctx_);
                 } else {
-                    std::streamsize end = oa_->tellp();
                     header_.data_size(data_size());
+                    std::streamsize end = oa_->tellp();
                     oa_->seekp(beg_);
                     (*oa_) << header_;
                     oa_->seekp(end);

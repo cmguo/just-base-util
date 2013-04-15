@@ -56,6 +56,7 @@ namespace util
                 pos = other.pos;
                 first = other.first;
                 begin_remainder = other.begin_remainder;
+                return *this;
             }
 
             cycle_buffers_status & operator=(
@@ -403,10 +404,8 @@ namespace util
                 const CycleBuffers& other)
             {
                 buffers_ = other.buffers_;
-                write_.at_end = other.write_.at_end;
-                write_.first = other.write_.first;
-                read_.at_end = other.read_.at_end;
-                read_.first = other.read_.first;
+                write_ = other.write_;
+                read_ = other.read_;
                 write_.begin_remainder = buffers_.begin();
                 read_.begin_remainder = buffers_.begin();
                 typename Buffers::const_iterator first = other.buffers_.begin();
@@ -519,7 +518,6 @@ namespace util
             // Get a forward-only iterator to the first element.
             const_buffer_iterator rbegin() const
             {
-                normalize(read_, write_);
                 return const_buffer_iterator(buffers_.begin(), buffers_.end(), read_, write_);
             }
 

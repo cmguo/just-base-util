@@ -42,7 +42,7 @@ namespace util
                             boost::uint16_t len;
                             memcpy(&len, b + 6, 2);
                             len = framework::system::BytesOrder::little_endian_to_host(len);
-                            size_ = MmspDataHeader::HEAD_SIZE + len;
+                            size_ = len;
                             msg_def_ = &data_def_;
                             step_ = 3;
                             ok_ = true;

@@ -20,9 +20,25 @@ namespace util
             {
             }
 
+            MmspString(
+                std::string const & str)
+                : size_(boost::uint32_t(-1))
+            {
+                str_.assign(str.begin(), str.end());
+                str_.push_back(0);
+            }
+
             template <size_t n>
             MmspString(
                 wchar_t const (&str)[n])
+                : size_(boost::uint32_t(-1))
+            {
+                str_.assign(str, str + n);
+            }
+
+            template <size_t n>
+            MmspString(
+                char const (&str)[n])
                 : size_(boost::uint32_t(-1))
             {
                 str_.assign(str, str + n);

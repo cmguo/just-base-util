@@ -219,6 +219,8 @@ namespace util
             StreamBuffer snd_buf_;
             StreamBuffer rcv_buf_;
             std::deque<size_t> pend_rcv_sizes_;
+            StreamBuffer rcv_data_;
+            std::deque<size_t> pend_data_sizes_;
 
         private:
             MessageParser & parser_;

@@ -1,12 +1,13 @@
-// RtmpClient.cpp
+// MmspClient.cpp
 
 #include "util/Util.h"
-#include "util/protocol/rtmp/RtmpClient.h"
-#include "util/protocol/rtmp/RtmpSocket.hpp"
-#include "util/protocol/rtmp/RtmpError.h"
-#include "util/protocol/rtmp/RtmpMessage.hpp"
-#include "util/protocol/rtmp/RtmpMessageDataCommand.h"
-using namespace util::protocol::rtmp_error;
+#include "util/protocol/mmsp/MmspClient.h"
+#include "util/protocol/mmsp/MmspSocket.hpp"
+#include "util/protocol/mmsp/MmspError.h"
+#include "util/protocol/mmsp/MmspMessage.hpp"
+#include "util/protocol/mmsp/MmspViewerToMacMessage.h"
+#include "util/protocol/mmsp/MmspMacToViewerMessage.h"
+using namespace util::protocol::mmsp_error;
 
 #include <framework/system/LogicError.h>
 #include <framework/logger/Logger.h>
@@ -30,11 +31,11 @@ namespace util
     namespace protocol
     {
 
-        FRAMEWORK_LOGGER_DECLARE_MODULE("util.protocol.RtmpClient");
+        FRAMEWORK_LOGGER_DECLARE_MODULE("util.protocol.MmspClient");
 
-        static char const SERVICE_NAME[] = "1935";
+        static char const SERVICE_NAME[] = "1755";
 
-        std::string const RtmpClient::con_status_str[] = {
+        std::string const MmspClient::con_status_str[] = {
             "closed", 
             "connectting", 
             "net_connectting", 
@@ -42,16 +43,16 @@ namespace util
             "broken", 
         };
 
-        std::string const RtmpClient::req_status_str[] = {
+        std::string const MmspClient::req_status_str[] = {
             "send_pending", 
             "sending_req", 
             "recving_resp", 
             "finished", 
         };
 
-        RtmpClient::RtmpClient(
+        MmspClient::MmspClient(
             boost::asio::io_service & io_svc)
-            : RtmpSocket(io_svc)
+            : MmspSocket(io_svc)
             , status_(closed)
             , request_status_(finished)
         {
@@ -60,17 +61,17 @@ namespace util
             addr_.svc(SERVICE_NAME);
         }
 
-        RtmpClient::~RtmpClient()
+        MmspClient::~MmspClient()
         {
             error_code ec;
             if (status_ >= established) {
                 status_ = broken;
             }
-            RtmpSocket::close(ec);
+            MmspSocket::close(ec);
             status_ = closed;
         }
 
-        boost::system::error_code RtmpClient::connect(
+        boost::system::error_code MmspClient::connect(
             framework::string::Url const & url, 
             boost::system::error_code & ec)
         {
@@ -85,7 +86,7 @@ namespace util
             return ec;
         }
 
-        void RtmpClient::async_connect(
+        void MmspClient::async_connect(
             framework::string::Url const & url, 
             response_type const & resp)
         {
@@ -99,177 +100,110 @@ namespace util
             handle_async_connect(ec);
         }
 
-        void RtmpClient::close()
+        void MmspClient::close()
         {
             error_code ec;
-            RtmpSocket::close();
+            MmspSocket::close();
             status_ = closed;
             dump("close", ec);
         }
 
-        error_code RtmpClient::close(
+        error_code MmspClient::close(
             error_code & ec)
         {
-            RtmpSocket::close(ec);
+            MmspSocket::close(ec);
             status_ = closed;
             dump("close", ec);
             return ec;
         }
 
-        boost::system::error_code RtmpClient::play(
+        boost::system::error_code MmspClient::play(
             boost::system::error_code & ec)
         {
             LOG_DEBUG("[play] (id = %u, url = %s)" % id_);
 
             if (requests_.empty()) {
-                make_play_requests(content_);
+                make_play_requests(file_name_);
                 request_status_ = send_pending;
             }
             resume_request(ec);
             return ec;
         }
 
-        void RtmpClient::async_play(
+        void MmspClient::async_play(
             response_type const & resp)
         {
             LOG_DEBUG("[async_play] (id = %u, url = %s)" % id_);
 
             resp_ = resp;
-            make_play_requests(content_);
+            make_play_requests(file_name_);
             async_reqeust();
         }
 
-        boost::system::error_code RtmpClient::publish(
-            boost::system::error_code & ec)
-        {
-            LOG_DEBUG("[publish] (id = %u, url = %s)" % id_);
-
-            if (requests_.empty()) {
-                make_publish_requests(content_);
-                request_status_ = send_pending;
-            }
-            resume_request(ec);
-            return ec;
-        }
-
-        void RtmpClient::async_publish(
-            response_type const & resp)
-        {
-            LOG_DEBUG("[async_publish] (id = %u, url = %s)" % id_);
-
-            resp_ = resp;
-            make_publish_requests(content_);
-            async_reqeust();
-        }
-
-        void RtmpClient::async_reqeust()
+        void MmspClient::async_reqeust()
         {
             request_status_ = send_pending;
             handle_async_reqeust(error_code());
         }
 
-        void RtmpClient::make_connect_requests(
+        void MmspClient::make_connect_requests(
             framework::string::Url const & url)
         {
             url_ = url;
-            std::string::size_type pos = url_.path().rfind('/');
-            content_ = url_.path().substr(pos + 1);
-            url_.path(url_.path().substr(0, pos));
-
+            file_name_ = url_.path_all().substr(1);
             addr_.from_string(url_.host_svc());
 
-            requests_.resize(1);
-
-            {
-                RtmpMessage & msg = requests_[0];
-                msg.chunk = 3;
-                RtmpCommandMessage0 & cmd = msg.get<RtmpCommandMessage0>();
-                cmd.CommandName = "connect";
-                cmd.TransactionID = 1;
-                RtmpAmfObject & obj = 
-                    cmd.CommandObject.get<RtmpAmfObject>();
-                obj["app"] = url_.path().substr(1);
-                obj["flashVer"] = "WIN 10,0,12,36";
-                obj["swfUrl"]; // = UNDEFINED
-                obj["tcUrl"] = url_.to_string();
-                obj["fpad"] = RtmpAmfValue(RtmpAmfType::BOOL);
-                obj["capabilities"] = 15;
-                obj["audioCodecs"] = 3191;
-                obj["videoCodecs"] = 252;
-                obj["videoFunction"] = 1;
-                obj["pageUrl"]; // = UNDEFINED
-                obj["objectEncoding"] = (double)3;
-
-                while (url_.param_begin() != url_.param_end()) {
-                    obj[url_.param_begin()->key()] = url_.param_begin()->value();
-                    url_.param(url_.param_begin()->key(), "");
-                }
-
-                obj["tcUrl"] = url_.to_string();
-            }
-        }
-
-        void RtmpClient::make_play_requests(
-            std::string const & content)
-        {
             requests_.resize(2);
 
             {
-                RtmpMessage & msg = requests_[0];
-                msg.chunk = 3;
-                RtmpCommandMessage0 & cmd = msg.get<RtmpCommandMessage0>();
-                cmd.CommandName = "createStream";
-                cmd.TransactionID = (double)0;
-                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::_NULL);
+                MmspMessage & msg = requests_[0];
+                MmspDataConnect & req = msg.get<MmspDataConnect>();
+                req.playIncarnation = 0xf0f0f0ef; // MMS_DISABLE_PACKET_PAIR
+                req.subscriberName = "NSPlayer/7.0.0.1956; {0xbabac001-0x97eb-0x8607-0xdfd8270fe217a55f}; Host: " + url_.host_svc();
             }
 
             {
-                RtmpMessage & msg = requests_[1];
-                msg.chunk = 3;
-                msg.stream = 1;
-                RtmpCommandMessage0 & cmd = msg.get<RtmpCommandMessage0>();
-                cmd.CommandName = "play";
-                cmd.TransactionID = (double)0;
-                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::_NULL);
-                cmd.OptionalArguments.push_back(content);
+                MmspMessage & msg = requests_[1];
+                MmspDataConnectFunnel & req = msg.get<MmspDataConnectFunnel>();
+                req.funnelName = "\\\\192.168.0.1\\TCP\\1234";
             }
         }
 
-        void RtmpClient::make_publish_requests(
+        void MmspClient::make_play_requests(
             std::string const & content)
         {
-            requests_.resize(2);
+            requests_.resize(3);
 
             {
-                RtmpMessage & msg = requests_[0];
-                msg.chunk = 3;
-                RtmpCommandMessage0 & cmd = msg.get<RtmpCommandMessage0>();
-                cmd.CommandName = "createStream";
-                cmd.TransactionID = (double)0;
-                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::_NULL);
+                MmspMessage & msg = requests_[0];
+                MmspDataOpenFile & req = msg.get<MmspDataOpenFile>();
+                req.playIncarnation = 1;
+                req.fileName = file_name_;
             }
 
             {
-                RtmpMessage & msg = requests_[1];
-                msg.chunk = 3;
-                msg.stream = 1;
-                RtmpCommandMessage0 & cmd = msg.get<RtmpCommandMessage0>();
-                cmd.CommandName = "publish";
-                cmd.TransactionID = (double)0;
-                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::_NULL);
-                cmd.OptionalArguments.push_back(content);
-                cmd.OptionalArguments.push_back("live");
+                MmspMessage & msg = requests_[1];
+                MmspDataReadBlock & req = msg.get<MmspDataReadBlock>();
+                req.openFileId = 1;
+                req.playIncarnation = 2;
+            }
+
+            {
+                MmspMessage & msg = requests_[2];
+                MmspDataStartPlaying & req = msg.get<MmspDataStartPlaying>();
+                req.openFileId = 1;
+                req.playIncarnation = 3;
             }
         }
 
-        void RtmpClient::resume_connect(
+        void MmspClient::resume_connect(
             boost::system::error_code & ec)
         {
             switch (status_) {
                 case closed:
                     status_ = connectting;
                 case connectting:
-                    if (RtmpSocket::connect(addr_, ec))
+                    if (MmspSocket::connect(addr_, ec))
                         break;
                     status_ = net_connectting;
                 case net_connectting:
@@ -285,7 +219,7 @@ namespace util
             }
         }
 
-        void RtmpClient::resume_request(
+        void MmspClient::resume_request(
             boost::system::error_code & ec)
         {
             while (true) {
@@ -301,7 +235,7 @@ namespace util
                         break;
                     if (process_protocol_message(response_, proto_responses_)) {
                         request_status_ = sending_req;
-                        if (write_msgs(proto_responses_, ec) == 0)
+                        if (write_msg(proto_responses_, ec) == 0)
                             break;
                         request_status_ = recving_resp;
                         break;
@@ -326,7 +260,7 @@ namespace util
             }
         }
 
-        void RtmpClient::handle_async_connect(
+        void MmspClient::handle_async_connect(
             error_code const & ec)
         {
             LOG_SECTION();
@@ -342,8 +276,8 @@ namespace util
             switch (status_) {
                 case closed:
                     status_ = connectting;
-                    RtmpSocket::async_connect(addr_, 
-                        boost::bind(&RtmpClient::handle_async_connect, this, _1));
+                    MmspSocket::async_connect(addr_, 
+                        boost::bind(&MmspClient::handle_async_connect, this, _1));
                     break;
                 case connectting:
                     status_ = net_connectting;
@@ -360,7 +294,7 @@ namespace util
             }
         }
 
-        void RtmpClient::handle_async_reqeust(
+        void MmspClient::handle_async_reqeust(
             error_code ec)
         {
             LOG_SECTION();
@@ -389,18 +323,18 @@ namespace util
                 case send_pending:
                     request_status_ = sending_req;
                     async_write_msg(requests_.front(), 
-                        boost::bind(&RtmpClient::handle_async_reqeust, this, _1));
+                        boost::bind(&MmspClient::handle_async_reqeust, this, _1));
                     break;
                 case sending_req:
                     request_status_ = recving_resp;
                     async_read_msg(response_, 
-                        boost::bind(&RtmpClient::handle_async_reqeust, this, _1));
+                        boost::bind(&MmspClient::handle_async_reqeust, this, _1));
                     break;
                 case recving_resp:
                     if (process_protocol_message(response_, proto_responses_)) {
                         request_status_ = sending_req;
-                        async_write_msgs(proto_responses_, 
-                            boost::bind(&RtmpClient::handle_async_reqeust, this, _1));
+                        async_write_msg(proto_responses_, 
+                            boost::bind(&MmspClient::handle_async_reqeust, this, _1));
                         break;
                     }
                     if (!post_response(ec)) {
@@ -423,47 +357,58 @@ namespace util
             }
         }
 
-        bool RtmpClient::post_response(
+        bool MmspClient::post_response(
             boost::system::error_code & ec)
         {
-            if (response_.type == RCMT_CommandMessage0 || 
-                response_.type == RCMT_CommandMessage3) {
-                RtmpCommandMessage const & cmd(
-                    response_.type == RCMT_CommandMessage0 
-                    ? (RtmpCommandMessage const &)response_.as<RtmpCommandMessage0>() 
-                    : (RtmpCommandMessage const &)response_.as<RtmpCommandMessage3>());
-                std::string const & cmd_name = cmd.CommandName.as<RtmpAmfString>().StringData;
-                if (cmd_name == "_result") {
-                    return true;
-                } else if (cmd_name == "_error") {
-                    ec = rtmp_error::format_error;
-                    return true;
-                } else {
-                    RtmpMessage const & req_msg = requests_[0];
-                    RtmpCommandMessage0 const & req_cmd = req_msg.as<RtmpCommandMessage0>();
-                    std::string const & req_cmd_name = req_cmd.CommandName.as<RtmpAmfString>().StringData;
-                    if (req_cmd_name == "play") {
-                        if (cmd_name == "onStatus") {
-                            RtmpAmfObject const & arg = cmd.OptionalArguments.front().as<RtmpAmfObject>();
-                            if (arg["code"] == "NetStream.Play.Start") {
-                                return true;
-                            }
+            boost::uint32_t req_id = requests_.front().id();
+            switch (req_id) {
+                case MmspViewerToMacMessage::CONNECT:
+                    {
+                        MmspDataReportConnectedEx const & resp(response_.as<MmspDataReportConnectedEx>());
+                        if (resp.hr) {
+                            ec = mmsp_error::format_error;
                         }
                     }
-                    if (req_cmd_name == "publish") {
-                        if (cmd_name == "onStatus") {
-                            RtmpAmfObject const & arg = cmd.OptionalArguments.front().as<RtmpAmfObject>();
-                            if (arg["code"] == "NetStream.Publish.Start") {
-                                return true;
-                            }
+                    break;
+                case MmspViewerToMacMessage::CONNECT_FUNNEL:
+                    {
+                        MmspDataReportConnectedFunnel const & resp(response_.as<MmspDataReportConnectedFunnel>());
+                        if (resp.hr) {
+                            ec = mmsp_error::format_error;
                         }
                     }
-                }
+                    break;
+                case MmspViewerToMacMessage::OPEN_FILE:
+                    {
+                        MmspDataReportOpenFile const & resp(response_.as<MmspDataReportOpenFile>());
+                        if (resp.hr) {
+                            ec = mmsp_error::format_error;
+                        }
+                    }
+                    break;
+                case MmspViewerToMacMessage::READ_BLOCK:
+                    {
+                        MmspDataReportReadBlock const & resp(response_.as<MmspDataReportReadBlock>());
+                        if (resp.hr) {
+                            ec = mmsp_error::format_error;
+                        }
+                    }
+                    break;
+                case MmspViewerToMacMessage::START_PLAYING:
+                    if (response_.is<MmspDataReportStartPlaying>()) {
+                        MmspDataReportStartPlaying const & resp(response_.as<MmspDataReportStartPlaying>());
+                        if (resp.hr) {
+                            ec = mmsp_error::format_error;
+                        }
+                    } else {
+                        return false;
+                    }
+                    break;
             }
-            return false;
+            return !ec;
         }
 
-        void RtmpClient::response(
+        void MmspClient::response(
             boost::system::error_code const & ec)
         {
             response_type tmp;
@@ -471,7 +416,7 @@ namespace util
             tmp(ec);
         }
 
-        void RtmpClient::tick(
+        void MmspClient::tick(
             boost::system::error_code & ec)
         {
             if (request_status_ != finished) {
@@ -480,19 +425,19 @@ namespace util
                     return;
             }
             if (proto_responses_.empty()) {
-                RtmpSocket::tick(proto_responses_);
+                //MmspSocket::tick(proto_responses_);
                 if (read_msg(response_, ec)) {
                     process_protocol_message(response_, proto_responses_);
                     response_.reset();
                 }
             }
-            if (!proto_responses_.empty() && write_msgs(proto_responses_, ec) == 0) {
+            if (!proto_responses_.empty() && write_msg(proto_responses_, ec) == 0) {
                 return;
             }
-            proto_responses_.clear();
+            proto_responses_.reset();
         }
 
-       void RtmpClient::dump(
+       void MmspClient::dump(
             char const * function, 
             boost::system::error_code const & ec)
         {
@@ -500,24 +445,18 @@ namespace util
                 % function % id_ % con_status_str[status_] % ec.message());
         }
 
-       static std::string const & command_name(
-           RtmpMessage const & msg)
-       {
-           return msg.as<RtmpCommandMessage0>().CommandName.as<RtmpAmfString>().StringData;
-       }
-
-        void RtmpClient::dump_request(
+        void MmspClient::dump_request(
             char const * function, 
             boost::system::error_code const & ec)
         {
-            LOG_TRACE("[%s] (id = %u, req_name = %s, req_status = %s, ec = %s)" 
-                % function % id_ % command_name(requests_.front()) % req_status_str[request_status_] % ec.message());
+            LOG_TRACE("[%s] (id = %u, req_id = %s, req_status = %s, ec = %s)" 
+                % function % id_ % requests_.front().id() % req_status_str[request_status_] % ec.message());
         }
 
-        void RtmpClient::close_socket(
+        void MmspClient::close_socket(
             error_code & ec)
         {
-            RtmpSocket::close(ec);
+            MmspSocket::close(ec);
         }
 
     } // namespace protocol

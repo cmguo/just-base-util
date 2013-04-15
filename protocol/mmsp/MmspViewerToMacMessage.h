@@ -79,8 +79,8 @@ namespace util
 
             MmspDataConnect()
                 : playIncarnation(0)
-                , MacToViewerProtocolRevision(0)
-                , ViewerToMacProtocolRevision(0)
+                , MacToViewerProtocolRevision(0x0004000B)
+                , ViewerToMacProtocolRevision(0x0003001C)
             {
             }
 
