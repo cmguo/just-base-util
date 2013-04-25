@@ -63,6 +63,7 @@ namespace util
                     } else {
                         result = (int)pos1.dereference_byte();
                     }
+                    result += 256;
                 }
                 return result;
             }
