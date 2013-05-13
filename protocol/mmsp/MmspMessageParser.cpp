@@ -22,6 +22,7 @@ namespace util
                 boost::asio::buffer_cast<boost::uint8_t const *>(buf);
             boost::uint8_t const * e = 
                 b + boost::asio::buffer_size(buf);
+            (void)e;
             switch (step_) {
                 case 0:
                     size_ = 8;

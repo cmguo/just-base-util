@@ -78,7 +78,10 @@ namespace util
             }
             calc_timestamp = r.calc_timestamp;
             if (extended_timestamp & 0xff000000) {
-                timestamp = 0x00ffffff;
+                //timestamp = 0x00ffffff;
+                fmt = 0;
+                timestamp = calc_timestamp;
+                extended_timestamp = calc_timestamp;
             } else {
                 timestamp = extended_timestamp;
             }
