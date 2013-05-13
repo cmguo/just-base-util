@@ -101,6 +101,8 @@ namespace util
 
         void RtmpClient::close()
         {
+            LOG_DEBUG("[close] (id = %u)" % id_);
+
             error_code ec;
             RtmpSocket::close();
             status_ = closed;
@@ -110,6 +112,8 @@ namespace util
         error_code RtmpClient::close(
             error_code & ec)
         {
+            LOG_DEBUG("[close] (id = %u)" % id_);
+
             RtmpSocket::close(ec);
             status_ = closed;
             dump("close", ec);
@@ -119,7 +123,7 @@ namespace util
         boost::system::error_code RtmpClient::play(
             boost::system::error_code & ec)
         {
-            LOG_DEBUG("[play] (id = %u, url = %s)" % id_);
+            LOG_DEBUG("[play] (id = %u)" % id_);
 
             if (requests_.empty()) {
                 make_play_requests(content_);
@@ -132,7 +136,7 @@ namespace util
         void RtmpClient::async_play(
             response_type const & resp)
         {
-            LOG_DEBUG("[async_play] (id = %u, url = %s)" % id_);
+            LOG_DEBUG("[async_play] (id = %u)" % id_);
 
             resp_ = resp;
             make_play_requests(content_);
@@ -142,7 +146,7 @@ namespace util
         boost::system::error_code RtmpClient::publish(
             boost::system::error_code & ec)
         {
-            LOG_DEBUG("[publish] (id = %u, url = %s)" % id_);
+            LOG_DEBUG("[publish] (id = %u)" % id_);
 
             if (requests_.empty()) {
                 make_publish_requests(content_);
@@ -155,7 +159,7 @@ namespace util
         void RtmpClient::async_publish(
             response_type const & resp)
         {
-            LOG_DEBUG("[async_publish] (id = %u, url = %s)" % id_);
+            LOG_DEBUG("[async_publish] (id = %u)" % id_);
 
             resp_ = resp;
             make_publish_requests(content_);
