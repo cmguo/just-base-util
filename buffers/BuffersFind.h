@@ -66,9 +66,9 @@ namespace util
                 BufferIterator const & beg, 
                 BufferIterator const & end, 
                 int chr)
-                : chr_(chr)
-                , beg_(beg, end)
+                : beg_(beg, end)
                 , end_(end)
+                , chr_(chr)
                 , reset_postion_(false)
             {
                 detail::buffers_char(beg_, end_, chr_);

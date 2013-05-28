@@ -544,6 +544,8 @@ namespace util
                 check();
                 assert(rpos == in_position());
                 assert(wpos + size == out_position());
+                (void)rpos;
+                (void)wpos;
             }
 
             void consume(
@@ -555,6 +557,8 @@ namespace util
                 check();
                 assert(rpos + size == in_position());
                 assert(wpos == out_position());
+                (void)rpos;
+                (void)wpos;
             }
 
             void reset()
