@@ -142,8 +142,12 @@ namespace util
                 Value & vp = value_stack_.back();
                 Value v;
                 v.type = Value::t_set2;
-                v.attr = vp.elem->Value(); // used attr as xml tag name
-                vp.elem = NULL;
+                if (vp.elem) {
+                    v.attr = vp.elem->Value(); // used attr as xml tag name
+                    vp.elem = NULL;
+                } else {
+                    v.attr = NULL; // no such item, so the collection is empty
+                }
                 value_stack_.push_back(v);
             }
 
@@ -211,9 +215,11 @@ namespace util
                     if (name == "count") {
                         v.type = Value::t_count;
                         v.count = 0;
-                        for (TiXmlNode * node = vppp.elem->FirstChild(vp.attr); 
-                            node; 
-                            node = node->NextSibling(vp.attr), ++v.count);
+                        if (vp.attr) { // the collection maybe empty (vp.attr == NULL)
+                            for (TiXmlNode * node = vppp.elem->FirstChild(vp.attr); 
+                                node; 
+                                node = node->NextSibling(vp.attr), ++v.count);
+                        }
                     } else {
                         assert(name == "item");
                         vpp.item = vppp.elem->IterateChildren(vp.attr, vpp.item);
