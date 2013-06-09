@@ -346,6 +346,12 @@ namespace util
             }
 
             BuffersFindIterator2(
+                super const & r)
+                : super(r)
+            {
+            }
+
+            BuffersFindIterator2(
                 ConstBufferSequence1 const & buffers, 
                 ConstBufferSequence2 const & find)
                 : super(buffers.begin(), buffers.end(), find)
