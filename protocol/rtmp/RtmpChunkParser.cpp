@@ -5,10 +5,15 @@
 #include "util/protocol/rtmp/RtmpMessageContext.h"
 #include "util/protocol/rtmp/RtmpMessage.h"
 
+#include <framework/logger/Logger.h>
+#include <framework/logger/FormatRecord.h>
+
 namespace util
 {
     namespace protocol
     {
+
+        FRAMEWORK_LOGGER_DECLARE_MODULE("util.protocol.RtmpChunkParser");
 
         RtmpChunkParser::RtmpChunkParser(
             RtmpMessageContext * ctx)
@@ -64,6 +69,9 @@ namespace util
                         ok_ = true;
                         size_ = e - b;
                         msg_def_ = RtmpMessage::find_msg(t);
+                        if (msg_def_ == NULL) {
+                            LOG_WARN("[parse] unknown msg type: %u" % (boost::uint32_t)t);
+                        }
                         assert(msg_def_);
                         step_ = 3;
                         break;

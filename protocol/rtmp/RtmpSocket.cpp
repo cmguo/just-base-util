@@ -18,6 +18,13 @@ namespace util
             , status_(closed)
             , read_parser_(&context_)
         {
+            RtmpMessage msg;
+            msg.reset(RtmpMessageDataSetChunkSize());
+            msg.reset(RtmpMessageDataAbortMessage());
+            msg.reset(RtmpMessageDataAcknowledgement());
+            msg.reset(RtmpMessageDataWindowAcknowledgementSize());
+            msg.reset(RtmpMessageDataSetPeerBandwidth());
+            msg.reset(RtmpMessageUserControl());
         }
 
         RtmpSocket::~RtmpSocket()

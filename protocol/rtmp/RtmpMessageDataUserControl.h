@@ -201,7 +201,9 @@ namespace util
             };
 
             RtmpMessageUserControl()
+                : event_type(0)
             {
+                _u64 = 0;
             }
 
             template <typename Archive>
