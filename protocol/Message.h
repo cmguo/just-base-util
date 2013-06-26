@@ -27,6 +27,10 @@ namespace util
             Message(
                 Message const & r);
 
+            template <typename T>
+            Message(
+                T const & t);
+
         public:
             template <typename T>
             T & get();

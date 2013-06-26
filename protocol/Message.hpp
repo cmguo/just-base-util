@@ -36,6 +36,14 @@ namespace util
 
         template <typename MsgT>
         template <typename T>
+        Message<MsgT>::Message(
+            T const & t)
+        {
+            reset(t);
+        }
+
+        template <typename MsgT>
+        template <typename T>
         T & Message<MsgT>::get()
         {
             if (!is<T>()) {

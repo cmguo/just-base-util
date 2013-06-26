@@ -401,6 +401,7 @@ namespace util
                         boost::bind(&RtmpClient::handle_async_reqeust, this, _1));
                     break;
                 case recving_resp:
+                    proto_responses_.clear();
                     if (process_protocol_message(response_, proto_responses_)) {
                         request_status_ = sending_req;
                         async_write_msgs(proto_responses_, 

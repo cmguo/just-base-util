@@ -103,10 +103,11 @@ namespace util
                     context_.read.user_control(msg.as<RtmpMessageUserControl>());
                     break;
                 case RCMT_WindowAcknowledgementSize:
-                    //context_.read.acknowledgement(msg.as<RtmpMessageDataWindowAcknowledgementSize>().acknowledgement_window_size);
+                    msg.as<RtmpMessageDataWindowAcknowledgementSize>();
                     break;
                 case RCMT_SetPeerBandwidth:
-                    //context_.read.acknowledgement(msg.as<RtmpProtocolControlMessageSetPeerBandwidth>().sequence_number);
+                    msg.as<RtmpMessageDataSetPeerBandwidth>();
+                    resp.push_back(RtmpMessageDataWindowAcknowledgementSize(250000));
                     break;
                 default:
                     return false;

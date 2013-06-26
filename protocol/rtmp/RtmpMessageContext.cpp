@@ -16,6 +16,8 @@ namespace util
             , ack_(0)
         {
             streams_.resize(1);
+            streams_[0].status = RtmpStream::started;
+
         }
 
         void RtmpMessageOneContext::chunk_size(
