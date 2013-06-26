@@ -12,6 +12,7 @@ namespace util
 
         RtmpMessageOneContext::RtmpMessageOneContext()
             : chunk_size_(128)
+            , win_(250000)
             , seq_(0)
             , ack_(0)
         {
@@ -30,6 +31,12 @@ namespace util
             boost::uint32_t n)
         {
             ack_ = n;
+        }
+
+        void RtmpMessageOneContext::window_size(
+            boost::uint32_t n)
+        {
+            win_ = n;
         }
 
         void RtmpMessageOneContext::user_control(

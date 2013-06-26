@@ -43,10 +43,10 @@ namespace util
         };
 
         std::string const RtmpClient::req_status_str[] = {
+            "finished", 
             "send_pending", 
             "sending_req", 
             "recving_resp", 
-            "finished", 
         };
 
         RtmpClient::RtmpClient(
@@ -431,36 +431,38 @@ namespace util
         bool RtmpClient::post_response(
             boost::system::error_code & ec)
         {
-            if (response_.type == RCMT_CommandMessage0 || 
-                response_.type == RCMT_CommandMessage3) {
-                RtmpCommandMessage const & cmd(
-                    response_.type == RCMT_CommandMessage0 
-                    ? (RtmpCommandMessage const &)response_.as<RtmpCommandMessage0>() 
-                    : (RtmpCommandMessage const &)response_.as<RtmpCommandMessage3>());
-                std::string const & cmd_name = cmd.CommandName.as<RtmpAmfString>().StringData;
-                if (cmd_name == "_result") {
-                    return true;
-                } else if (cmd_name == "_error") {
-                    ec = rtmp_error::format_error;
-                    return true;
-                } else {
-                    RtmpMessage const & req_msg = requests_[0];
-                    RtmpCommandMessage0 const & req_cmd = req_msg.as<RtmpCommandMessage0>();
-                    std::string const & req_cmd_name = req_cmd.CommandName.as<RtmpAmfString>().StringData;
-                    if (req_cmd_name == "play") {
-                        if (cmd_name == "onStatus") {
-                            RtmpAmfObject const & arg = cmd.OptionalArguments.front().as<RtmpAmfObject>();
-                            if (arg["code"] == "NetStream.Play.Start") {
-                                return true;
-                            }
+            if (response_.type != RCMT_CommandMessage0 
+                && response_.type == RCMT_CommandMessage3) {
+                    return false;
+            }
+            RtmpCommandMessage const & cmd(
+                response_.type == RCMT_CommandMessage0 
+                ? (RtmpCommandMessage const &)response_.as<RtmpCommandMessage0>() 
+                : (RtmpCommandMessage const &)response_.as<RtmpCommandMessage3>());
+            std::string const & cmd_name = cmd.CommandName.as<RtmpAmfString>().StringData;
+            LOG_TRACE("[post_response] (id = %u, type = command, cmd = %s)" % id_ % cmd_name);
+            if (cmd_name == "_result") {
+                return true;
+            } else if (cmd_name == "_error") {
+                ec = rtmp_error::format_error;
+                return true;
+            } else {
+                RtmpMessage const & req_msg = requests_[0];
+                RtmpCommandMessage0 const & req_cmd = req_msg.as<RtmpCommandMessage0>();
+                std::string const & req_cmd_name = req_cmd.CommandName.as<RtmpAmfString>().StringData;
+                if (req_cmd_name == "play") {
+                    if (cmd_name == "onStatus") {
+                        RtmpAmfObject const & arg = cmd.OptionalArguments.front().as<RtmpAmfObject>();
+                        if (arg["code"] == "NetStream.Play.Start") {
+                            return true;
                         }
                     }
-                    if (req_cmd_name == "publish") {
-                        if (cmd_name == "onStatus") {
-                            RtmpAmfObject const & arg = cmd.OptionalArguments.front().as<RtmpAmfObject>();
-                            if (arg["code"] == "NetStream.Publish.Start") {
-                                return true;
-                            }
+                }
+                if (req_cmd_name == "publish") {
+                    if (cmd_name == "onStatus") {
+                        RtmpAmfObject const & arg = cmd.OptionalArguments.front().as<RtmpAmfObject>();
+                        if (arg["code"] == "NetStream.Publish.Start") {
+                            return true;
                         }
                     }
                 }
@@ -471,6 +473,8 @@ namespace util
         void RtmpClient::response(
             boost::system::error_code const & ec)
         {
+            LOG_DEBUG("[response] (id = %u, req_status = %s, ec = %s)" 
+                % id_ % req_status_str[request_status_] % ec.message());
             response_type tmp;
             tmp.swap(resp_);
             tmp(ec);

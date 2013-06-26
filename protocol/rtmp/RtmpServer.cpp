@@ -68,9 +68,9 @@ namespace util
             // pre process
             if (!window_send_) {
                 RtmpMessage msg;
-                msg.reset(RtmpMessageDataWindowAcknowledgementSize(250000));
+                msg.reset(RtmpMessageDataWindowAcknowledgementSize(context().write.window_size()));
                 response_.push_back(msg);
-                msg.reset(RtmpMessageDataSetPeerBandwidth(250000, 2)); //Dynamic
+                msg.reset(RtmpMessageDataSetPeerBandwidth(context().read.window_size(), 2)); //Dynamic
                 response_.push_back(msg);
                 window_send_ = true;
             }

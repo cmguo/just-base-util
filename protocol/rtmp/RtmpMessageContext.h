@@ -62,6 +62,14 @@ namespace util
                 return ack_;
             }
 
+            void window_size(
+                boost::uint32_t n);
+
+            boost::uint32_t window_size() const
+            {
+                return win_;
+            }
+
             void user_control(
                 RtmpMessageUserControl const & msg);
 
@@ -92,6 +100,7 @@ namespace util
 
         protected:
             boost::uint32_t chunk_size_;
+            boost::uint32_t win_;
             boost::uint32_t seq_;
             boost::uint32_t ack_;
             std::vector<RtmpChunkMessage> chunks_;
