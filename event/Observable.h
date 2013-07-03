@@ -3,49 +3,26 @@
 #ifndef _UTIL_EVENT_OBSERVABLE_H_
 #define _UTIL_EVENT_OBSERVABLE_H_
 
-#include <boost/function.hpp>
-
 namespace util
 {
     namespace event
     {
 
-        struct EventId;
         class Event;
-
-        typedef boost::function<void (Event const &)> Listener;
 
         class Observable
         {
         public:
-            void on(
-                EventId const & e, 
-                Listener const & l);
-
-            template <typename E>
-            void on(
-                Listener const & l)
+            friend bool operator==(
+                Observable const & l, 
+                Observable const & r)
             {
-                on(E::id, l);
-            }
-
-            void un(
-                EventId const & e, 
-                Listener const & l);
-
-            template <typename E>
-            void un(
-                Listener const & l)
-            {
-                un(E::id, l);
+                return &l == &r;
             }
 
         protected:
             void raise(
-                Event const & e);
-
-        private:
-            std::map<EventId const *, std::list<Listener> > listeners_;
+                Event const & e) const;
         };
 
     } // namespace event

@@ -3,16 +3,20 @@
 #ifndef _UTIL_EVENT_EVENT_H_
 #define _UTIL_EVENT_EVENT_H_
 
+#include <boost/function.hpp>
+
 namespace util
 {
     namespace event
     {
 
-        struct EventId
-        {
-        };
-
         class Observable;
+        class Event;
+
+        typedef boost::function<void (
+            Observable const & sender, 
+            Event const &)
+        > Listener;
 
         class Event
         {
@@ -20,53 +24,42 @@ namespace util
             virtual ~Event() {}
 
         public:
-            template <typename E>
-            E * as()
-            {
-                return (&E::id == id_) ? (E *)(this) : NULL;
-            }
+            void on(
+                Listener const & l);
 
-            template <typename E>
-            E const * as() const
-            {
-                return (&E::id == id_) ? (E const *)(this) : NULL;
-            }
+            void un(
+                Listener const & l);
 
-            template <typename E>
-            bool is() const
+        public:
+            friend bool operator==(
+                Event const & l, 
+                Event const & r)
             {
-                return (&E::id == id_);
+                return &l == &r;
             }
 
         protected:
-            Event(
-                EventId const & id)
-                : id_(&id)
+            Event()
             {
             }
 
         private:
+            // noncopyable
+            Event(
+                Event const &);
+
+            Event & operator=(
+                Event const &);
+
+        private:
             friend class Observable;
 
-            EventId const * id_;
+            void raise(
+                Observable const & sender) const;
+
+        private:
+            std::list<Listener> listeners_;
         };
-
-        template <typename E>
-        class EventBase
-            : public Event
-        {
-        public:
-            static EventId id;
-
-        public:
-            EventBase()
-                : Event(id)
-            {
-            }
-        };
-
-        template <typename E>
-        EventId EventBase<E>::id;
 
     } // namespace event
 } // namespace util
