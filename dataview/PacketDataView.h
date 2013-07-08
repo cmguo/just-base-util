@@ -17,7 +17,8 @@ namespace util
 
     namespace dataview
     {
-        typedef util::archive::JsonOArchive oarchive;
+
+        typedef util::archive::JsonOArchive<> oarchive;
 
         struct packet_login
         {

@@ -24,9 +24,9 @@ namespace util
             TextOArchive(
                 std::basic_ostream<_Elem, _Traits> & os)
                 : StreamOArchive<TextOArchive<_Elem, _Traits>, _Elem, _Traits>(*os.rdbuf())
-                , delimiter_(none)
                 , os_(os)
                 , local_os_(false)
+                , delimiter_(none)
                 , space_(" ")
                 , newline_("\n")
             {
@@ -35,9 +35,9 @@ namespace util
             TextOArchive(
                 std::basic_streambuf<_Elem, _Traits> & buf)
                 : StreamOArchive<TextOArchive<_Elem, _Traits>, _Elem, _Traits>(buf)
-                , delimiter_(none)
                 , os_(*new std::basic_ostream<_Elem, _Traits>(&buf))
                 , local_os_(true)
+                , delimiter_(none)
                 , space_(" ")
                 , newline_("\n")
             {
@@ -110,12 +110,13 @@ namespace util
             }
 
         private:
-            enum {
+            enum  DelimiterType {
                 none,
                 eol,
                 space
-            } delimiter_;
+            };
 
+        private:
             /// 分隔符一开始是空的（none），写入第一个变量以后变为空格（space）
             void newtoken()
             {
@@ -145,6 +146,7 @@ namespace util
         private:
             std::basic_ostream<_Elem, _Traits> & os_;
             bool local_os_;
+            DelimiterType delimiter_;
             std::string delim_;
             std::string space_;
             std::string newline_;

@@ -16,27 +16,48 @@ namespace util
     namespace archive
     {
 
+        template <
+            typename _Elem = char, 
+            typename _Traits = std::char_traits<_Elem>
+        >
         class JsonOArchive
-            : public StreamOArchive<JsonOArchive>
+            : public StreamOArchive<JsonOArchive<_Elem, _Traits>, _Elem, _Traits>
         {
-            friend class StreamOArchive<JsonOArchive>;
+            friend class StreamOArchive<JsonOArchive<_Elem, _Traits>, _Elem, _Traits>;
 
         public:
             JsonOArchive(
-                std::ostream & os)
-                : StreamOArchive<JsonOArchive>(*os.rdbuf())
-                , is_save_(true)
-                , sub_just_end_(true)
+                std::basic_ostream<_Elem, _Traits> & os)
+                : StreamOArchive<JsonOArchive<_Elem, _Traits>, _Elem, _Traits>(*os.rdbuf())
+                , local_os_(false)
                 , os_(os)
             {
-                splits.push_back(0);
             }
 
+            JsonOArchive(
+                std::basic_streambuf<_Elem, _Traits> & buf)
+                : StreamOArchive<JsonOArchive<_Elem, _Traits>, _Elem, _Traits>(buf)
+                , os_(*new std::basic_ostream<_Elem, _Traits>(&buf))
+                , local_os_(true)
+                , sub_just_end_(true)
+            {
+            }
+
+            ~JsonOArchive()
+            {
+                if (local_os_)
+                    delete &os_;
+            }
+
+        public:
             /// 向流中写入参数化类型变量
             template <typename T>
             void save(
                 T const & t)
             {
+                if (splits.back() == 'c') {
+                    return;
+                }
                 os_ << t;
             }
 
@@ -54,74 +75,62 @@ namespace util
                 os_ << "'" << t << "'";
             }
 
-            using StreamOArchive<JsonOArchive>::save;
-
-            /// 向流中写入数组（优化）
-            void save_array(
-                framework::container::Array<char> const & a)
-            {
-                save_binary((char const *)a.address(), sizeof(char) * a.count());
-            }
-
-            /// 判断某个类型是否可以优化数组的序列化
-            /// 只有基本类型能够直接序列化数组
-            template<class T>
-            struct use_array_optimization
-                : boost::is_same<T, char>
-            {
-            };
+            using StreamOArchive<JsonOArchive<_Elem, _Traits>, _Elem, _Traits>::save;
 
             void save_start(
                 std::string const & name)
             {
-                os_ << ident_;
-                if (splits.back()) {
-                    os_ << splits.back();
+                assert(splits.size() >= 2); // named object can only occur in object or array (count, item)
+                if (name == "count" && splits.back() == '{') {
+                    splits.pop_back();
+                    splits.back() = ']';
+                    splits.push_back('c');
                 } else {
-                    splits.back() = ',';
+                    os_ << splits.back() << std::endl;
+                    os_ << ident_;
+                    if (name != "item" || splits[splits.size() - 2] != ']') {
+                        os_ << "\"" << name << "\":";
+                    }
                 }
-                os_ << name << ":";
-                sub_just_end_ = false;
             }
 
             void save_end(
                 std::string const & name)
             {
-                if (!sub_just_end_)
-                    os_ << std::endl;
-                sub_just_end_ = true;
+                if (splits.back() == 'c') {
+                    splits.back() = '[';
+                } else {
+                    splits.back() = ',';
+                }
             }
 
             void sub_start()
             {
-                os_ << std::endl;
-                splits.push_back(0);
-                os_ << ident_ << "{" << std::endl;
-                sub_just_end_ = false;
+                splits.push_back('}');
+                splits.push_back('{');
                 ident_ += "  ";
+                sub_just_end_ = true;
             }
 
             void sub_end()
             {
-                os_ << ident_ << "}" << std::endl;
-                if (!sub_just_end_)
-                    os_ << std::endl;
+                os_ << std::endl;
                 splits.pop_back();
-                sub_just_end_ = true;
                 ident_.erase(ident_.size() - 2);
+                os_ << ident_ << splits.back();
+                splits.pop_back();
+                sub_just_end_ = false;
             }
 
         private:
+            std::basic_ostream<_Elem, _Traits> & os_;
+            bool local_os_;
             std::vector<char> splits;
-            bool is_save_;
             std::string ident_;
             bool sub_just_end_;
-            std::ostream & os_;
         };
 
     } // namespace archive
 } // namespace util
-
-SERIALIZATION_USE_ARRAY_OPTIMIZATION(util::archive::JsonOArchive);
 
 #endif // _UTIL_ARCHIVE_JSON_O_ARCHIVE_H_
