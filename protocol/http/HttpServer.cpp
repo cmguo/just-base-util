@@ -248,13 +248,25 @@ namespace util
                 // restart
                 watch_state_ = watch_stopped;
                 start();
-            } else if (ec 
-                && ec != boost::asio::error::eof
-                && ec != boost::asio::error::operation_aborted) {
+            } else {
+                boost::system::error_code ec1 = ec;
+                if (!ec) {
+                    char c[1];
+                    boost::asio::ip::tcp::socket::receive(
+                        boost::asio::buffer(c),  
+                        boost::asio::socket_base::message_peek, ec1);
+                }
+                if (!ec1) { // new request
+                    watch_state_ = watch_stopped;
+                } else if (ec1 == boost::asio::error::operation_aborted) { // canceled
+                    watch_state_ = watch_stopped;
+                } else if (ec1 == boost::asio::error::eof) { // read shutdown
                     watch_state_ = broken;
                     on_broken_pipe();
-            } else {
-                watch_state_ = watch_stopped;
+                } else { // connection error
+                    watch_state_ = broken;
+                    on_broken_pipe();
+                }
             }
         }
 

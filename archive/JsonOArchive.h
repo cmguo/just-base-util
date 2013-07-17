@@ -29,8 +29,8 @@ namespace util
             JsonOArchive(
                 std::basic_ostream<_Elem, _Traits> & os)
                 : StreamOArchive<JsonOArchive<_Elem, _Traits>, _Elem, _Traits>(*os.rdbuf())
-                , local_os_(false)
                 , os_(os)
+                , local_os_(false)
             {
             }
 
