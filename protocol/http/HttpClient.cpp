@@ -864,6 +864,7 @@ namespace util
             if (requests_[0].status == opened) {
                 requests_[0].stat.response_data_time = requests_[0].stat.elapse();
                 requests_[0].status = finished;
+                reset_source(response_.head());
                 // close_socket if not keep_alive
                 error_code ec1;
                 post_handle_request(requests_[0], ec1);
