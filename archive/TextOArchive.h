@@ -29,6 +29,7 @@ namespace util
                 , delimiter_(none)
                 , space_(" ")
                 , newline_("\n")
+                , no_string_size_(false)
             {
             }
 
@@ -40,6 +41,7 @@ namespace util
                 , delimiter_(none)
                 , space_(" ")
                 , newline_("\n")
+                , no_string_size_(false)
             {
             }
 
@@ -67,7 +69,8 @@ namespace util
             void save(
                 std::string const & t)
             {
-                save((std::size_t)t.size());
+                if (!no_string_size_)
+                    save((std::size_t)t.size());
                 newtoken(); // 加上一个空格
                 this->save_binary((_Elem const *)&t[0], t.size());
             }
@@ -107,6 +110,12 @@ namespace util
                 std::string const & s)
             {
                 newline_ = s;
+            }
+
+            void set_no_string_size(
+                bool b)
+            {
+                no_string_size_ = b;
             }
 
         private:
@@ -150,6 +159,7 @@ namespace util
             std::string delim_;
             std::string space_;
             std::string newline_;
+            bool no_string_size_;
         };
 
     }  // namespace archive
