@@ -17,7 +17,8 @@ namespace util
                 no_more_place,
                 chain_is_not_complete,
                 filter_sink_error,
-                filter_source_error,
+                filter_source_error, 
+                unknown_url_proto, 
             };
 
             namespace detail {
@@ -34,18 +35,20 @@ namespace util
                     std::string message(int value) const
                     {
                         switch (value) {
-                case success:
-                    return "success";
-                case alread_stopped:
-                    return "alread stopped";
-                case no_more_place:
-                    return "no more place";
-                case chain_is_not_complete:
-                    return "chain is not complete";
-                case filter_sink_error:
-                    return "filter sink error";
-                case filter_source_error:
-                    return "filter source error";
+                            case success:
+                                return "success";
+                            case alread_stopped:
+                                return "alread stopped";
+                            case no_more_place:
+                                return "no more place";
+                            case chain_is_not_complete:
+                                return "chain is not complete";
+                            case filter_sink_error:
+                                return "filter sink error";
+                            case filter_source_error:
+                                return "filter source error";
+                            case unknown_url_proto:
+                                return "unknown url proto";
                         }
                         return "unknown";
                     }

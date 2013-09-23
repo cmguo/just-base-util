@@ -11,15 +11,28 @@ namespace util
         class Base
         {
         public:
-            Base()
-                : io_svc_(NULL)
-            {
-            }
+            Base();
 
+            virtual ~Base();
+
+        public:
             boost::asio::io_service & get_io_service()
             {
                 return *io_svc_;
             }
+
+        public:
+            virtual bool cancel(
+                boost::system::error_code & ec);
+
+        public:
+            virtual bool set_non_block(
+                bool non_block, 
+                boost::system::error_code & ec);
+
+            virtual bool set_time_out(
+                boost::uint32_t time_out, 
+                boost::system::error_code & ec);
 
         protected:
             void set_io_service(
