@@ -4,35 +4,46 @@
 #define _UTIL_TOOLS_CLASS_FACTORY_H_
 
 #include <boost/function.hpp>
+#include <boost/type_traits/is_same.hpp>
 
 namespace util
 {
     namespace tools
     {
 
-        template <
-            typename ClassType, 
-            typename KeyType, 
-            typename CreateProto, 
-            typename FactoryType = void
-        >
-        class ClassFactory
+        struct ClassFactoryTraits
         {
-        protected:
-            typedef KeyType key_type;
-            typedef ClassType * result_type;
-            typedef boost::function<CreateProto> creator_type;
-            typedef std::map<KeyType, creator_type> creator_map_type;
+            typedef void creator_type;
+            typedef void creator_map_type;
 
-        protected:
-            typedef ClassFactory factory_type;
-
-        public:
             // override by devide classes
             static boost::system::error_code error_not_found()
             {
                 return framework::system::logic_error::item_not_exist;
             }
+        };
+
+        template <
+            typename FactoryTraits
+        >
+        class ClassFactory
+        {
+        protected:
+            typedef ClassFactory factory_type;
+            typedef FactoryTraits factory_traits;
+            typedef typename FactoryTraits::key_type key_type;
+            typedef typename FactoryTraits::create_proto create_proto;
+            typedef typename boost::mpl::if_<
+                boost::is_same<void, typename FactoryTraits::creator_type>, 
+                boost::function<create_proto>, 
+                typename FactoryTraits::creator_type
+            >::type creator_type;
+            typedef typename creator_type::result_type result_type;
+            typedef typename boost::mpl::if_<
+                boost::is_same<void, typename FactoryTraits::creator_map_type>, 
+                std::map<key_type, creator_type>, 
+                typename FactoryTraits::creator_map_type
+            >::type creator_map_type;
 
         public:
             static void register_creator(
@@ -49,7 +60,7 @@ namespace util
                 typename creator_map_type::const_iterator iter = 
                     creator_map().find(key);
                 if (iter == creator_map().end()) {
-                    ec = ClassType::error_not_found();
+                    ec = factory_traits::error_not_found();
                     return result_type();
                 }
                 ec.clear();
@@ -67,7 +78,7 @@ namespace util
                 typename creator_map_type::const_iterator iter = 
                     creator_map().find(key);
                 if (iter == creator_map().end()) {
-                    ec = ClassType::error_not_found();
+                    ec = factory_traits::error_not_found();
                     return result_type();
                 }
                 ec.clear();
@@ -87,7 +98,7 @@ namespace util
                 typename creator_map_type::const_iterator iter = 
                     creator_map().find(key);
                 if (iter == creator_map().end()) {
-                    ec = ClassType::error_not_found();
+                    ec = factory_traits::error_not_found();
                     return result_type();
                 }
                 ec.clear();
@@ -109,7 +120,7 @@ namespace util
                 typename creator_map_type::const_iterator iter = 
                     creator_map().find(key);
                 if (iter == creator_map().end()) {
-                    ec = ClassType::error_not_found();
+                    ec = factory_traits::error_not_found();
                     return result_type();
                 }
                 ec.clear();

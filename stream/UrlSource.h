@@ -15,33 +15,35 @@ namespace util
         class UrlSource
             : public Source
             , public UrlBase
-            , public util::tools::ClassFactory<
-                UrlSource, 
-                std::string, 
-                UrlSource * (boost::asio::io_service &)
-            >
         {
-        public:
-            typedef boost::function<void (
-                boost::system::error_code const &)
-            > response_type;
-
-        public:
-            static boost::system::error_code error_not_found();
-
-            static UrlSource * create(
-                boost::asio::io_service & io_svc,
-                std::string const & proto, 
-                boost::system::error_code & ec);
-
         public:
             UrlSource(
                 boost::asio::io_service & io_svc);
         };
 
+        struct UrlSourceTraits
+            : util::tools::ClassFactoryTraits
+        {
+            typedef std::string key_type;
+            typedef UrlSource * (create_proto)(
+                boost::asio::io_service &);
+
+            static boost::system::error_code error_not_found();
+        };
+
+        class UrlSourceFactory
+            : public util::tools::ClassFactory<UrlSourceTraits>
+        {
+        public:
+            static UrlSource * create(
+                boost::asio::io_service & io_svc,
+                std::string const & proto, 
+                boost::system::error_code & ec);
+        };
+
     } // namespace stream
 } // namespace util
 
-#define UTIL_REGISTER_URL_SOURCE(k, c) UTIL_REGISTER_CLASS(k, c)
+#define UTIL_REGISTER_URL_SOURCE(k, c) UTIL_REGISTER_CLASS(util::stream::UrlSourceFactory, k, c)
 
 #endif // _UTIL_STREAM_URL_SOURCE_H_

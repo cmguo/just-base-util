@@ -1,9 +1,7 @@
-// Create.h
+// Creator.h
 
-#ifndef _UTIL_TOOLS_CREATE_H_
-#define _UTIL_TOOLS_CREATE_H_
-
-#include <boost/function.hpp>
+#ifndef _UTIL_TOOLS_CREATOR_H_
+#define _UTIL_TOOLS_CREATOR_H_
 
 namespace util
 {
@@ -56,4 +54,4 @@ namespace util
     } // namespace tools
 } // namespace util
 
-#endif // _UTIL_TOOLS_CREATE_H_
+#endif // _UTIL_TOOLS_CREATOR_H_

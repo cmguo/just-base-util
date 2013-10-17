@@ -12,24 +12,24 @@ namespace util
     namespace stream
     {
 
-        boost::system::error_code UrlSource::error_not_found()
-        {
-            return error::unknown_url_proto;
-        }
-
-        UrlSource * UrlSource::create(
-            boost::asio::io_service & io_svc,
-            std::string const & proto, 
-            boost::system::error_code & ec)
-        {
-            return factory_type::create(proto, io_svc, ec);
-        }
-
         UrlSource::UrlSource(
             boost::asio::io_service & io_svc)
             : Source(io_svc)
             , UrlBase(io_svc)
         {
+        }
+
+        boost::system::error_code UrlSourceTraits::error_not_found()
+        {
+            return error::unknown_url_proto;
+        }
+
+        UrlSource * UrlSourceFactory::create(
+            boost::asio::io_service & io_svc,
+            std::string const & proto, 
+            boost::system::error_code & ec)
+        {
+            return factory_type::create(proto, io_svc, ec);
         }
 
     } // namespace stream
