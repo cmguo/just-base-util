@@ -201,6 +201,14 @@ namespace util
                 boost::system::error_code ec, 
                 size_t bytes_transferred);
 
+            template <
+                typename Handler
+            >
+            void response(
+                Handler const & handler, 
+                boost::system::error_code ec, 
+                size_t bytes_transferred);
+
         protected:
             bool read_free() const
             {

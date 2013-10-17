@@ -114,6 +114,10 @@ namespace util
                 read_status_.size = parser_.size();
                 read_status_.pos = 0;
                 read_status_.wait = util::buffers::buffers_size(buffers);
+                if (read_status_.size > read_status_.wait) {
+                    ec = boost::asio::error::no_buffer_space;
+                    return 0;
+                }
             }
             while (true) {
                 size_t bytes_read = read_some(
@@ -161,8 +165,7 @@ namespace util
             assert(read_parallel_);
             if (!pend_rcv_sizes_.empty()) {
                 // control messages should be handle before data messages
-                get_io_service().post(
-                    boost::asio::detail::bind_handler(handler, boost::asio::error::would_block, 0));
+                response(handler, boost::asio::error::would_block, 0);
                 return;
             }
             if (pend_data_sizes_.size() > 0) {
@@ -171,8 +174,7 @@ namespace util
                 assert(size <= rcv_data_.size());
                 util::buffers::buffers_copy(buffers, rcv_data_.data(size));
                 rcv_data_.consume(size);
-                get_io_service().post(
-                    boost::asio::detail::bind_handler(handler, boost::system::error_code(), size));
+                response(handler, boost::system::error_code(), size);
                 return;
             }
             assert(read_status_.size == 0);
@@ -180,6 +182,10 @@ namespace util
             read_status_.size = parser_.size();
             read_status_.pos = 0;
             read_status_.wait = util::buffers::buffers_size(buffers);
+            if (read_status_.size > read_status_.wait) {
+                response(handler, boost::asio::error::no_buffer_space, 0);
+                return;
+            }
             async_read_some(
                 util::buffers::sub_buffers(buffers, read_status_.pos, read_status_.left()), 
                 detail::raw_msg_read_handler<MutableBufferSequence, Handler>(*this, buffers, handler));
@@ -488,8 +494,7 @@ namespace util
                     msg.from_data(rcv_buf_, ctx_);
                     rcv_buf_.pubseekoff((std::streamoff)left, std::ios::cur, std::ios::out);
                     assert(left == rcv_buf_.size());
-                    get_io_service().post(
-                        boost::asio::detail::bind_handler(handler, boost::system::error_code(), size));
+                    response(handler, boost::system::error_code(), size);
                 } else {
                     read_status_.resp = detail::msg_read_handler<Message, Handler>(*this, msg, handler);
                 }
@@ -516,14 +521,12 @@ namespace util
         {
             if (read_parallel_) {
                 if (rcv_buf_.size() == 0) {
-                    get_io_service().post(
-                        boost::asio::detail::bind_handler(handler, ec, 0));
+                    response(handler, ec, 0);
                 } else {
                     assert(rcv_buf_.size() == bytes_transferred);
                     msg.from_data(rcv_buf_, ctx_);
                     assert(rcv_buf_.size() == 0);
-                    get_io_service().post(
-                        boost::asio::detail::bind_handler(handler, ec, bytes_transferred));
+                    response(handler, ec, bytes_transferred);
                 }
                 return;
             }
@@ -647,11 +650,9 @@ namespace util
                 if (snd_buf_.size() == 0) {
                     assert(write_status_.wait == bytes_transferred);
                     write_status_.wait = 0;
-                    get_io_service().post(
-                        boost::asio::detail::bind_handler(handler, ec, bytes_transferred));
+                    response(handler, ec, bytes_transferred);
                 } else {
-                    get_io_service().post(
-                        boost::asio::detail::bind_handler(handler, ec, 0));
+                    response(handler, ec, 0);
                 }
                 return;
             }
@@ -669,6 +670,19 @@ namespace util
                 snd_buf_.data(), 
                 detail::msg_write_handler<Message, Handler>(*this, msg, handler));
         }
+
+        template <
+            typename Handler
+        >
+        void MessageSocket::response(
+            Handler const & handler, 
+            boost::system::error_code ec, 
+            size_t bytes_transferred)
+        {
+            get_io_service().post(
+                boost::asio::detail::bind_handler(handler, ec, bytes_transferred));
+        }
+
 
     } // namespace protocol
 } // namespace util
