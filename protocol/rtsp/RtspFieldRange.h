@@ -37,7 +37,7 @@ namespace util
                 void add_range(
                     float b)
                 {
-                    units_.push_back(Unit(b, b - 1.0));
+                    units_.push_back(Unit(b, b - 1.0f));
                 }
 
                 void add_range(
@@ -114,7 +114,7 @@ namespace util
                             ec = parse2(str, b_);
                         } else if (p == str.size() - 1) {
                             ec = parse2(str.substr(0, p), b_);
-                            e_ = b_ - 1.0;
+                            e_ = b_ - 1.0f;
                         } else {
                             ec = parse2(str.substr(0, p), b_);
                             if (!ec)
