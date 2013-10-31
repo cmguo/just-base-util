@@ -59,7 +59,6 @@ namespace util
             {
                 _Size count(0);
                 ar & SERIALIZATION_NVP(count);
-                map_.resize(count);
                 load_collection(ar, map_, count);
             }
 

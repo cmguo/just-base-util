@@ -126,6 +126,11 @@ namespace util
                 return buf_ ? buf_->size() : 0;
             }
 
+            bool empty() const
+            {
+                return (buf_ == NULL) || buf_->empty();
+            }
+
         public:
             void reset()
             {
@@ -181,6 +186,20 @@ namespace util
                     } else {
                         buf_->clear();
                     }
+                }
+            }
+
+        public:
+            void consume(
+                size_t n)
+            {
+                before_modify();
+                while (n >= boost::asio::buffer_size(buf_->front())) {
+                    n -= boost::asio::buffer_size(buf_->front());
+                    buf_->pop_front();
+                }
+                if (n) {
+                    buf_->front() = buf_->front() + n;
                 }
             }
 

@@ -7,6 +7,7 @@
 
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/detail/bind_handler.hpp>
+#include <boost/intrusive_ptr.hpp>
 
 #include <utility>
 
@@ -21,24 +22,22 @@ namespace util
             typedef void result_type;
 
         public:
+            StreamHandler()
+            {
+            }
+
             template <typename Handler>
             StreamHandler(
                 Handler const & handler)
-                : handler_(HandlerT<Handler>::create(handler))
+                : handler_(create(handler))
             {
-                handler_->attach();
             }
 
-            StreamHandler(
-                StreamHandler const & r)
-                : handler_(r.handler_)
+        public:
+            void swap(
+                StreamHandler & r)
             {
-                handler_->attach();
-            }
-
-            ~StreamHandler()
-            {
-                handler_->detach();
+                std::swap(handler_, r.handler_);
             }
 
         public:
@@ -60,15 +59,17 @@ namespace util
                     return invoker_(*this, ec, bytes_transferred);
                 }
 
-                void attach()
+                friend void intrusive_ptr_add_ref(
+                    HandlerBase * p)
                 {
-                    ++nref_;
+                    ++p->nref_;
                 }
 
-                void detach()
+                friend void intrusive_ptr_release(
+                    HandlerBase * p)
                 {
-                    if (--nref_ == 0) {
-                        deleter_(*this);
+                    if (--p->nref_ == 0) {
+                        p->deleter_(*p);
                     }
                 }
 
@@ -101,17 +102,6 @@ namespace util
                 : public HandlerBase
             {
             public:
-                static HandlerT<Handler> * create(
-                    Handler const & handler)
-                {
-                    void * ptr = 
-                        boost::asio::asio_handler_allocate(sizeof(HandlerT<Handler>), &handler);
-                    if (ptr)
-                        new (ptr) HandlerT<Handler>(handler);
-                    return (HandlerT<Handler> *)ptr;
-                }
-
-            private:
                 HandlerT(
                     Handler const & h)
                     : HandlerBase(&HandlerT::invoker, &HandlerT::deleter)
@@ -119,6 +109,7 @@ namespace util
                 {
                 }
 
+            private:
                 static void invoker(
                     HandlerBase & handler, 
                     boost::system::error_code const & ec, 
@@ -141,7 +132,19 @@ namespace util
             };
 
         private:
-            HandlerBase * handler_;
+            template <typename Handler>
+            static HandlerT<Handler> * create(
+                Handler const & handler)
+            {
+                void * ptr = 
+                    boost::asio::asio_handler_allocate(sizeof(HandlerT<Handler>), &handler);
+                if (ptr)
+                    new (ptr) HandlerT<Handler>(handler);
+                return (HandlerT<Handler> *)ptr;
+            }
+
+        private:
+            boost::intrusive_ptr<HandlerBase> handler_;
         };
 
     } // namespace stream

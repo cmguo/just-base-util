@@ -50,7 +50,6 @@ namespace util
             {
                 _Size size = 0;
                 ar & len;
-                set_.resize(size);
                 load_collection(ar, set_, size);
             }
 
