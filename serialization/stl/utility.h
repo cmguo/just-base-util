@@ -10,23 +10,20 @@
 
 #include <utility>
 
-namespace util
+namespace std
 {
-    namespace serialization
+
+    // pair
+    template<class Archive, class _Ty1, class _Ty2>
+    inline void serialize(
+        Archive & ar,
+        std::pair<_Ty1, _Ty2> & p)
     {
+        typedef typename boost::remove_const<_Ty1>::type typef;
+        ar & util::serialization::make_nvp("first", const_cast<typef &>(p.first));
+        ar & util::serialization::make_nvp("second", p.second);
+    }
 
-        // pair
-        template<class Archive, class _Ty1, class _Ty2>
-        inline void serialize(
-            Archive & ar,
-            std::pair<_Ty1, _Ty2> & p)
-        {
-            typedef typename boost::remove_const<_Ty1>::type typef;
-            ar & util::serialization::make_nvp("first", const_cast<typef &>(p.first));
-            ar & util::serialization::make_nvp("second", p.second);
-        }
-
-    } // namespace serialization
-} // namespace util
+} // namespace std
 
 #endif // _UTIL_SERIALIZATION_STL_UTILITY_H_

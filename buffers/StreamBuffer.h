@@ -42,8 +42,8 @@ namespace util
             {
                 std::size_t pend = (std::min<std::size_t>)(max_size_, buffer_delta);
                 buffer_.resize((std::max<std::size_t>)(pend, 1));
-                setg(&buffer_[0], &buffer_[0], &buffer_[0]);
-                setp(&buffer_[0], &buffer_[0] + pend);
+                this->setg(&buffer_[0], &buffer_[0], &buffer_[0]);
+                this->setp(&buffer_[0], &buffer_[0] + pend);
             }
 
             StreamBuffer(
@@ -58,8 +58,8 @@ namespace util
                 std::size_t pnext = r.pptr() - &r.buffer_[0];
                 std::size_t pend = r.epptr() - &r.buffer_[0];
                 // Update stream positions.
-                setg(&buffer_[0], &buffer_[0] + gnext, &buffer_[0] + gend);
-                setp(&buffer_[0] + pnext, &buffer_[0] + pend);
+                this->setg(&buffer_[0], &buffer_[0] + gnext, &buffer_[0] + gend);
+                this->setp(&buffer_[0] + pnext, &buffer_[0] + pend);
             }
 
         public:
@@ -75,8 +75,8 @@ namespace util
                 std::size_t pnext = r.pptr() - &r.buffer_[0];
                 std::size_t pend = r.epptr() - &r.buffer_[0];
                 // Update stream positions.
-                setg(&buffer_[0], &buffer_[0] + gnext, &buffer_[0] + gend);
-                setp(&buffer_[0] + pnext, &buffer_[0] + pend);
+                this->setg(&buffer_[0], &buffer_[0] + gnext, &buffer_[0] + gend);
+                this->setp(&buffer_[0] + pnext, &buffer_[0] + pend);
 
                 return *this;
             }
@@ -153,8 +153,8 @@ namespace util
             void reset()
             {
                 std::size_t pend = buffer_.size();
-                setg(&buffer_[0], &buffer_[0], &buffer_[0]);
-                setp(&buffer_[0], &buffer_[0] + pend);
+                this->setg(&buffer_[0], &buffer_[0], &buffer_[0]);
+                this->setp(&buffer_[0], &buffer_[0] + pend);
                 pos_ = 0;
             }
 
@@ -229,13 +229,13 @@ namespace util
                 position -= pos_;
                 if (mode == std::ios_base::in) {
                     if (position <= this->pptr() - &buffer_[0]) {
-                        setg(this->eback(), this->eback() + position, this->pptr());
+                        this->setg(this->eback(), this->eback() + position, this->pptr());
                     } else {
                         return pos_type(-1);
                     }
                 } else if (mode == std::ios_base::out) {
                     if (position >= this->gptr() - &buffer_[0] && position <= pos_type(buffer_.size())) {
-                        setp(this->gptr(), this->epptr());
+                        this->setp(this->gptr(), this->epptr());
                         this->pbump(&buffer_[0] + position - this->gptr());
                     } else {
                         return pos_type(-1);
@@ -288,8 +288,8 @@ namespace util
                 }
 
                 // Update stream positions.
-                setg(&buffer_[0], &buffer_[0], &buffer_[0] + gend);
-                setp(&buffer_[0] + pnext, &buffer_[0] + pnext + n);
+                this->setg(&buffer_[0], &buffer_[0], &buffer_[0] + gend);
+                this->setp(&buffer_[0] + pnext, &buffer_[0] + pnext + n);
             }
 
         private:

@@ -161,7 +161,7 @@ namespace util
             {
                 RtmpChunkBasicHeader::serialize(ar);
                 void * ctx = ar.context();
-                ar.context((void *)fmt);
+                ar.context((void *)(intptr_t)fmt);
                 RtmpChunkMessageHeader::serialize(ar);
                 ar.context(ctx);
 

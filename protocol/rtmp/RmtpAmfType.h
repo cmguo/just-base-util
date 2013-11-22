@@ -16,7 +16,7 @@ namespace util
                 STRING      = 0x02,
                 OBJECT      = 0x03,
                 MOVIECLIP   = 0x04,
-                _NULL       = 0x05,
+                NULL_       = 0x05,
                 UNDEFINED   = 0x06,
                 REFERENCE   = 0x07,
                 MIXEDARRAY  = 0x08,
@@ -552,7 +552,7 @@ namespace util
                     case RtmpAmfType::MOVIECLIP:
                         ar.fail();
                         break;
-                    case RtmpAmfType::_NULL:
+                    case RtmpAmfType::NULL_:
                         break;
                     case RtmpAmfType::UNDEFINED:
                         break;

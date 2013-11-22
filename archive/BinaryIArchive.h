@@ -41,6 +41,8 @@ namespace util
             }
 
         public:
+            using StreamIArchive<BinaryIArchive<_Elem, _Traits>, _Elem, _Traits>::load_binary;
+
             /// 从流中读出变量
             template<class T>
             void load(

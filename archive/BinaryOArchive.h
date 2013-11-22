@@ -43,6 +43,8 @@ namespace util
             }
 
         public:
+            using StreamOArchive<BinaryOArchive<_Elem, _Traits>, _Elem, _Traits>::save_binary;
+
             /// 向流中写入参数化类型变量
             template <typename T>
             void save(

@@ -224,7 +224,7 @@ namespace util
                 RtmpCommandMessage0 & cmd = msg.get<RtmpCommandMessage0>();
                 cmd.CommandName = "createStream";
                 cmd.TransactionID = (double)0;
-                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::_NULL);
+                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::NULL_);
             }
 
             {
@@ -234,7 +234,7 @@ namespace util
                 RtmpCommandMessage0 & cmd = msg.get<RtmpCommandMessage0>();
                 cmd.CommandName = "play";
                 cmd.TransactionID = (double)0;
-                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::_NULL);
+                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::NULL_);
                 cmd.OptionalArguments.push_back(content);
             }
         }
@@ -250,7 +250,7 @@ namespace util
                 RtmpCommandMessage0 & cmd = msg.get<RtmpCommandMessage0>();
                 cmd.CommandName = "createStream";
                 cmd.TransactionID = (double)0;
-                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::_NULL);
+                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::NULL_);
             }
 
             {
@@ -260,7 +260,7 @@ namespace util
                 RtmpCommandMessage0 & cmd = msg.get<RtmpCommandMessage0>();
                 cmd.CommandName = "publish";
                 cmd.TransactionID = (double)0;
-                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::_NULL);
+                cmd.CommandObject = RtmpAmfValue(RtmpAmfType::NULL_);
                 cmd.OptionalArguments.push_back(content);
                 cmd.OptionalArguments.push_back("live");
             }

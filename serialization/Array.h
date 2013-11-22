@@ -15,31 +15,19 @@ namespace util
 {
     namespace serialization
     {
-        /// 指示Archive是否支持某个类型T的数组优化序列化
-        /// 默认不支持
-#ifndef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
+
         template <class Archive, typename T>
         struct use_array_optimization : boost::mpl::false_ {};
-#else
-        template <typename Archive>
-        struct use_array_optimization_impl
-        {
-            struct result_
-            {
-                template <typename T>
-                struct apply : boost::mpl::false_
-                {
-                };
-            };
-        };
 
-        template <class Archive, typename T>
-        struct use_array_optimization
-            : use_array_optimization_impl<Archive>::result_::template apply<T>
-        {
-        };
-#endif
+    }  // namespace serialization
+} // namespace util
 
+namespace framework
+{
+    namespace container
+    {
+        /// 指示Archive是否支持某个类型T的数组优化序列化
+        /// 默认不支持
         // 默认实现
         template <class Archive, typename T>
         void serialize_optimized(
@@ -89,19 +77,15 @@ namespace util
         {
             // 根据use_array_optimization指示分别调用优化与非优化版本的序列化方法
             typedef typename boost::mpl::if_<
-#ifndef BOOST_NO_PARTIAL_SPECIALIZATION
-                use_array_optimization<Archive, T>, 
-#else
-                use_array_optimization<T>::apply<Archive> >, 
-#endif
+                util::serialization::use_array_optimization<Archive, T>, 
                 boost::mpl::true_, 
                 boost::mpl::false_
             >::type use_optimized;
-            util::serialization::serialize_optimized(ar, arr, use_optimized());
+            serialize_optimized(ar, arr, use_optimized());
         }
 
-    }  // namespace serialization
-} // namespace util
+    }  // namespace container
+} // namespace framework
 
 /// Archive用此宏指示其支持某些类型的数组优化序列化
 #ifndef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION

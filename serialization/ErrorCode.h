@@ -8,9 +8,9 @@
 
 #include <boost/system/error_code.hpp>
 
-namespace util
+namespace boost
 {
-    namespace serialization
+    namespace system
     {
 
         template <class Archive>
@@ -42,7 +42,7 @@ namespace util
             util::serialization::split_free(ar, t);
         }
 
-    }  // namespace serialize
-} // namespace util
+    }  // namespace system
+} // namespace boost
 
 #endif // _UTIL_SERIALIZATION_ERROR_CODE_H_

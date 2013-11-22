@@ -11,131 +11,136 @@
 
 #include <vector>
 
+namespace std
+{
+
+    template<
+        class Archive, 
+        class _Ty, 
+        class _Alloc
+    >
+    inline void save(
+        Archive & ar,
+        std::vector<_Ty, _Alloc> const & t,
+        boost::mpl::false_)
+    {
+        util::serialization::save_collection<Archive, std::vector<_Ty, _Alloc> >(ar, t);
+    }
+
+    template<
+        class Archive, 
+        class _Ty, 
+        class _Alloc
+    >
+    inline void load(
+        Archive & ar,
+        std::vector<_Ty, _Alloc> & t,
+        boost::mpl::false_)
+    {
+        util::serialization::load_collection<Archive, std::vector<_Ty, _Alloc> >(ar, t);
+    }
+
+    // the optimized versions
+
+    template<
+        class Archive, 
+        class _Ty, 
+        class _Alloc
+    >
+    inline void save(
+        Archive & ar,
+        std::vector<_Ty, _Alloc> const & t,
+        boost::mpl::true_)
+    {
+        typename std::vector<_Ty, _Alloc>::size_type const count(t.size());
+        ar << SERIALIZATION_NVP(count);
+        if (!t.empty())
+            ar.save_array(framework::container::make_array(&t[0], t.size()));
+    }
+
+    template<
+        class Archive, 
+        class _Ty, 
+        class _Alloc
+    >
+    inline void load(
+        Archive & ar,
+        std::vector<_Ty, _Alloc> &t,
+        boost::mpl::true_)
+    {
+        typename std::vector<_Ty, _Alloc>::size_type count(0);
+        ar >> SERIALIZATION_NVP(count);
+        t.clear();
+        typename std::vector<_Ty, _Alloc>::size_type l(0);
+        if (count > 1024) {
+            for (; count > 1024; l += 1024, count -= 1024) {
+                t.resize(l + 1024);
+                ar.load_array(framework::container::make_array(&t[l], 1024));
+                if (!ar) return;
+            }
+        }
+        if (count) {
+            t.resize(l + count);
+            ar.load_array(framework::container::make_array(&t[l], count));
+        }
+    }
+
+    // dispatch to either default or optimized versions
+
+    template<
+        class Archive, 
+        class _Ty, 
+        class _Alloc
+    >
+    inline void save(
+        Archive & ar,
+        std::vector<_Ty, _Alloc> const & t)
+    {
+        typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_<
+            util::serialization::use_array_optimization<Archive, _Ty>, 
+            boost::mpl::true_, 
+            boost::mpl::false_>::type use_optimized;
+        save(ar, t, use_optimized());
+    }
+
+    template<
+        class Archive, 
+        class _Ty, 
+        class _Alloc
+    >
+    inline void load(
+        Archive & ar,
+        std::vector<_Ty, _Alloc> & t)
+    {
+        typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_<
+            util::serialization::use_array_optimization<Archive, _Ty>, 
+            boost::mpl::true_, 
+            boost::mpl::false_>::type use_optimized;
+        load(ar, t, use_optimized());
+    }
+
+    // split non-intrusive Serialize function member into separate
+    // non intrusive save/load member functions
+    template<
+        class Archive, 
+        class _Ty, 
+        class _Alloc
+    >
+    inline void serialize(
+        Archive & ar,
+        std::vector<_Ty, _Alloc> & t)
+    {
+        util::serialization::split_free(ar, t);
+    }
+
+} // namespace std
+
 namespace util
 {
     namespace serialization
     {
 
         // the default versions
-
-        template<
-            class Archive, 
-            class _Ty, 
-            class _Alloc
-        >
-        inline void save(
-            Archive & ar,
-            std::vector<_Ty, _Alloc> const & t,
-            boost::mpl::false_)
-        {
-            save_collection<Archive, std::vector<_Ty, _Alloc> >(ar, t);
-        }
-
-        template<
-            class Archive, 
-            class _Ty, 
-            class _Alloc
-        >
-        inline void load(
-            Archive & ar,
-            std::vector<_Ty, _Alloc> & t,
-            boost::mpl::false_)
-        {
-            load_collection<Archive, std::vector<_Ty, _Alloc> >(ar, t);
-        }
-
-        // the optimized versions
-
-        template<
-            class Archive, 
-            class _Ty, 
-            class _Alloc
-        >
-        inline void save(
-            Archive & ar,
-            std::vector<_Ty, _Alloc> const & t,
-            boost::mpl::true_)
-        {
-            typename std::vector<_Ty, _Alloc>::size_type const count(t.size());
-            ar << SERIALIZATION_NVP(count);
-            if (!t.empty())
-                ar.save_array(framework::container::make_array(&t[0], t.size()));
-        }
-
-        template<
-            class Archive, 
-            class _Ty, 
-            class _Alloc
-        >
-        inline void load(
-            Archive & ar,
-            std::vector<_Ty, _Alloc> &t,
-            boost::mpl::true_)
-        {
-            typename std::vector<_Ty, _Alloc>::size_type count(0);
-            ar >> SERIALIZATION_NVP(count);
-            t.clear();
-            typename std::vector<_Ty, _Alloc>::size_type l(0);
-            if (count > 1024) {
-                for (; count > 1024; l += 1024, count -= 1024) {
-                    t.resize(l + 1024);
-                    ar.load_array(framework::container::make_array(&t[l], 1024));
-                    if (!ar) return;
-                }
-            }
-            if (count) {
-                t.resize(l + count);
-                ar.load_array(framework::container::make_array(&t[l], count));
-            }
-        }
-
-        // dispatch to either default or optimized versions
-
-        template<
-            class Archive, 
-            class _Ty, 
-            class _Alloc
-        >
-        inline void save(
-            Archive & ar,
-            std::vector<_Ty, _Alloc> const & t)
-        {
-            typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                util::serialization::use_array_optimization<Archive, _Ty>, 
-                boost::mpl::true_, 
-                boost::mpl::false_>::type use_optimized;
-            save(ar, t, use_optimized());
-        }
-
-        template<
-            class Archive, 
-            class _Ty, 
-            class _Alloc
-        >
-        inline void load(
-            Archive & ar,
-            std::vector<_Ty, _Alloc> & t)
-        {
-            typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                util::serialization::use_array_optimization<Archive, _Ty>, 
-                boost::mpl::true_, 
-                boost::mpl::false_>::type use_optimized;
-            load(ar, t, use_optimized());
-        }
-
-        // split non-intrusive Serialize function member into separate
-        // non intrusive save/load member functions
-        template<
-            class Archive, 
-            class _Ty, 
-            class _Alloc
-        >
-        inline void serialize(
-            Archive & ar,
-            std::vector<_Ty, _Alloc> & t)
-        {
-            split_free(ar, t);
-        }
 
         namespace detail
         {

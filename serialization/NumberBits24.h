@@ -20,7 +20,7 @@ namespace util
         {
         };
 
-    }
-}
+    } // serialization
+} // util
 
 #endif // _UTIL_SERIALIZATION_NUMBER_BITS_24_H_
