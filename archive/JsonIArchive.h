@@ -141,7 +141,7 @@ namespace util
                         jsmntok_t & v = tokens_[i];
                         if (v.type != JSMN_STRING) {
                             assert(false);
-                            state(2);
+                            this->state(2);
                             token_stack_.push_back(size_t(-1));
                             break;
                         }
@@ -178,7 +178,7 @@ namespace util
                     }
                 } else {
                     assert(false);
-                    state(2);
+                    this->state(2);
                     token_stack_.push_back(size_t(-1));
                 }
             }
@@ -208,7 +208,7 @@ namespace util
                 }
 
                 if (result != 0) {
-                    state(1);
+                    this->state(1);
                 } else {
                     tokens_.resize(parser.toknext);
                     adjust(&tokens_.front());

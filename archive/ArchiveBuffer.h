@@ -184,13 +184,13 @@ namespace util
                 assert(position != pos_type(-1));
                 if (mode == std::ios_base::in) {
                     if (position <= this->pptr() - buf_) {
-                        setg(this->eback(), this->eback() + position, this->pptr());
+                        this->setg(this->eback(), this->eback() + position, this->pptr());
                     } else {
                         return pos_type(-1);
                     }
                 } else if (mode == std::ios_base::out) {
                     if (position >= this->gptr() - buf_) {
-                        setp(this->gptr(), this->epptr());
+                        this->setp(this->gptr(), this->epptr());
                         this->pbump(buf_ + position - this->gptr());
                     } else {
                         return pos_type(-1);
