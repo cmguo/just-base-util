@@ -131,7 +131,7 @@ namespace util
             head_stream.ignore(1);
             head_stream >> tmp;
             version |= tmp & 0xff;
-            return head_stream;
+			return (bool)head_stream;
         }
 
         HttpResponseHead::HttpResponseHead(
@@ -190,7 +190,7 @@ namespace util
             head_stream >> err_code;
             head_stream.ignore(1);
             std::getline(head_stream, err_msg);
-            return head_stream;
+			return (bool)head_stream;
         }
 
     } // namespace protocol
