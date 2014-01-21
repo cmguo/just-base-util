@@ -31,7 +31,7 @@ namespace util
         {
             if (is_open_)
                 file_.close(ec);
-            is_open_ = file_.open(url.path(), ec);
+            is_open_ = file_.open(url.path(), file_.f_write | file_.f_create, ec);
             if (!is_open_) {
                 ec = framework::system::last_system_error();
                 if (!ec) {
