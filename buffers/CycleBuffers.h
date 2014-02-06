@@ -730,7 +730,7 @@ namespace util
                         return pos_type(-1);
                     }
                     if (pos > write_.position()) {
-                        consume(pos - write_.position());
+                        commit(pos - write_.position());
                     } else if (pos < write_.position()) {
                         read_.pos -= read_.first.split(boost::asio::buffer(*read_.begin_remainder), write_.first);
                         write_.begin_remainder = read_.begin_remainder;
