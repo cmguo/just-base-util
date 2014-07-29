@@ -4,7 +4,7 @@
 #define _UTIL_PROTOCOL_RTMP_RTMP_MESSAGE_DATA_DATA_H_
 
 #include "util/protocol/rtmp/RtmpMessageData.h"
-#include "util/protocol/rtmp/RmtpAmfType.h"
+#include "util/protocol/rtmp/RtmpAmfType.h"
 
 namespace util
 {

@@ -334,6 +334,20 @@ namespace util
                 reset();
             }
 
+            bool operator!() const
+            {
+                return Type == RtmpAmfType::NULL_ 
+                    || Type == RtmpAmfType::UNDEFINED;
+            }
+
+            typedef void (*unspecified_bool_type)();
+            static void unspecified_bool_true() {}
+
+            operator unspecified_bool_type() const
+            { 
+              return !(*this) ? 0 : unspecified_bool_true;
+            }
+
             RtmpAmfValue & operator=(
                 RtmpAmfValue const & r)
             {
@@ -438,6 +452,14 @@ namespace util
             }
 
         public:
+            template <
+                typename T
+            >
+            bool is()
+            {
+                return Type == T::TYPE;
+            }
+
             template <
                 typename T
             >
