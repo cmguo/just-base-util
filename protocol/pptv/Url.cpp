@@ -18,7 +18,7 @@ namespace util
                 std::string const & str, 
                 std::string const & key)
             {
-                return framework::string::Url::encode(base64_encode(str, key), "/.");
+                return framework::string::Url::encode(base64_encode(str, key));
             }
 
             std::string url_decode(
