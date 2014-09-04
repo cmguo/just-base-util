@@ -150,8 +150,11 @@ namespace util
                     std::string str;
                     if (empty) {
                         t_.erase(name_);
-                    } else {
+                    } else if (value[0] == '{') {
                         framework::string::parse2(value, t_[name_]);
+                    } else {
+                        t_[name_].resize(1);
+                        framework::string::parse2(value, t_[name_][0]);
                     }
                 }
 
