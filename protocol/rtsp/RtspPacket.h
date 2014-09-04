@@ -7,6 +7,7 @@
 
 #include <util/serialization/SplitMember.h>
 #include <util/archive/ArchiveBuffer.h>
+#include <util/buffers/StreamBuffer.h>
 
 #include <boost/asio/streambuf.hpp>
 
@@ -50,7 +51,8 @@ namespace util
             void load(
                 Archive & ar)
             {
-                StreamBuffer & buf = static_cast<StreamBuffer &>(*ar.rdbuf());
+                util::buffers::StreamBuffer<boost::uint8_t> & buf = 
+                    static_cast<util::buffers::StreamBuffer<boost::uint8_t> &>(*ar.rdbuf());
                 util::archive::ArchiveBuffer<char> abuf(buf.data());
                 std::istream is(&abuf);
                 head_->set_content(is);
@@ -66,7 +68,8 @@ namespace util
             void save(
                 Archive & ar) const
             {
-                StreamBuffer & buf = static_cast<StreamBuffer &>(*ar.rdbuf());
+                util::buffers::StreamBuffer<boost::uint8_t> & buf = 
+                    static_cast<util::buffers::StreamBuffer<boost::uint8_t> &>(*ar.rdbuf());
                 util::archive::ArchiveBuffer<char> abuf(buf.prepare(4096));
                 std::ostream os(&abuf);
                 head_->get_content(os);

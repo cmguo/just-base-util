@@ -30,10 +30,11 @@ namespace util
             void serialize(
                 Archive & ar)
             {
-                MineHeadT::serialize(ar);
+                MineHeadT<TestHead>::serialize(ar);
             }
         };
 
+        /*
         static void test()
         {
             TestHead h;
@@ -42,6 +43,7 @@ namespace util
             MineHeadOArchive oa(std::cout);
             oa << h;
         };
+        */
 
     } // namespace protocol
 } // namespace util

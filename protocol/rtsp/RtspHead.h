@@ -7,6 +7,8 @@
 #include "util/protocol/rtsp/RtspFieldRange.h"
 #include "util/protocol/rtsp/RtspFieldConnection.h"
 
+#include "util/serialization/NVPair.h"
+
 namespace util
 {
     namespace protocol

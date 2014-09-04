@@ -173,7 +173,7 @@ namespace util
                 }
             }
 
-            using BasicIArchive<MineHeadIArchive>::load;
+            using util::archive::BasicIArchive<MineHeadIArchive>::load;
 
             void load(
                 fields_map & other)

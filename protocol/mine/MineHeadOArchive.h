@@ -169,7 +169,7 @@ namespace util
                 }
             }
 
-            using BasicOArchive<MineHeadOArchive>::save;
+            using util::archive::BasicOArchive<MineHeadOArchive>::save;
 
             void save_start(
                 std::string const & name)

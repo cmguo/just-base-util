@@ -232,7 +232,7 @@ namespace util
             public:
                 std::string to_string() const
                 {
-                    return std::string(R::prefix()) + " " + unit_.to_string() + "/" + framework::string::format(total_);
+                    return std::string(prefix_()) + " " + unit_.to_string() + "/" + framework::string::format(total_);
                 }
 
                 boost::system::error_code from_string(
