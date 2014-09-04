@@ -34,19 +34,36 @@ namespace util
         protected:
             RtspRequest & request()
             {
-                return request_;
+                return recv_msg_.as<RtspRequest>();
             }
 
             RtspResponse & response()
             {
-                return response_;
+                return send_msgs_[0].as<RtspResponse>();
             }
 
+            void post_request(
+                RtspRequest const & request);
+
         protected:
-            virtual void local_process(
+            virtual void on_start()
+            {
+            }
+
+            virtual void on_next()
+            {
+            }
+
+            virtual void local_process_request(
                 response_type const & resp)
             {
                 resp(boost::system::error_code());
+            }
+
+            virtual void local_process_response(
+                RtspResponse & response, 
+                boost::system::error_code & ec)
+            {
             }
 
             virtual void post_process(
@@ -67,27 +84,21 @@ namespace util
         private:
             void start();
 
+            void next();
+
         private:
             void handle_prepare(
                 boost::system::error_code const & ec, 
                 bool proxy);
 
-            void handle_receive_request_head(
-                boost::system::error_code const & ec, 
-                size_t bytes_transferred);
-
-            void handle_receive_request_data(
+            void handle_receive_message(
                 boost::system::error_code const & ec, 
                 size_t bytes_transferred);
 
             void handle_local_process(
                 boost::system::error_code const & ec);
 
-            void handle_send_response_head(
-                boost::system::error_code const & ec, 
-                size_t bytes_transferred);
-
-            void handle_send_response_data(
+            void handle_send_message(
                 boost::system::error_code const & ec, 
                 size_t bytes_transferred);
 
@@ -112,8 +123,8 @@ namespace util
             friend class framework::network::ServerManager;
 
             size_t id_;
-            RtspRequest request_;
-            RtspResponse response_;
+            RtspMessage recv_msg_;
+            std::vector<RtspMessage> send_msgs_;
         };
 
     } // namespace protocol

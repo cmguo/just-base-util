@@ -14,69 +14,25 @@ namespace util
 
         RtspSocket::RtspSocket(
             boost::asio::io_service & io_svc)
-            : super(io_svc)
+            : MessageSocket(io_svc, read_parser_, NULL)
         {
         }
 
-        void RtspSocket::close()
-        {
-            snd_buf_.reset();
-            rcv_buf_.reset();
-            super::close();
-        }
-
-        boost::system::error_code RtspSocket::close(
+        size_t RtspSocket::write_msgs(
+            std::vector<RtspMessage> const & msgs, 
             boost::system::error_code & ec)
         {
-            snd_buf_.reset();
-            rcv_buf_.reset();
-            return super::close(ec);
+            return write_msg(RtspMessageVector(msgs), ec);
         }
 
-        size_t RtspSocket::write(
-            RtspHead & head)
+        void RtspMessageVector::to_data(
+            StreamBuffer & buf, 
+            void * vctx) const
         {
-            if (snd_buf_.size() == 0) {
-                std::ostream os(&snd_buf_);
-                head.get_content(os);
+            for (size_t i = 0; i < msgs_.size(); ++i) {
+                msgs_[i].to_data(buf, NULL);
             }
-            return boost::asio::write((super &)*this, snd_buf_);
         }
 
-        size_t RtspSocket::write(
-            RtspHead & head, 
-            boost::system::error_code & ec)
-        {
-            if (snd_buf_.size() == 0) {
-                std::ostream os(&snd_buf_);
-                head.get_content(os);
-            }
-            return boost::asio::write((super &)*this, snd_buf_, boost::asio::transfer_all(), ec);
-        }
-
-        size_t RtspSocket::read(
-            RtspHead & head)
-        {
-            boost::asio::read_until((super &)*this, rcv_buf_, "\r\n\r\n");
-            size_t old_size = rcv_buf_.size();
-            std::istream is(&rcv_buf_);
-            head.set_content(is);
-            return old_size - rcv_buf_.size();
-        }
-
-        size_t RtspSocket::read(
-            RtspHead & head, 
-            boost::system::error_code & ec)
-        {
-            boost::asio::read_until((super &)*this, rcv_buf_, "\r\n\r\n", ec);
-            if (!ec) {
-                size_t old_size = rcv_buf_.size();
-                std::istream is(&rcv_buf_);
-                head.set_content(is);
-                return old_size - rcv_buf_.size();
-            }
-            return 0;
-        }
-
-} // namespace protocol
+    } // namespace protocol
 } // namespace util

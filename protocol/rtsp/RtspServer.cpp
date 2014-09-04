@@ -5,6 +5,9 @@
 #include "util/protocol/rtsp/RtspServer.h"
 #include "util/protocol/rtsp/RtspSocket.hpp"
 #include "util/protocol/rtsp/RtspError.h"
+#include "util/protocol/rtsp/RtspMessageHelper.h"
+#include "util/protocol/mine/MineHead.hpp"
+#include "util/protocol/Message.hpp"
 using namespace util::stream;
 
 #include <framework/logger/Logger.h>
@@ -45,17 +48,29 @@ namespace util
 
         void RtspServer::start()
         {
-            async_read(request_.head(), 
-                boost::bind(&RtspServer::handle_receive_request_head, this, _1, _2));
+            on_start();
+            next();
         }
 
-        void RtspServer::handle_receive_request_head(
+        void RtspServer::next()
+        {
+            on_next();
+            if (!send_msgs_.empty()) {
+                error_code ec;
+                handle_local_process(ec);
+                return;
+            }
+            async_read_msg(recv_msg_, 
+                boost::bind(&RtspServer::handle_receive_message, this, _1, _2));
+        }
+
+        void RtspServer::handle_receive_message(
             error_code const & ec, 
             size_t bytes_transferred)
         {
             LOG_SECTION();
 
-            LOG_DEBUG("[handle_receive_request_head] id = %u, ec = %s, bytes_transferred = %d" 
+            LOG_DEBUG("[handle_receive_message] id = %u, ec = %s, bytes_transferred = %d" 
                 % id_ % ec.message() % bytes_transferred);
 
             if (ec) {
@@ -63,34 +78,18 @@ namespace util
                 return;
             }
 
-            size_t content_length = request_.head().content_length.get_value_or(0);
-            if (content_length) {
-                boost::asio::async_read(
-                    (RtspSocket &)(*this), 
-                    request_.data(), 
-                    boost::asio::transfer_at_least(content_length), 
-                    boost::bind(&RtspServer::handle_receive_request_data, this, _1, _2));
-            } else {
-                handle_receive_request_data(boost::system::error_code(), 0);
-            }
-        }
+            send_msgs_.clear();
 
-        void RtspServer::handle_receive_request_data(
-            boost::system::error_code const & ec, 
-            size_t bytes_transferred)
-        {
-            LOG_SECTION();
-
-            LOG_DEBUG("[handle_receive_request_data] id = %u, ec = %s, bytes_transferred = %d" 
-                % id_ % ec.message() % bytes_transferred);
-
-            if (ec) {
-                handle_error(ec);
+            if (recv_msg_.is<RtspResponse>()) {
+                error_code ec1;
+                local_process_response(recv_msg_.as<RtspResponse>(), ec1);
+                recv_msg_.reset();
+                handle_local_process(ec1);
                 return;
             }
 
-            response_.head() = RtspResponseHead();
-            local_process(
+            send_msgs_.push_back(RtspResponse());
+            local_process_request(
                 boost::bind(&RtspServer::handle_local_process, this, _1));
         }
 
@@ -106,45 +105,32 @@ namespace util
                 return;
             }
 
-            response_.head().err_msg = "OK";
-            response_.head()["CSeq"] = request_.head()["CSeq"];
-            response_.head().content_length.reset(response_.data().size());
+            if (recv_msg_.is<RtspRequest>()) {
+                RtspResponse & response(send_msgs_[0].as<RtspResponse>());
+                response.head().err_msg = "OK";
+                response.head()["CSeq"] = recv_msg_.as<RtspRequest>().head()["CSeq"];
+            }
+            for (size_t i = 0; i < send_msgs_.size(); ++i) {
+                if (send_msgs_[i].is<RtspResponse>()) {
+                    RtspResponse & response(send_msgs_[i].as<RtspResponse>());
+                    response.head().content_length.reset(response.data().size());
+                } else {
+                    RtspRequest & request(send_msgs_[i].as<RtspRequest>());
+                    request.head().content_length.reset(request.data().size());
+                }
+            }
 
-            async_write(response_.head(), 
-                boost::bind(&RtspServer::handle_send_response_head, this, _1, _2));
+            async_write_msgs(send_msgs_, 
+                boost::bind(&RtspServer::handle_send_message, this, _1, _2));
         }
 
-        void RtspServer::handle_send_response_head(
+        void RtspServer::handle_send_message(
             error_code const & ec, 
             size_t bytes_transferred)
         {
             LOG_SECTION();
 
-            LOG_DEBUG("[handle_send_response_head] id = %u, ec = %s, bytes_transferred = %d" 
-                % id_ % ec.message() % bytes_transferred);
-
-            if (ec) {
-                handle_error(ec);
-                return;
-            }
-
-            if (response_.data().size()) {
-                boost::asio::async_write(
-                    (RtspSocket &)(*this), 
-                    response_.data(), 
-                    boost::bind(&RtspServer::handle_send_response_data, this, _1, _2));
-            } else {
-                handle_send_response_data(boost::system::error_code(), 0);
-            }
-        }
-
-        void RtspServer::handle_send_response_data(
-            boost::system::error_code const & ec, 
-            size_t bytes_transferred)
-        {
-            LOG_SECTION();
-
-            LOG_DEBUG("[handle_send_response_data] id = %u, ec = %s, bytes_transferred = %d" 
+            LOG_DEBUG("[handle_send_message] id = %u, ec = %s, bytes_transferred = %d" 
                 % id_ % ec.message() % bytes_transferred);
 
             if (ec) {
@@ -154,10 +140,10 @@ namespace util
 
             on_finish();
 
-            request_.clear_data();
-            response_.clear_data();
+            recv_msg_.reset();
+            send_msgs_.clear();
 
-            start();
+            next();
         }
 
         void RtspServer::handle_response_error(
@@ -196,7 +182,11 @@ namespace util
         void RtspServer::response_error(
             error_code const & ec)
         {
-            RtspResponseHead & head = response_.head();
+            if (!send_msgs_[0].is<RtspResponse>()) {
+                return;
+            }
+            RtspResponse & response = send_msgs_[0].as<RtspResponse>();
+            RtspResponseHead & head = response.head();
             head = RtspResponseHead(); // clear
             if (ec.category() == rtsp_error::get_category()) {
                 head.err_code = ec.value();
@@ -204,14 +194,14 @@ namespace util
                 || ec.category() == boost::asio::error::get_netdb_category()
                 || ec.category() == boost::asio::error::get_addrinfo_category()
                 || ec.category() == boost::asio::error::get_misc_category()) {
-                response_.head().err_code = rtsp_error::service_unavailable;
+                response.head().err_code = rtsp_error::service_unavailable;
             } else {
                 head.err_code = rtsp_error::internal_server_error;
             }
             head.err_msg = ec.message();
             head.content_length.reset(0);
             on_error(ec);
-            RtspSocket::async_write(response_.head(), 
+            RtspSocket::async_write_msg(send_msgs_[0], 
                 boost::bind(&RtspServer::handle_response_error, this, _1, _2));
         }
 

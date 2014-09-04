@@ -4,6 +4,7 @@
 #define _UTIL_PROTOCOL_RTSP_RTSP_REQUEST_H_
 
 #include "util/protocol/rtsp/RtspPacket.h"
+#include "util/protocol/rtsp/RtspMessageData.h"
 
 namespace util
 {
@@ -32,19 +33,12 @@ namespace util
 
         public:
             RtspRequestHead(
-                MethodEnum method = invalid_method)
-                : method(method)
-            {
-                version = 0x00000100; // 1.0
-            }
+                MethodEnum method = invalid_method);
 
             RtspRequestHead(
                 MethodEnum method, 
                 std::string const & path, 
-                size_t version = 0x00000100)
-                : method(method)
-                , path(path)
-                , version(version) {}
+                size_t version = 0x00000100);
 
         public:
             static std::string const method_str[];
@@ -64,13 +58,15 @@ namespace util
 
         class RtspRequest
             : public RtspPacket
+            , public RtspMessageData<RtspRequest, RtspMessageType::REQUEST>
         {
         public:
-            RtspRequest()
-                : RtspPacket(head_)
-            {
-            }
+            RtspRequest();
 
+            RtspRequest(
+                RtspRequest const & r);
+
+        public:
             RtspRequestHead & head()
             {
                 return head_;

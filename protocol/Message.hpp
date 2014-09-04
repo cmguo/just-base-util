@@ -61,7 +61,7 @@ namespace util
             reset();
             header_type::id(T::static_id);
             def_ = &T::msg_def;
-            assert(sizeof(T) <= sizeof(data_));
+            BOOST_STATIC_ASSERT(sizeof(T) <= sizeof(data_));
             new (data_) T(t);
         }
 
@@ -142,7 +142,7 @@ namespace util
             MessageBase * mb)
         {
             Message * m = static_cast<Message *>(mb);
-            assert(sizeof(T) <= sizeof(m->data_));
+            BOOST_STATIC_ASSERT(sizeof(T) <= sizeof(m->data_));
             new (m->data_) T;
         }
 

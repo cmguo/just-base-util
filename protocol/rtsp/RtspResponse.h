@@ -4,6 +4,7 @@
 #define _UTIL_PROTOCOL_RTSP_RTSP_RESPONSE_H_
 
 #include "util/protocol/rtsp/RtspPacket.h"
+#include "util/protocol/rtsp/RtspMessageData.h"
 
 namespace util
 {
@@ -20,21 +21,12 @@ namespace util
         public:
             RtspResponseHead(
                 size_t err_code = 200, 
-                size_t version = 0x00000100)
-                : version(version)
-                , err_code(err_code)
-            {
-            }
+                size_t version = 0x00000100);
 
             RtspResponseHead(
                 size_t err_code, 
                 std::string const & err_msg, 
-                size_t version = 0x00000100)
-                : version(version)
-                , err_code(err_code)
-                , err_msg(err_msg)
-            {
-            }
+                size_t version = 0x00000100);
 
         private:
             virtual bool get_line(
@@ -46,13 +38,15 @@ namespace util
 
         class RtspResponse
             : public RtspPacket
+            , public RtspMessageData<RtspResponse, RtspMessageType::RESPONSE>
         {
         public:
-            RtspResponse()
-                : RtspPacket(head_)
-            {
-            }
+            RtspResponse();
 
+            RtspResponse(
+                RtspResponse const & r);
+
+        public:
             RtspResponseHead & head()
             {
                 return head_;
