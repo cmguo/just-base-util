@@ -3,6 +3,8 @@
 #ifndef _UTIL_TOOLS_CLASS_FACTORY_H_
 #define _UTIL_TOOLS_CLASS_FACTORY_H_
 
+#include "util/tools/Creator.h"
+
 #include <boost/function.hpp>
 #include <boost/type_traits/is_same.hpp>
 
@@ -46,6 +48,13 @@ namespace util
             >::type creator_map_type;
 
         public:
+            template <typename C>
+            static void register_class(
+                key_type const & key)
+            {
+                register_creator(key, Creator<C>());
+            }
+
             static void register_creator(
                 key_type const & key, 
                 creator_type creator)
