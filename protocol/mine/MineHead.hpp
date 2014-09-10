@@ -117,30 +117,12 @@ namespace util
         }
 
         template <typename Head>
-        void MineHeadT<Head>::check_handler(
-            MineStringField & field)
+        std::auto_ptr<MineStringField::Handler> MineHeadT<Head>::handler(
+            std::string const & name) const
         {
-            if (!field.handler_.get()) {
-                MineHeadVisitor visitor(field);
-                visitor.visit(This());
-                field.handler_ = visitor.handler();
-            }
-        }
-
-        template <typename Head>
-        void MineHeadT<Head>::set_field(
-            MineStringField const & field)
-        {
-            check_handler(const_cast<MineStringField &>(field));
-            field.set();
-        }
-
-        template <typename Head>
-        void MineHeadT<Head>::get_field(
-            MineStringField & field) const
-        {
-            const_cast<MineHeadT &>(*this).check_handler(field);
-            field.get();
+            MineHeadVisitor visitor(name);
+            visitor.visit(const_cast<Head &>(This()));
+            return visitor.handler();
         }
 
     } // namespace protocol

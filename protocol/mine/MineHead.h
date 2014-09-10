@@ -70,9 +70,17 @@ namespace util
             MineStringField operator[](
                 std::string const & name)
             {
-                MineStringField field(name);
-                get_field(field);
-                return field;
+                std::auto_ptr<MineStringField::Handler> h = handler(name);
+                MineStringField f(h);
+                return f;
+            }
+
+            MineStringField const operator[](
+                std::string const & name) const
+            {
+                std::auto_ptr<MineStringField::Handler> h = handler(name);
+                MineStringField f(h);
+                return f;
             }
 
         public:
@@ -102,14 +110,8 @@ namespace util
             }
 
         private:
-            void check_handler(
-                MineStringField & field);
-
-            void set_field(
-                MineStringField const & field);
-
-            void get_field(
-                MineStringField & field) const;
+            std::auto_ptr<MineStringField::Handler> handler(
+                std::string const & name) const;
         };
 
     } // namespace protocol

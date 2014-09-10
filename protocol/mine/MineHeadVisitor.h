@@ -40,7 +40,7 @@ namespace util
 
         public:
             MineHeadVisitor(
-                MineStringField & field)
+                std::string const & field)
                 : field_(field)
             {
             }
@@ -182,7 +182,7 @@ namespace util
             void load_wrapper(
                 util::serialization::NVPair<T> & nvp)
             {
-                if (nvp.name() == field_.name()) {
+                if (nvp.name() == field_) {
                     handler_.reset(get_handler(nvp.data()));
                 }
             }
@@ -191,7 +191,7 @@ namespace util
                 fields_map & other)
             {
                 if (!handler_.get())
-                    handler_.reset(new OtherHandler(field_.name(), other));
+                    handler_.reset(new OtherHandler(field_, other));
             }
 
             template<class T>
@@ -209,7 +209,7 @@ namespace util
             }
 
         private:
-            MineStringField & field_;
+            std::string const & field_;
             std::auto_ptr<MineStringField::Handler> handler_;
         };
 

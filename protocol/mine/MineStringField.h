@@ -18,60 +18,6 @@ namespace util
         class MineStringField
         {
         public:
-            MineStringField(
-                std::string const & name)
-                : name_(name)
-                , empty_(true)
-            {
-            }
-
-            MineStringField(
-                std::string const & name, 
-                std::string const & value)
-                : name_(name)
-                , empty_(false)
-                , value_(value)
-            {
-            }
-
-            std::string const & name() const
-            {
-                return name_;
-            }
-
-            std::string const & value() const
-            {
-                return value_;
-            }
-
-            operator std::string() const
-            {
-                if (empty_)
-                    return std::string();
-                else
-                    return value_;
-            }
-
-            MineStringField & operator=(
-                std::string const & str)
-            {
-                empty_ = false;
-                value_ = str;
-                set();
-                return *this;
-            }
-
-            void get()
-            {
-                handler_->get(*this);
-            }
-
-            void set() const
-            {
-                handler_->set(*this);
-            }
-
-        public:
             class Handler
             {
             public:
@@ -100,13 +46,53 @@ namespace util
                     std::string & value) const = 0;
             };
 
+        public:
+            MineStringField()
+                : empty_(true)
+            {
+            }
+
+            MineStringField(
+                std::auto_ptr<Handler> & handler)
+                : handler_(handler)
+            {
+                handler_->get(*this);
+            }
+
+            operator std::string() const
+            {
+                if (empty_)
+                    return std::string();
+                else
+                    return value_;
+            }
+
+            MineStringField & operator=(
+                std::string const & str)
+            {
+                empty_ = false;
+                value_ = str;
+                handler_->set(*this);
+                return *this;
+            }
+
+            bool empty() const
+            {
+                return empty_;
+            }
+
+            void clear()
+            {
+                empty_ = true;
+                handler_->set(*this);
+            }
+
         private:
             friend class Handler;
 
             template <typename Head>
             friend class MineHeadT;
 
-            std::string name_;
             bool empty_;
             std::string value_;
             std::auto_ptr<Handler> handler_;
