@@ -1,4 +1,4 @@
-// RtspPacket.cpp
+// RtspRequest.cpp
 
 #include "util/Util.h"
 #include "util/protocol/rtsp/RtspRequest.h"

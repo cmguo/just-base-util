@@ -10,8 +10,10 @@ namespace util
     namespace protocol
     {
 
-        RtspMessageParser::RtspMessageParser()
+        RtspMessageParser::RtspMessageParser(
+            RtspMessageContext & ctx)
             : data_def_(data_def_.data_message)
+            , ctx_(ctx)
         {
         }
 
@@ -31,40 +33,45 @@ namespace util
                 case 1:
                     if (*b == '$') {
                         ok_ = true;
-                        step_ = 2;
+                        step_ = 3;
                         size_ = 4 + b[2] * 256 + b[3];
                         msg_def_ = &data_def_;
+                        break;
                     } else {
-                        if (*b >= '1' && *b <= '9') {
-                            msg_def_ = RtspMessage::find_msg(RtspMessageType::RESPONSE);
+                        if (b[4] == '/') {
+                            ctx_.read_type = RtspMessageType::RESPONSE;
                         } else {
-                            msg_def_ = RtspMessage::find_msg(RtspMessageType::REQUEST);
+                            ctx_.read_type = RtspMessageType::REQUEST;
                         }
-                        if (e[-1] == '\n') {
-                            if (e[-3] == '\n') {
-                                while (b != e) {
-                                    if (strncmp(b, "Content-Length:", 15) == 0) {
-                                        b += 15;
-                                        while (*b == ' ') ++b;
-                                        size_t len = atol(b);
-                                        size_ += len;
-                                        break;
-                                    }
-                                    b = strchr(b, '\n') + 1;
+                        msg_def_ = RtspMessage::find_msg(ctx_.read_type);
+                        step_ = 2;
+                    }
+                case 2:
+                    if (e[-1] == '\n') {
+                        if (e[-3] == '\n') {
+                            while (b != e) {
+                                if (strncmp(b, "Content-Length:", 15) == 0) {
+                                    b += 15;
+                                    while (*b == ' ') ++b;
+                                    size_t len = atol(b);
+                                    size_ += len;
+                                    break;
                                 }
-                                ok_ = true;
-                            } else {
-                                size_ += 2;
+                                b = strchr(b, '\n') + 1;
                             }
-                        } else if (e[-1] == '\r') {
-                            if (e[-3] == '\r') {
-                                size_ += 1;
-                            } else {
-                                size_ += 3;
-                            }
+                            ok_ = true;
+                            step_ = 3;
                         } else {
-                            size_ += 4;
+                            size_ += 2;
                         }
+                    } else if (e[-1] == '\r') {
+                        if (e[-3] == '\r') {
+                            size_ += 1;
+                        } else {
+                            size_ += 3;
+                        }
+                    } else {
+                        size_ += 4;
                     }
                     break;
                 default:

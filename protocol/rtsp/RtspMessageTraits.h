@@ -17,6 +17,7 @@ namespace util
         class RtspMessageHelper;
         class RtspHeadIArchive;
         class RtspHeadOArchive;
+        struct RtspMessageContext;
 
         struct RtspMessageTraits
             : MessageTraits
@@ -30,6 +31,8 @@ namespace util
             typedef util::archive::BigEndianBinaryOArchive<boost::uint8_t> o_archive_t;
 
             static size_t const max_size = 800;
+
+            typedef RtspMessageContext context_t;
 
             typedef RtspMessageHelper helper_t;
         };

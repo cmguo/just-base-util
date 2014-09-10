@@ -5,6 +5,7 @@
 
 #include "util/protocol/rtsp/RtspMessage.h"
 #include "util/protocol/rtsp/RtspMessageParser.h"
+#include "util/protocol/rtsp/RtspMessageContext.h"
 #include "util/protocol/MessageSocket.h"
 
 namespace util
@@ -31,6 +32,7 @@ namespace util
 
         private:
             RtspMessageParser read_parser_;
+            RtspMessageContext ctx_;
         };
 
     } // namespace protocol

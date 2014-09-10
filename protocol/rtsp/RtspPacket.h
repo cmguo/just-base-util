@@ -6,8 +6,6 @@
 #include "util/protocol/rtsp/RtspHead.h"
 
 #include <util/serialization/SplitMember.h>
-#include <util/archive/ArchiveBuffer.h>
-#include <util/buffers/StreamBuffer.h>
 
 #include <boost/asio/streambuf.hpp>
 
@@ -35,7 +33,17 @@ namespace util
                 return *head_;
             }
 
+            RtspHead const & head() const
+            {
+                return *head_;
+            }
+
             boost::asio::streambuf & data()
+            {
+                return data_;
+            }
+
+            boost::asio::streambuf const & data() const
             {
                 return data_;
             }
@@ -49,33 +57,11 @@ namespace util
 
             template <typename Archive>
             void load(
-                Archive & ar)
-            {
-                util::buffers::StreamBuffer<boost::uint8_t> & buf = 
-                    static_cast<util::buffers::StreamBuffer<boost::uint8_t> &>(*ar.rdbuf());
-                util::archive::ArchiveBuffer<char> abuf(buf.data());
-                std::istream is(&abuf);
-                head_->set_content(is);
-                if (!is) {
-                    ar.fail();
-                }
-                std::ostream os(&data_);
-                os << &abuf;
-                buf.consume(buf.size());
-            }
+                Archive & ar);
 
             template <typename Archive>
             void save(
-                Archive & ar) const
-            {
-                util::buffers::StreamBuffer<boost::uint8_t> & buf = 
-                    static_cast<util::buffers::StreamBuffer<boost::uint8_t> &>(*ar.rdbuf());
-                util::archive::ArchiveBuffer<char> abuf(buf.prepare(4096));
-                std::ostream os(&abuf);
-                head_->get_content(os);
-                os << const_cast<boost::asio::streambuf *>(&data_);
-                buf.commit(abuf.size());
-            }
+                Archive & ar) const;
 
         private:
             RtspHead * head_;

@@ -27,12 +27,7 @@ namespace util
                 header_type & header, 
                 context_t * ctx)
             {
-                char c = ar.rdbuf()->sgetc();
-                if (c >= '1' && c <= '9') {
-                    header.id(RtspMessageType::RESPONSE);
-                } else {
-                    header.id(RtspMessageType::REQUEST);
-                }
+                header.id(ctx->read_type);
             }
 
             RtspMessageHelper(

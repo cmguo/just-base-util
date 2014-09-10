@@ -24,6 +24,7 @@ namespace util
         {
             enum Enum
             {
+                NONE, 
                 REQUEST, 
                 RESPONSE, 
                 DATA, 

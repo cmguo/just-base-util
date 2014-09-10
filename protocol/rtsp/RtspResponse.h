@@ -57,6 +57,12 @@ namespace util
                 return head_;
             }
 
+            void clear()
+            {
+                head_ = RtspResponseHead();
+                clear_data();
+            }
+
         private:
             RtspResponseHead head_;
         };

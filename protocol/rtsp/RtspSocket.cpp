@@ -14,7 +14,8 @@ namespace util
 
         RtspSocket::RtspSocket(
             boost::asio::io_service & io_svc)
-            : MessageSocket(io_svc, read_parser_, NULL)
+            : MessageSocket(io_svc, read_parser_, &ctx_)
+            , read_parser_(ctx_)
         {
         }
 
