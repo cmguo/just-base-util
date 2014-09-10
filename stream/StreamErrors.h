@@ -12,18 +12,14 @@ namespace util
 
             enum errors
             {
-                success,
-                alread_stopped,
-                no_more_place,
-                chain_is_not_complete,
-                filter_sink_error,
+                filter_sink_error = 1,
                 filter_source_error, 
                 unknown_url_proto, 
             };
 
             namespace detail {
 
-                class compress_category
+                class stream_category
                     : public boost::system::error_category
                 {
                 public:
@@ -35,22 +31,14 @@ namespace util
                     std::string message(int value) const
                     {
                         switch (value) {
-                            case success:
-                                return "success";
-                            case alread_stopped:
-                                return "alread stopped";
-                            case no_more_place:
-                                return "no more place";
-                            case chain_is_not_complete:
-                                return "chain is not complete";
                             case filter_sink_error:
-                                return "filter sink error";
+                                return "stream: filter sink error";
                             case filter_source_error:
-                                return "filter source error";
+                                return "stream: filter source error";
                             case unknown_url_proto:
-                                return "unknown url proto";
+                                return "stream: unknown url proto";
                         }
-                        return "unknown";
+                        return "stream: unknown";
                     }
                 };
 
@@ -58,7 +46,7 @@ namespace util
 
             inline const boost::system::error_category & get_category()
             {
-                static detail::compress_category instance;
+                static detail::stream_category instance;
                 return instance;
             }
 
