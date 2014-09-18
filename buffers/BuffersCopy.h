@@ -45,7 +45,7 @@ namespace util
                         if (++isrc == esrc)
                             break;
                         src_off -= buffer_size(bsrc);
-                        bsrc = buffer(*idst);
+                        bsrc = buffer(*isrc);
                     } else {
                         bsrc = bsrc + src_off;
                         src_off = 0;
