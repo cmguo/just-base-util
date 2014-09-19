@@ -32,17 +32,33 @@ namespace util
 
         void MessageSocket::close()
         {
-            snd_buf_.reset();
-            rcv_buf_.reset();
-            super::close();
+            cancel_parallel();
+            framework::network::TcpSocket::close();
         }
 
         boost::system::error_code MessageSocket::close(
             boost::system::error_code & ec)
         {
+            cancel_parallel();
+            return framework::network::TcpSocket::close(ec);
+        }
+
+        void MessageSocket::cancel_parallel()
+        {
+            boost::mutex::scoped_lock lc(mutex_);
             snd_buf_.reset();
             rcv_buf_.reset();
-            return framework::network::TcpSocket::close(ec);
+            if (read_parallel_ && !read_status_.resp.empty()) {
+                get_io_service().post(
+                    boost::bind(read_status_.resp, boost::asio::error::operation_aborted, 0));
+                read_status_.resp.clear();
+            }
+            if (write_parallel_ && !write_status_.resp.empty()) {
+                get_io_service().post(
+                    boost::bind(write_status_.resp, boost::asio::error::operation_aborted, 0));
+                write_status_.resp.clear();
+            }
+            cond_.notify_all();
         }
 
         void MessageSocket::set_read_parallel(

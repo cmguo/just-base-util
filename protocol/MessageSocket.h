@@ -220,6 +220,8 @@ namespace util
                 return write_status_.size == 0;
             }
 
+            void cancel_parallel();
+
         protected:
             boost::mutex mutex_;
             boost::condition_variable cond_;
