@@ -49,6 +49,11 @@ namespace util
             {
             }
 
+            size_t shared_count() const
+            {
+                return nref;
+            }
+
             size_t nref;
 
             template <typename B>
@@ -131,6 +136,11 @@ namespace util
                 return (buf_ == NULL) || buf_->empty();
             }
 
+            size_t shared_count() const
+            {
+                return buf_->shared_count();
+            }
+
         public:
             void reset()
             {
@@ -140,7 +150,7 @@ namespace util
             void reset(
                 StreamBuffers const & r)
             {
-                buf_.reset(r.buf_);
+                buf_ = r.buf_;
             }
 
             StreamBuffers & operator=(

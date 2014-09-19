@@ -40,6 +40,11 @@ namespace util
                 std::swap(handler_, r.handler_);
             }
 
+            size_t shared_count() const
+            {
+                return handler_->shared_count();
+            }
+
         public:
             void operator()(
                 boost::system::error_code const & ec, 
@@ -57,6 +62,11 @@ namespace util
                     size_t bytes_transferred)
                 {
                     return invoker_(*this, ec, bytes_transferred);
+                }
+
+                size_t shared_count() const
+                {
+                    return nref_;
                 }
 
                 friend void intrusive_ptr_add_ref(
