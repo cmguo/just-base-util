@@ -34,7 +34,7 @@ namespace util
                     if (*b == '$') {
                         ok_ = true;
                         step_ = 3;
-                        size_ = 4 + b[2] * 256 + b[3];
+                        size_ = 4 + (boost::uint16_t)b[2] * 256 + (boost::uint8_t)b[3];
                         msg_def_ = &data_def_;
                         break;
                     } else {
@@ -50,7 +50,7 @@ namespace util
                     if (e[-1] == '\n') {
                         if (e[-3] == '\n') {
                             while (b != e) {
-                                if (strncmp(b, "Content-Length:", 15) == 0) {
+                                if (strncasecmp(b, "Content-Length:", 15) == 0) {
                                     b += 15;
                                     while (*b == ' ') ++b;
                                     size_t len = atol(b);
