@@ -201,7 +201,6 @@ namespace util
             WatchStateEnum watch_state_;
             HttpRequest request_;
             HttpResponse response_;
-            boost::asio::streambuf transfer_buf_;
         };
 
     } // namespace protocol

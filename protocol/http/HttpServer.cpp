@@ -170,8 +170,7 @@ namespace util
                     break;
                 case transferring_request_data:
                     reset_source(request_.head());
-                    on_receive_request_data(transfer_buf_);
-                    transfer_buf_.consume(transfer_buf_.size());
+                    on_receive_request_data(request_.data());
                     state_ = local_processing;
                     if (watch_state_ == watch_stopped) {
                         watch_state_ = watching;
@@ -206,6 +205,7 @@ namespace util
                 case transferring_response_data:
                     reset_sink(response_.head());
                     on_finish();
+                    request_.clear_data();
                     if (!response_.head().connection
                         || response_.head().connection.get() == http_field::Connection::close) {
                             state_ = exiting;
@@ -221,7 +221,7 @@ namespace util
                         if (watch_state_ != watching) {
                             // restart
                             watch_state_ = watch_stopped;
-                            handle_async(ec, Size());
+                            start();
                         } else {
                             error_code ec;
                             boost::asio::ip::tcp::socket::cancel(ec);
@@ -279,12 +279,11 @@ namespace util
         void HttpServer::transfer_request_data(
             response_type const & resp)
         {
-            transfer_buf_.reset();
             size_t content_length = request_.head().content_length.get_value_or(0);
             if (content_length) {
                 boost::asio::async_read(
                     source(), 
-                    transfer_buf_, 
+                    request_.data(), 
                     boost::asio::transfer_at_least(content_length), 
                     resp);
             } else {
@@ -295,10 +294,9 @@ namespace util
         void HttpServer::transfer_response_data(
             response_type const & resp)
         {
-            transfer_buf_.reset();
-            on_receive_response_data(transfer_buf_);
-            if (transfer_buf_.size()) {
-                boost::asio::async_write(sink(), transfer_buf_, resp);
+            on_receive_response_data(response_.data());
+            if (response_.data().size()) {
+                boost::asio::async_write(sink(), response_.data(), resp);
             } else {
                 resp(boost::system::error_code(), Size());
             }
