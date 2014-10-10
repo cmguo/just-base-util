@@ -67,6 +67,11 @@ namespace util
                 bool b);
 
         public:
+            void cancel();
+
+            boost::system::error_code cancel(
+                boost::system::error_code & ec);
+
             void close();
 
             boost::system::error_code close(

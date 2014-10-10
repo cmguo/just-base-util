@@ -30,6 +30,19 @@ namespace util
             close(ec);
         }
 
+        void MessageSocket::cancel()
+        {
+            cancel_parallel();
+            framework::network::TcpSocket::cancel();
+        }
+
+        boost::system::error_code MessageSocket::cancel(
+            boost::system::error_code & ec)
+        {
+            cancel_parallel();
+            return framework::network::TcpSocket::cancel(ec);
+        }
+
         void MessageSocket::close()
         {
             cancel_parallel();
