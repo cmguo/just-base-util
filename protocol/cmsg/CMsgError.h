@@ -1,39 +1,39 @@
-// MineError.h
+// CMsgError.h
 
-#ifndef _UTIL_PROTOCOL_MINE_MINE_ERROR_H_
-#define _UTIL_PROTOCOL_MINE_MINE_ERROR_H_
+#ifndef _UTIL_PROTOCOL_CMSG_CMSG_ERROR_H_
+#define _UTIL_PROTOCOL_CMSG_CMSG_ERROR_H_
 
 namespace util
 {
     namespace protocol
     {
 
-        namespace mine_error {
+        namespace cmsg_error {
 
             enum errors
             {
-                format_error = 1,   // mine头格式错误
+                format_error = 1,   // cmsg头格式错误
 
             };
 
             namespace detail {
 
-                class mine_category
+                class cmsg_category
                     : public boost::system::error_category
                 {
                 public:
                     const char* name() const
                     {
-                        return "mine";
+                        return "cmsg";
                     }
 
                     std::string message(int value) const
                     {
                         switch (value) {
-                        case mine_error::format_error:
+                        case cmsg_error::format_error:
                             return "MINE packet format error";
                         default:
-                            return "mine error";
+                            return "cmsg error";
                         }
                     }
                 };
@@ -42,11 +42,11 @@ namespace util
 
             inline const boost::system::error_category & get_category()
             {
-                static detail::mine_category instance;
+                static detail::cmsg_category instance;
                 return instance;
             }
 
-            static boost::system::error_category const & mine_category = get_category();
+            static boost::system::error_category const & cmsg_category = get_category();
 
             inline boost::system::error_code make_error_code(
                 errors e)
@@ -55,7 +55,7 @@ namespace util
                     static_cast<int>(e), get_category());
             }
 
-        } // namespace mine_error
+        } // namespace cmsg_error
 
     } // namespace protocol
 } // namespace util
@@ -66,16 +66,16 @@ namespace boost
     {
 
         template<>
-        struct is_error_code_enum<util::protocol::mine_error::errors>
+        struct is_error_code_enum<util::protocol::cmsg_error::errors>
         {
             BOOST_STATIC_CONSTANT(bool, value = true);
         };
 
 #ifdef BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP
-        using util::protocol::mine_error::make_error_code;
+        using util::protocol::cmsg_error::make_error_code;
 #endif
 
     }
 }
 
-#endif // _UTIL_PROTOCOL_MINE_MINE_ERROR_H_
+#endif // _UTIL_PROTOCOL_CMSG_CMSG_ERROR_H_

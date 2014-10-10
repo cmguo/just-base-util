@@ -104,9 +104,9 @@ namespace util
             sockets_[n + 1]->connect(endpoint, ec);
             if (ec)
                 return false;
-            boost::uint8_t nat[] = {0xce, 0xfa, 0xed, 0xfe};
-            sockets_[n]->send(boost::asio::buffer(nat), 0, ec);
-            sockets_[n + 1]->send(boost::asio::buffer(nat), 0, ec);
+            //boost::uint8_t nat[] = {0xce, 0xfa, 0xed, 0xfe};
+            //sockets_[n]->send(boost::asio::buffer(nat), 0, ec);
+            //sockets_[n + 1]->send(boost::asio::buffer(nat), 0, ec);
             read_handler_->add_socket(sockets_[n]);
             read_handler_->add_socket(sockets_[n + 1]);
             return true;

@@ -5,19 +5,17 @@
 
 #include "util/protocol/rtsp/RtspPacket.h"
 #include "util/protocol/rtsp/RtspMessageData.h"
+#include "util/protocol/rtsp/RtspFieldRange.h"
+
+#include "util/protocol/cmsg/CMsgResponse.h"
 
 namespace util
 {
     namespace protocol
     {
         class RtspResponseHead
-            : public RtspHead
+            : public CMsgResponseHead
         {
-        public:
-            size_t version;
-            size_t err_code;
-            std::string err_msg;
-
         public:
             RtspResponseHead(
                 size_t err_code = 200, 
@@ -27,17 +25,10 @@ namespace util
                 size_t err_code, 
                 std::string const & err_msg, 
                 size_t version = 0x00000100);
-
-        private:
-            virtual bool get_line(
-                std::string & line) const;
-
-            virtual bool set_line(
-                std::string const & line);
         };
 
         class RtspResponse
-            : public RtspPacket
+            : public CMsgResponse
             , public RtspMessageData<RtspResponse, RtspMessageType::RESPONSE>
         {
         public:
@@ -55,12 +46,6 @@ namespace util
             RtspResponseHead const & head() const
             {
                 return head_;
-            }
-
-            void clear()
-            {
-                head_ = RtspResponseHead();
-                clear_data();
             }
 
         private:

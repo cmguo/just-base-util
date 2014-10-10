@@ -5,7 +5,8 @@
 #include "util/protocol/rtsp/RtspSocket.hpp"
 #include "util/protocol/rtsp/RtspError.h"
 #include "util/protocol/rtsp/RtspMessageHelper.h"
-#include "util/protocol/rtsp/RtspPacket.hpp"
+#include "util/protocol/cmsg/CMsgPacket.hpp"
+#include "util/protocol/cmsg/CMsgFields.h"
 #include "util/protocol/Message.hpp"
 
 #include <framework/logger/Logger.h>
@@ -22,6 +23,8 @@ namespace util
         FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.protocol.RtspSession", framework::logger::Warn);
 
         static size_t const DATA_BUFFER_SIZE = 10240;
+
+        using cmsg_field::f_content_length;
 
         RtspSession::RtspSession(
             boost::asio::io_service & io_svc)
@@ -51,7 +54,7 @@ namespace util
 
             request.head()["CSeq"] = framework::string::format(++seq_);
             request.head()["Date"] = date;
-            request.head().content_length.reset(request.data().size());
+            request.head()[f_content_length] = request.data().size();
 
             post(RtspMessage(request));
         }
@@ -67,7 +70,7 @@ namespace util
             response.head().err_msg = "OK";
             response.head()["CSeq"] = request.head()["CSeq"];
             response.head()["Date"] = date;
-            response.head().content_length.reset(response.data().size());
+            response.head()[f_content_length] = response.data().size();
 
             requests_.pop_front();
 

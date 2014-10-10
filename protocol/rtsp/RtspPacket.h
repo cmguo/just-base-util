@@ -3,70 +3,19 @@
 #ifndef _UTIL_PROTOCOL_RTSP_RTSP_PACKET_H_
 #define _UTIL_PROTOCOL_RTSP_RTSP_PACKET_H_
 
-#include "util/protocol/rtsp/RtspHead.h"
+#include "util/protocol/rtsp/RtspFields.h"
 
-#include <util/serialization/SplitMember.h>
-
-#include <boost/asio/streambuf.hpp>
+#include "util/protocol/cmsg/CMsgPacket.h"
+#include "util/protocol/cmsg/CMsgProtocol.h"
 
 namespace util
 {
     namespace protocol
     {
 
-        class RtspPacket
-        {
-        protected:
-            RtspPacket(
-                RtspHead & head);
+        typedef CMsgPacket RtspPacket;
 
-            RtspPacket(
-                RtspPacket const & r, 
-                RtspHead & head);
-
-            RtspPacket & operator=(
-                RtspPacket const & r);
-
-        public:
-            RtspHead & head()
-            {
-                return *head_;
-            }
-
-            RtspHead const & head() const
-            {
-                return *head_;
-            }
-
-            boost::asio::streambuf & data()
-            {
-                return data_;
-            }
-
-            boost::asio::streambuf const & data() const
-            {
-                return data_;
-            }
-
-            void clear_data()
-            {
-                data_.reset();
-            }
-
-            SERIALIZATION_SPLIT_MEMBER();
-
-            template <typename Archive>
-            void load(
-                Archive & ar);
-
-            template <typename Archive>
-            void save(
-                Archive & ar) const;
-
-        private:
-            RtspHead * head_;
-            boost::asio::streambuf data_;
-        };
+        extern CMsgProtocol rtsp_protocol;
 
     } // namespace protocol
 } // namespace util

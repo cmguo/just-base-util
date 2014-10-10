@@ -8,32 +8,25 @@ namespace util
     namespace protocol
     {
 
-        RtspPacket::RtspPacket(
-            RtspHead & head)
-            : head_(&head)
-        {
-        }
+        static char const * const rtsp_method_strings[] = {
+            "DESCRIBE", 
+            "ANNOUNCE", 
+            "GET_PARAMETER", 
+            "SET_PARAMETER", 
+            "OPTIONS", 
+            "REDIRECT", 
+            "SETUP", 
+            "PLAY", 
+            "RECORD", 
+            "PAUSE", 
+            "TEARDOWN", 
+            NULL
+        };
 
-        RtspPacket::RtspPacket(
-            RtspPacket const & r, 
-            RtspHead & head)
-            : head_(&head)
-        {
-            *this = r;
-        }
-
-        RtspPacket & RtspPacket::operator=(
-            RtspPacket const & r)
-        {
-            // head_²»±ä
-            data_.reset();
-            memcpy(
-                boost::asio::buffer_cast<void *>(data_.prepare(r.data_.size())), 
-                boost::asio::buffer_cast<void const *>(r.data_.data()), 
-                r.data_.size());
-            data_.commit(r.data_.size());
-            return *this;
-        }
+        CMsgProtocol rtsp_protocol = {
+            "RTSP", 
+            rtsp_method_strings
+        };
 
     } // namespace protocol
 } // namespace util

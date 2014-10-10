@@ -5,6 +5,9 @@
 
 #include "util/protocol/rtsp/RtspPacket.h"
 #include "util/protocol/rtsp/RtspMessageData.h"
+#include "util/protocol/rtsp/RtspFieldRange.h"
+
+#include "util/protocol/cmsg/CMsgRequest.h"
 
 namespace util
 {
@@ -12,7 +15,7 @@ namespace util
     {
 
         class RtspRequestHead
-            : public RtspHead
+            : public CMsgRequestHead
         {
         public:
             enum MethodEnum
@@ -41,23 +44,11 @@ namespace util
                 size_t version = 0x00000100);
 
         public:
-            static std::string const method_str[];
-
-        public:
-            MethodEnum method;
-            std::string path;
-            size_t version;
-
-        private:
-            virtual bool get_line(
-                std::string & line) const;
-
-            virtual bool set_line(
-                std::string const & line);
+            //static std::string const method_str[];
         };
 
         class RtspRequest
-            : public RtspPacket
+            : public CMsgRequest
             , public RtspMessageData<RtspRequest, RtspMessageType::REQUEST>
         {
         public:
@@ -75,12 +66,6 @@ namespace util
             RtspRequestHead const & head() const
             {
                 return head_;
-            }
-
-            void clear()
-            {
-                head_ = RtspRequestHead();
-                clear_data();
             }
 
         private:

@@ -3,7 +3,7 @@
 #ifndef _UTIL_PROTOCOL_RTSP_RTSP_FIELD_RANGE_H_
 #define _UTIL_PROTOCOL_RTSP_RTSP_FIELD_RANGE_H_
 
-#include "util/protocol/mine/MineFieldRange.h"
+#include "util/protocol/cmsg/CMsgFieldRange.h"
 
 namespace util
 {
@@ -12,16 +12,18 @@ namespace util
         namespace rtsp_field
         {
 
-            struct PrefixNpt
+            struct RangeNptTraits
             {
-                char const * operator()() const
+                typedef float type;
+
+                char const * prefix() const
                 {
                     return "npt";
                 }
             };
 
-            typedef mine_field::RangeUnit<float> RangeUnit;
-            typedef mine_field::Range<float, PrefixNpt> Range;
+            typedef cmsg_field::RangeUnitT<float> RangeUnit;
+            typedef cmsg_field::RangeT<RangeNptTraits> Range;
 
         }
 
