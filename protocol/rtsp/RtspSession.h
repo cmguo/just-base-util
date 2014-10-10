@@ -36,6 +36,9 @@ namespace util
             // call this when finish session
             void stop();
 
+            void stop(
+                boost::system::error_code & ec);
+
         protected:
             virtual void on_start()
             {

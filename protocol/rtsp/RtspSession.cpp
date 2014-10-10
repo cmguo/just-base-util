@@ -88,6 +88,15 @@ namespace util
         void RtspSession::stop()
         {
             stopping_ = true;
+            cancel();
+            release();
+        }
+
+        void RtspSession::stop(
+            boost::system::error_code & ec)
+        {
+            stopping_ = true;
+            cancel(ec);
             release();
         }
 
