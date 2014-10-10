@@ -22,9 +22,13 @@ namespace util
         {
             friend class BasicOArchive<Archive>;
         public:
-            typedef typename std::basic_streambuf<_Elem, _Traits>::pos_type pos_type;
+            typedef _Elem char_type;
 
-            typedef typename std::basic_streambuf<_Elem, _Traits>::off_type off_type;
+            typedef _Traits traits_type;
+
+            typedef typename _Traits::pos_type pos_type;
+
+            typedef typename _Traits::off_type off_type;
 
             StreamOArchive(
                 std::basic_streambuf<_Elem, _Traits> & buf)
