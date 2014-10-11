@@ -210,10 +210,12 @@ namespace util
 
                 boost::mutex::scoped_lock(mutex_);
                 assert(socket->next_ready == NULL);
-                if (ready_sockets_)
+                if (ready_sockets_) {
                     ready_sockets_tail_->next_ready = socket;
-                else
+                    ready_sockets_tail_ = socket;
+                } else {
                     ready_sockets_ = ready_sockets_tail_ = socket;
+                }
 
                 while (!tasks_.empty() && ready_sockets_) {
                     if (handle_task(tasks_.front(), ec)) {

@@ -4,6 +4,7 @@
 #define _UTIL_PROTOCOL_RTSP_RTSP_FIELDS_H_
 
 #include "util/protocol/rtsp/RtspFieldRange.h"
+#include "util/protocol/rtsp/RtspFieldRtpInfo.h"
 #include "util/protocol/cmsg/CMsgFieldDef.h"
 
 namespace util

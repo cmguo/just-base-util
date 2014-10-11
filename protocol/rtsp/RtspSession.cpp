@@ -134,8 +134,9 @@ namespace util
                 % id_ % ec.message() % bytes_transferred);
 
             if (ec) {
-                recv_msg_.type = RtspMessageType::NONE;
                 handle_error(ec);
+                recv_msg_.type = RtspMessageType::NONE;
+                release();
                 return;
             }
 
@@ -144,6 +145,12 @@ namespace util
             } else {
                 requests_.push_back(recv_msg_.as<RtspRequest>());
                 on_recv(requests_.back());
+            }
+
+            if (stopping_) {
+                recv_msg_.type = RtspMessageType::NONE;
+                release();
+                return;
             }
 
             recv_next();
@@ -159,8 +166,9 @@ namespace util
                 % id_ % ec.message() % bytes_transferred);
 
             if (ec) {
-                send_msgs_.clear();
                 handle_error(ec);
+                send_msgs_.clear();
+                release();
                 return;
             }
 
@@ -172,7 +180,9 @@ namespace util
             }
 
             send_msgs_.pop_front();
-            if (!send_msgs_.empty()) {
+            if (send_msgs_.empty()) {
+                release();
+            } else {
                 send_next();
             }
         }
@@ -183,8 +193,6 @@ namespace util
             LOG_WARN("[handle_error] id = %u, ec = %s" % id_ % ec.message());
 
             on_error(ec);
-
-            release();
         }
 
         void RtspSession::release()

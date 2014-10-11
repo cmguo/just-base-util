@@ -127,6 +127,8 @@ namespace util
                     return 8;
                 }
                 if (!descs_[order].empty() && (flag & 2) == 0) { // not multiple
+                    if (order == 0)
+                        return 8;
                     return 2;
                 }
                 if (flag & 4) { // child
@@ -398,18 +400,17 @@ namespace util
                 std::string value = line.substr(2);
                 char flag = s->add_line(key, value);
                 if (flag) {
+                    while ((flag & 8) && !stack.empty()) { // not found
+                        s = stack.back();
+                        stack.pop_back();
+                        flag = s->add_line(key, value);
+                    }
                     if (flag & 4) { // child
                         boost::intrusive_ptr<Section> child = s->add_child(key);
                         stack.push_back(s);
                         s = child;
                         flag = s->add_line(key, value);
                         assert(flag == 0);
-                    } else if ((flag & 8) && !stack.empty()) { // not found
-                        do {
-                            s = stack.back();
-                            stack.pop_back();
-                            flag = s->add_line(key, value);
-                        } while ((flag & 8) && stack.empty());
                     }
                     if (flag)
                         break;
