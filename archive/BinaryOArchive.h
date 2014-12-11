@@ -21,29 +21,37 @@ namespace util
 
         template <
             typename _Elem = char, 
-            typename _Traits = std::char_traits<_Elem>
+            typename _Traits = std::char_traits<_Elem>, 
+            typename _Archive = boost::mpl::false_
         >
         class BinaryOArchive
-            : public StreamOArchive<BinaryOArchive<_Elem, _Traits>, _Elem, _Traits>
+            : public StreamOArchive<typename boost::mpl::if_<
+                boost::is_same<_Archive, boost::mpl::false_>, 
+                BinaryOArchive<_Elem, _Traits>, 
+                _Archive>::type, _Elem, _Traits>
         {
-            friend class StreamOArchive<BinaryOArchive<_Elem, _Traits>, _Elem, _Traits>;
+            typedef StreamOArchive<typename boost::mpl::if_<
+                boost::is_same<_Archive, boost::mpl::false_>, 
+                BinaryOArchive<_Elem, _Traits>, 
+                _Archive>::type, _Elem, _Traits> super;
+
             friend struct SaveAccess;
 
         public:
             BinaryOArchive(
                 std::basic_ostream<_Elem, _Traits> & os)
-                : StreamOArchive<BinaryOArchive<_Elem, _Traits>, _Elem, _Traits>(*os.rdbuf())
+                : super(*os.rdbuf())
             {
             }
 
             BinaryOArchive(
                 std::basic_streambuf<_Elem, _Traits> & buf)
-                : StreamOArchive<BinaryOArchive<_Elem, _Traits>, _Elem, _Traits>(buf)
+                : super(buf)
             {
             }
 
         public:
-            using StreamOArchive<BinaryOArchive<_Elem, _Traits>, _Elem, _Traits>::save_binary;
+            using super::save_binary;
 
             /// 向流中写入参数化类型变量
             template <typename T>
@@ -59,7 +67,7 @@ namespace util
                 save_binary((_Elem const *)t.data(), 3);
             }
 
-            using StreamOArchive<BinaryOArchive<_Elem, _Traits>, _Elem, _Traits>::save;
+            using super::save;
 
             /// 判断某个类型是否可以优化数组的序列化
             /// 只有基本类型能够直接序列化数组
@@ -89,10 +97,11 @@ namespace util
         template <
             typename _Elem, 
             typename _Traits, 
+            typename _Archive,
             typename T
         >
-        struct use_array_optimization<util::archive::BinaryOArchive<_Elem, _Traits>, T>
-            : util::archive::BinaryOArchive<_Elem, _Traits>::template use_array_optimization<T>
+        struct use_array_optimization<util::archive::BinaryOArchive<_Elem, _Traits, _Archive>, T>
+            : util::archive::BinaryOArchive<_Elem, _Traits, _Archive>::template use_array_optimization<T>
         {
         };
     }

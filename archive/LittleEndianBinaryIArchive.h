@@ -28,18 +28,19 @@ namespace util
             typename _Traits = std::char_traits<_Elem>
         >
         class LittleEndianBinaryIArchive
-            : public BinaryIArchive<_Elem, _Traits>
+            : public BinaryIArchive<_Elem, _Traits, LittleEndianBinaryIArchive<_Elem, _Traits> >
         {
+            typedef BinaryIArchive<_Elem, _Traits, LittleEndianBinaryIArchive<_Elem, _Traits> > super;
         public:
             LittleEndianBinaryIArchive(
                 std::basic_istream<_Elem, _Traits> & is)
-                : BinaryIArchive<_Elem, _Traits>(*is.rdbuf())
+                : super(*is.rdbuf())
             {
             }
 
             LittleEndianBinaryIArchive(
                 std::basic_streambuf<_Elem, _Traits> & buf)
-                : BinaryIArchive<_Elem, _Traits>(buf)
+                : super(buf)
             {
             }
         };
@@ -61,8 +62,6 @@ namespace util
         class LittleEndianBinaryIArchive
             : public StreamIArchive<LittleEndianBinaryIArchive<_Elem, _Traits>, _Elem, _Traits>
         {
-            friend class StreamIArchive<LittleEndianBinaryIArchive<_Elem, _Traits>, _Elem, _Traits>;
-
         public:
             LittleEndianBinaryIArchive(
                 std::basic_istream<_Elem, _Traits> & is)

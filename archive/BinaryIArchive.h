@@ -21,27 +21,35 @@ namespace util
 
         template <
             typename _Elem = char, 
-            typename _Traits = std::char_traits<_Elem>
+            typename _Traits = std::char_traits<_Elem>, 
+            typename _Archive = boost::mpl::false_
         >
         class BinaryIArchive
-            : public StreamIArchive<BinaryIArchive<_Elem, _Traits>, _Elem, _Traits>
+            : public StreamIArchive<typename boost::mpl::if_<
+                boost::is_same<_Archive, boost::mpl::false_>, 
+                BinaryIArchive<_Elem, _Traits>, 
+                _Archive>::type, _Elem, _Traits>
         {
-            friend class StreamIArchive<BinaryIArchive<_Elem, _Traits>, _Elem, _Traits>;
+            typedef StreamIArchive<typename boost::mpl::if_<
+                boost::is_same<_Archive, boost::mpl::false_>, 
+                BinaryIArchive<_Elem, _Traits>, 
+                _Archive>::type, _Elem, _Traits> super;
+
         public:
             BinaryIArchive(
                 std::basic_istream<_Elem, _Traits> & is)
-                : StreamIArchive<BinaryIArchive<_Elem, _Traits>, _Elem, _Traits>(*is.rdbuf())
+                : super(*is.rdbuf())
             {
             }
 
             BinaryIArchive(
                 std::basic_streambuf<_Elem, _Traits> & buf)
-                : StreamIArchive<BinaryIArchive<_Elem, _Traits>, _Elem, _Traits>(buf)
+                : super(buf)
             {
             }
 
         public:
-            using StreamIArchive<BinaryIArchive<_Elem, _Traits>, _Elem, _Traits>::load_binary;
+            using super::load_binary;
 
             /// 从流中读出变量
             template<class T>
@@ -58,7 +66,7 @@ namespace util
                 load_binary((_Elem *)t.data(), 3);
             }
 
-            using StreamIArchive<BinaryIArchive<_Elem, _Traits>, _Elem, _Traits>::load;
+            using super::load;
 
             /// 判断某个类型是否可以优化数组的序列化
             /// 只有基本类型能够直接序列化数组
@@ -88,10 +96,11 @@ namespace util
         template <
             typename _Elem, 
             typename _Traits, 
+            typename _Archive,
             typename T
         >
-        struct use_array_optimization<util::archive::BinaryIArchive<_Elem, _Traits>, T>
-            : util::archive::BinaryIArchive<_Elem, _Traits>::template use_array_optimization<T>
+        struct use_array_optimization<util::archive::BinaryIArchive<_Elem, _Traits, _Archive>, T>
+            : util::archive::BinaryIArchive<_Elem, _Traits, _Archive>::template use_array_optimization<T>
         {
         };
     }

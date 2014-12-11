@@ -28,18 +28,19 @@ namespace util
             typename _Traits = std::char_traits<_Elem>
         >
         class LittleEndianBinaryOArchive
-            : public BinaryOArchive<_Elem, _Traits>
+            : public BinaryOArchive<_Elem, _Traits, LittleEndianBinaryOArchive<_Elem, _Traits> >
         {
+            typedef BinaryOArchive<_Elem, _Traits, LittleEndianBinaryOArchive<_Elem, _Traits> > super;
         public:
             LittleEndianBinaryOArchive(
                 std::basic_ostream<_Elem, _Traits> & os)
-                : BinaryOArchive<_Elem, _Traits>(*os.rdbuf())
+                : super(*os.rdbuf())
             {
             }
 
             LittleEndianBinaryOArchive(
                 std::basic_streambuf<_Elem, _Traits> & buf)
-                : BinaryOArchive<_Elem, _Traits>(buf)
+                : super(buf)
             {
             }
         };
