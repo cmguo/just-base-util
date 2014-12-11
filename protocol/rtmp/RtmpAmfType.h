@@ -202,32 +202,12 @@ namespace util
                     && l.Variables == r.Variables;
             }
 
-            SERIALIZATION_SPLIT_MEMBER();
-
             template <typename Archive>
-            void load(
+            void serialize(
                 Archive & ar)
             {
                 ar & ECMAArrayLength;
-                RtmpAmfObjectProperty Property;
-                Variables.clear();
-                while (ar & Property) {
-                    Variables.push_back(Property);
-                    if (FLV_Property_End(Property))
-                        break;
-                }
-            }
-
-            template <typename Archive>
-            void save(
-                Archive & ar) const
-            {
-                boost::uint32_t ECMAArrayLength = Variables.size();
-                ar & ECMAArrayLength;
-                for (size_t i = 0; i < Variables.size(); ++i) {
-                    ar & Variables[i];
-                }
-                ar & RtmpAmfObjectProperty();
+                util::serialization::serialize_collection(ar, Variables, ECMAArrayLength);
             }
         };
 
