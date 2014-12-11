@@ -472,7 +472,7 @@ namespace boost
             const util::buffers::StlBuffer<_Witch, _Elem, _Traits> & b)
         {
             return typename util::buffers::WitchBuffers<_Witch>::type(
-                detail::buffer_cast_helper(b), buffer_size_helper(b));
+                detail::buffer_cast_helper(b), detail::buffer_size_helper(b));
         }
 
         template <
@@ -484,8 +484,7 @@ namespace boost
             const util::buffers::StlBuffer<_Witch, _Elem, _Traits> & b, 
             std::size_t max_size_in_bytes)
         {
-            return typename util::buffers::WitchBuffers<_Witch>::type(
-                typename util::buffers::WitchBuffer<_Witch>::type(detail::buffer_cast_helper(b), buffer_size_helper(b)), max_size_in_bytes);
+            return buffer(buffer(b), max_size_in_bytes);
         }
     }
 }
