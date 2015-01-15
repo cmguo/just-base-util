@@ -47,4 +47,13 @@ namespace util
     }  // namespace serialization
 } // namespace util
 
+#define SERIALIZATION_SPLIT_FREE(type) \
+template<class Archive> \
+void serialize( \
+    Archive & ar, \
+    type & t) \
+{ \
+    util::serialization::split_free(ar, *this); \
+}
+
 #endif // _UTIL_SERIALIZATION_SPLIT_FREE_H_

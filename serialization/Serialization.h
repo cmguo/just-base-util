@@ -47,13 +47,4 @@ namespace util
     }  // namespace serialization
 } // namespace util
 
-/// 定义serialize拆分功能的宏
-#define SERIALIZATION_SPLIT_MEMBER() \
-template<class Archive> \
-void serialize( \
-    Archive & ar) \
-{ \
-    util::serialization::split_member(ar, *this); \
-}
-
 #endif // _UTIL_SERIALIZATION_SERIALIZATION_H_
