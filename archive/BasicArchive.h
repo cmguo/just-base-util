@@ -1,4 +1,4 @@
-// BasicIArchive.h
+// BasicArchive.h
 
 #ifndef _UTIL_ARCHIVE_BASIC_ARCHIVE_H_
 #define _UTIL_ARCHIVE_BASIC_ARCHIVE_H_
@@ -17,7 +17,6 @@ namespace util
     namespace archive
     {
 
-        template <typename Archive>
         class BasicArchive
         {
         protected:
@@ -26,12 +25,6 @@ namespace util
                 , version_(0)
                 , context_(NULL)
             {
-            }
-
-            /// 获取派生类的指针
-            Archive * This()
-            {
-                return static_cast<Archive *>(this);
             }
 
         public:
@@ -134,7 +127,20 @@ namespace util
             size_t version_;
             void * context_;
             std::vector<std::string> path_;
-        }; // class basic_iarchive
+        };
+
+        template <typename Archive>
+        class BasicArchiveT
+            : public BasicArchive
+        {
+        protected:
+            /// 获取派生类的指针
+            Archive * This()
+            {
+                return static_cast<Archive *>(this);
+            }
+
+        };
 
     }  // namespace archive
 } // namespace util

@@ -44,7 +44,7 @@ namespace util
          */
         template <typename Archive>
         class BasicIArchive
-            : public BasicArchive<Archive>
+            : public BasicArchiveT<Archive>
         {
         public:
             typedef boost::mpl::false_ is_saving; ///< 表明该归档“不是”用于保存数据的
@@ -210,7 +210,7 @@ namespace util
             }
 
         protected:
-            using BasicArchive<Archive>::This;
+            using BasicArchiveT<Archive>::This;
 
             /// 从流中读出标准库字符串
             template<class _Elem, class _Traits, class _Ax>
