@@ -11,50 +11,10 @@ namespace util
     namespace serialization
     {
 
-        /// 调用类中拆分出来的序列化方法
         template<
+            class Size,
             class Archive, 
             class Container
-        >
-        inline void save_collection(
-            Archive & ar, 
-            Container const & t)
-        {
-            typename Container::size_type count(t.size());
-            ar <<  SERIALIZATION_NVP(count);
-            typename Container::const_iterator it = t.begin();
-            while(ar && count-- > 0) {
-                ar << util::serialization::make_nvp("item", *it++);
-            }
-        }
-
-        template<
-            class Archive, 
-            class Container
-        >
-        inline void load_collection(
-            Archive & ar, 
-            Container & t)
-        {
-            t.clear();
-            typename Container::size_type count = 0;
-            ar >>  SERIALIZATION_NVP(count);
-            if (!ar)
-                return;
-            while(count-- > 0) {
-                typename Container::value_type v;
-                ar >> util::serialization::make_nvp("item", v);
-                if (ar)
-                    t.insert(t.end(), v);
-                else
-                    break;
-            }
-        }
-
-        template<
-            class Archive, 
-            class Container, 
-            class Size
         >
         inline void save_collection(
             Archive & ar, 
@@ -69,9 +29,9 @@ namespace util
         }
 
         template<
+            class Size,
             class Archive, 
-            class Container, 
-            class Size
+            class Container
         >
         inline void load_collection(
             Archive & ar, 
@@ -90,30 +50,60 @@ namespace util
             }
         }
 
+        template<
+            class Size,
+            class Archive, 
+            class Container
+        >
+        inline void save_collection(
+            Archive & ar, 
+            Container const & t)
+        {
+            Size count(t.size());
+            ar <<  SERIALIZATION_NVP(count);
+            save_collection(ar, t, count);
+        }
+
+        template<
+            class Size,
+            class Archive, 
+            class Container
+        >
+        inline void load_collection(
+            Archive & ar, 
+            Container & t)
+        {
+            t.clear();
+            Size count = 0;
+            ar >>  SERIALIZATION_NVP(count);
+            load_collection(ar, t, count);
+        }
+
         struct free_collection_saver
         {
             template <
+                class Size,
                 class Archive, 
-                class T
+                class Container
             >
             static void invoke(
                 Archive & ar, 
-                T const & t)
+                Container const & t)
             {
-                save_collection(ar, t);
+                save_collection<Size, Archive, Container>(ar, t);
             }
 
             template <
+                class Size,
                 class Archive, 
-                class T, 
-                class Size
+                class Container
             >
             static void invoke(
                 Archive & ar, 
-                T const & t, 
+                Container const & t, 
                 Size n)
             {
-                save_collection(ar, t, n);
+                save_collection<Size, Archive, Container>(ar, t, n);
             }
         };
 
@@ -121,24 +111,25 @@ namespace util
         struct free_collection_loader
         {
             template<
+                class Size,
                 class Archive, 
-                class T
+                class Container
             >
             static void invoke(
                 Archive & ar, 
-                T & t)
+                Container & t)
             {
-                load_collection(ar, t);
+                load_collection<Size>(ar, t);
             }
 
             template<
+                class Size,
                 class Archive, 
-                class T, 
-                class Size
+                class Container
             >
             static void invoke(
                 Archive & ar, 
-                T & t, 
+                Container & t, 
                 Size n)
             {
                 load_collection(ar, t, n);
@@ -146,6 +137,7 @@ namespace util
         };
         
         template<
+            class Size,
             class Archive, 
             class Container
         >
@@ -158,13 +150,24 @@ namespace util
                 free_collection_saver, 
                 free_collection_loader
             >::type typex;
-            typex::invoke(ar, t);
+            typex::template invoke<Size>(ar, t);
         }
 
         template<
             class Archive, 
-            class Container, 
-            class Size
+            class Container
+        >
+        inline void serialize_collection(
+            Archive & ar, 
+            Container & t)
+        {
+            serialize_collection<typename Container::size_type>(ar, t);
+        }
+
+        template<
+            class Size,
+            class Archive, 
+            class Container
         >
         inline void serialize_collection(
             Archive & ar, 
@@ -180,7 +183,7 @@ namespace util
         }
 
         template<
-            class Size, 
+            class Size,
             class Container
         >
         class Sized
@@ -197,17 +200,13 @@ namespace util
             template <typename Archive>
             void save(Archive & ar) const
             {
-                Size size = c_.size();
-                ar & size;
-                save_collection(ar, c_, size);
+                save_collection<Size>(ar, c_);
             }
 
             template <typename Archive>
             void load(Archive & ar)
             {
-                Size size = 0;
-                ar & size;
-                load_collection(ar, c_, size);
+                load_collection<Size>(ar, c_);
             }
 
         private:
@@ -215,13 +214,58 @@ namespace util
         };
 
         template<
-            class Size, 
+            class Size,
             class Container
         >
         Sized<Size, Container> const make_sized(
             Container & c)
         {
             return Sized<Size, Container>(c);
+        }
+
+        template<
+            class Size,
+            class Container
+        >
+        class Sized2
+        {
+        public:
+            Sized2(
+                Container & c, 
+                Size size)
+                : c_(c)
+                , size_(size)
+            {
+            }
+
+            SERIALIZATION_SPLIT_MEMBER();
+
+            template <typename Archive>
+            void save(Archive & ar) const
+            {
+                save_collection(ar, c_, size_);
+            }
+
+            template <typename Archive>
+            void load(Archive & ar)
+            {
+                load_collection(ar, c_, size_);
+            }
+
+        private:
+            Container & c_;
+            Size size_;
+        };
+
+        template<
+            class Size,
+            class Container
+        >
+        Sized2<Size, Container> const make_sized(
+            Container & c, 
+            Size size)
+        {
+            return Sized2<Size, Container>(c, size);
         }
 
     } // namespace serialization
