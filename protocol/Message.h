@@ -4,6 +4,7 @@
 #define _UTIL_PROTOCOL_MESSAGE_H_
 
 #include "util/protocol/MessageBase.h"
+#include "util/serialization/SplitMember.h"
 
 namespace util
 {
@@ -58,6 +59,15 @@ namespace util
             void to_data(
                 StreamBuffer & buf, 
                 void *) const;
+
+        public:
+            SERIALIZATION_SPLIT_MEMBER();
+
+            void load(
+                typename MsgT::i_archive_t & ar);
+
+            void save(
+                typename MsgT::o_archive_t & ar) const;
 
         public:
             template <typename T>

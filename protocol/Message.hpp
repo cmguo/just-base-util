@@ -96,6 +96,29 @@ namespace util
         }
 
         template <typename MsgT>
+        void Message<MsgT>::load(
+            typename MsgT::i_archive_t & ia)
+        {
+            typename MsgT::context_t * ctx = 
+                reinterpret_cast<typename MsgT::context_t *>(ia.context());
+            typename MsgT::helper_t hlp(ia, *this, ctx);
+            ia >> (header_type &)(*this);
+            MessageBase::reset(find_msg(header_type::id()));
+            MessageBase::from_data(&ia, &hlp);
+        }
+
+        template <typename MsgT>
+        void Message<MsgT>::save(
+            typename MsgT::o_archive_t & oa)
+        {
+            typename MsgT::context_t * ctx = 
+                reinterpret_cast<typename MsgT::context_t *>(oa.context());
+            typename MsgT::helper_t hlp(oa, *this, ctx);
+            oa << (header_type const &)(*this);
+            MessageBase::to_data(&oa, &hlp);
+        }
+
+        template <typename MsgT>
         void Message<MsgT>::from_data(
             StreamBuffer & buf, 
             void * vctx)
