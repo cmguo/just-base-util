@@ -24,6 +24,7 @@ namespace util
         public:
             typedef StdIoBuffer<_Mode, _Elem, _Traits> std_io_buf_t;
             typedef ByteIteratorT<SimpleIoBuffer, BufferIterator> byte_buf_t;
+            typedef ByteIterator<BufferIterator> byte_iterator;
             typedef SimpleIoBuffer<typename _Mode::switch_t, BufferIterator, _Elem, _Traits> switch_t;
             typedef typename std_io_buf_t::char_type char_type;
 
@@ -31,7 +32,7 @@ namespace util
             SimpleIoBuffer(
                 StdIoStream<_Elem, _Traits> & io_stream, 
                 switch_t & switch_buf,
-                BufferIterator iter)
+                byte_iterator iter)
                 : std_io_buf_t(io_stream)
                 , byte_buf_t(iter)
                 , switch_buf_(switch_buf)
@@ -59,10 +60,11 @@ namespace util
 
         public:
             void reset(
-                BufferIterator iter)
+                byte_iterator iter)
             {
-                byte_buf_t::reset(iter);
                 pos_ = 0;
+                byte_buf_t::reset(iter);
+                pos_ -= get_offset();
             }
 
             void seek_off(
@@ -96,6 +98,12 @@ namespace util
             size_t position() const
             {
                 return pos_ + get_offset();
+            }
+
+            void inc_pos(
+                size_t d)
+            {
+                pos_ += d;
             }
 
         private:

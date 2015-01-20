@@ -1,7 +1,7 @@
-// BuffersFind.h
+// ByteBuffers.h
 
-#ifndef _UTIL_BUFFERS_BUFFERS_BYTE_ITERATOR_H_
-#define _UTIL_BUFFERS_BUFFERS_BYTE_ITERATOR_H_
+#ifndef _UTIL_BUFFERS_BUFFERS_BYTE_BUFFERS_H_
+#define _UTIL_BUFFERS_BUFFERS_BYTE_BUFFERS_H_
 
 #include "util/buffers/ByteIterator.h"
 
@@ -15,9 +15,9 @@ namespace util
         template <
             typename BufferIterator
         >
-        class ByteBuffersIterator
+        class ByteBufferIterator
             : public boost::iterator_facade<
-                ByteBuffersIterator<BufferIterator>,
+                ByteBufferIterator<BufferIterator>,
                 typename BufferIteratorTraits<BufferIterator>::buffer_type const, 
                 boost::forward_traversal_tag
             >
@@ -28,7 +28,7 @@ namespace util
             typedef typename byte_iterator::buffer_t buffer_t;
 
         public:
-            ByteBuffersIterator(
+            ByteBufferIterator(
                 BufferIterator const & beg, 
                 BufferIterator const & end, 
                 size_t off = 0)
@@ -38,7 +38,7 @@ namespace util
                 update();
             }
 
-            ByteBuffersIterator(
+            ByteBufferIterator(
                 byte_iterator const & beg, 
                 byte_iterator const & end)
                 : beg_(beg)
@@ -47,8 +47,17 @@ namespace util
                 update();
             }
 
-            ByteBuffersIterator()
+            ByteBufferIterator(
+                BufferIterator const & end)
+                : beg_(end)
+                , end_(end)
             {
+            }
+
+        public:
+            byte_iterator byte_iter() const
+            {
+                return beg_;
             }
 
         private:
@@ -80,7 +89,7 @@ namespace util
             }
 
             bool equal(
-                ByteBuffersIterator const & r) const
+                ByteBufferIterator const & r) const
             {
                 assert(r.beg_ == r.end_);
                 return beg_ == end_;
@@ -104,14 +113,14 @@ namespace util
         {
         public:
             typedef ByteIterator<BufferIterator> byte_iterator;
-            typedef ByteBuffersIterator<BufferIterator> const_iterator;
+            typedef ByteBufferIterator<BufferIterator> const_iterator;
             typedef typename const_iterator::value_type value_type;
 
         public:
             ByteBuffers(
                 const_iterator beg, 
                 const_iterator end = const_iterator())
-                : beg_(beg)
+                : beg_(beg, end)
                 , end_(end, end)
             {
             }
@@ -139,7 +148,7 @@ namespace util
             const_iterator end_;
         };
 
-    } // namespace mux
-} // namespace ppbox
+    } // namespace buffers
+} // namespace util
 
-#endif // _UTIL_BUFFERS_BUFFERS_BYTE_ITERATOR_H_
+#endif // _UTIL_BUFFERS_BUFFERS_BYTE_BUFFERS_H_

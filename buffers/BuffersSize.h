@@ -10,18 +10,24 @@ namespace util
     namespace buffers
     {
 
-        template <typename ConstBufferSequence>
+        template <typename ConstBufferIterator>
         size_t buffers_size(
-            ConstBufferSequence const & buf)
+            ConstBufferIterator const & beg, 
+            ConstBufferIterator const & end)
         {
-            using namespace boost::asio;
-            typename ConstBufferSequence::const_iterator iter = buf.begin();
-            typename ConstBufferSequence::const_iterator end = buf.end();
+            ConstBufferIterator iter = beg;
             size_t total_size = 0;
             for (; iter != end; ++iter) {
                 total_size += boost::asio::buffer_size(buffer(*iter));
             }
             return total_size;
+        }
+
+        template <typename ConstBufferSequence>
+        size_t buffers_size(
+            ConstBufferSequence const & buf)
+        {
+            return buffers_size(buf.begin(), buf.end());
         }
 
     } // namespace buffers

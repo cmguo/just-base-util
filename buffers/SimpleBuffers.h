@@ -34,19 +34,21 @@ namespace util
 
             typedef StdIoStream<Elem, Traits> stream_type;
 
-            typedef BufferIterator buffer_const_iterator;
+            typedef BufferIterator buffer_iterator;
 
-            typedef ByteIterator<buffer_const_iterator> byte_iterator;
-
-            typedef SimpleIoBuffer<
-                StdIoMode<detail::_read>, buffer_const_iterator, char_type, traits_type> read_buffer;
+            typedef ByteIterator<buffer_iterator> byte_iterator;
 
             typedef SimpleIoBuffer<
-                StdIoMode<detail::_write>, buffer_const_iterator, char_type, traits_type> write_buffer;
+                StdIoMode<detail::_read>, buffer_iterator, char_type, traits_type> read_buffer;
 
-            typedef ByteBuffers<buffer_const_iterator> const_byte_buffers;
+            typedef SimpleIoBuffer<
+                StdIoMode<detail::_write>, buffer_iterator, char_type, traits_type> write_buffer;
 
-            typedef ByteBuffers<buffer_const_iterator> mutable_byte_buffers;
+            typedef ByteBuffers<buffer_iterator> byte_buffers;
+
+            typedef ByteBuffers<buffer_iterator> const_byte_buffers;
+
+            typedef ByteBuffers<buffer_iterator> mutable_byte_buffers;
 
             //typedef ConstBuffers const_buffers_type;
             //typedef MutableBuffers mutable_buffers_type;
@@ -60,11 +62,66 @@ namespace util
 
             template <typename Buffers>
             SimpleBuffers(
-                Buffers const & buffers)
-                : write_(*this, read_)
-                , read_(*this, write_)
-                , beg_(buffers.begin())
+                Buffers const & buffers, 
+                size_t avail = 0)
+                : beg_(buffers.begin())
                 , end_(buffers.end())
+                , write_(*this, read_, beg_)
+                , read_(*this, write_, end_)
+            {
+                reset(avail);
+            }
+
+            SimpleBuffers(
+                byte_buffers const & buffers)
+                : beg_(buffers.begin().byte_iter())
+                , end_(buffers.end().byte_iter())
+                , write_(*this, read_, beg_)
+                , read_(*this, write_, end_)
+            {
+                reset();
+            }
+
+            SimpleBuffers(
+                buffer_iterator beg, 
+                size_t avail)
+                : beg_(beg)
+                , end_(beg_ + avail)
+                , write_(*this, read_, beg_)
+                , read_(*this, write_, end_)
+            {
+                reset();
+            }
+
+            SimpleBuffers(
+                buffer_iterator beg, 
+                buffer_iterator end)
+                : beg_(beg)
+                , end_(end)
+                , write_(*this, read_, beg_)
+                , read_(*this, write_, end_)
+            {
+                reset();
+            }
+
+            SimpleBuffers(
+                byte_iterator beg, 
+                size_t avail)
+                : beg_(beg)
+                , end_(beg_ + avail)
+                , write_(*this, read_, beg_)
+                , read_(*this, write_, end_)
+            {
+                reset();
+            }
+
+            SimpleBuffers(
+                byte_iterator beg, 
+                byte_iterator end)
+                : beg_(beg)
+                , end_(end)
+                , write_(*this, read_, beg_)
+                , read_(*this, write_, end_)
             {
                 reset();
             }
@@ -72,10 +129,10 @@ namespace util
             // Copy constructor.
             SimpleBuffers(
                 SimpleBuffers const & other)
-                : write_(*this, read_, other.write_)
-                , read_(*this, write_, other.read_)
-                , beg_(other.beg_)
+                : beg_(other.beg_)
                 , end_(other.end_)
+                , write_(*this, read_, beg_)
+                , read_(*this, write_, end_)
             {
             }
 
@@ -127,6 +184,16 @@ namespace util
                 return write_.position();
             }
 
+            byte_iterator read_pos() const
+            {
+                return read_;
+            }
+
+            byte_iterator write_pos() const
+            {
+                return write_;
+            }
+
         public:
             // Consume the specified number of bytes from the buffers.
             void commit(
@@ -155,13 +222,42 @@ namespace util
                 (void)wpos;
             }
 
-            void reset()
+        public:
+            void reset(
+                byte_iterator beg)
+            {
+                beg_ = beg;
+                reset();
+            }
+
+            void reset(
+                byte_iterator beg, 
+                byte_iterator end)
+            {
+                beg_ = beg;
+                end_ = end;
+                reset();
+            }
+
+            template <typename Buffers>
+            void reset(
+                Buffers const & buffers, 
+                size_t avail)
+            {
+                reset(buffers.begin(), buffers.end());
+            }
+
+            void reset(
+                size_t avail = 0)
             {
                 read_.reset(beg_);
-                if (is_const_buffer<BufferIterator>::value)
+                if (avail) {
+                    write_.reset(beg_ + avail);
+                } else if (is_const_buffer_iterator<BufferIterator>::value) {
                     write_.reset(end_);
-                else
+                } else {
                     write_.reset(beg_);
+                }
             }
 
         private:
@@ -237,7 +333,7 @@ namespace util
                     }
                     assert(pos == read_.position());
                 } else if (mode == std::ios_base::out) {
-                    if (is_const_buffer<BufferIterator>::value)
+                    if (is_const_buffer_iterator<BufferIterator>::value)
                         return pos_type(-1);
                     if (pos < read_.position()) {
                         return pos_type(-1);
@@ -250,7 +346,7 @@ namespace util
                     }
                     assert(pos == write_.position());
                 } else { // mode == std::ios_base::in | std::ios_base::out
-                    if (is_const_buffer<BufferIterator>::value)
+                    if (is_const_buffer_iterator<BufferIterator>::value)
                         return pos_type(-1);
                     reset();
                     write_.seek_off(end_, pos);
@@ -265,10 +361,10 @@ namespace util
             }
 
         private:
+            byte_iterator beg_;
+            byte_iterator end_;
             write_buffer write_;
             read_buffer read_;
-            buffer_const_iterator beg_;
-            buffer_const_iterator end_;
         };
 
     } // namespace buffer

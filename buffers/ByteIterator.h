@@ -3,6 +3,8 @@
 #ifndef _UTIL_BUFFERS_BYTE_TERATOR_H_
 #define _UTIL_BUFFERS_BYTE_TERATOR_H_
 
+#include "util/buffers/BufferTraits.h"
+
 #include <boost/iterator/iterator_facade.hpp>
 
 namespace util
@@ -10,41 +12,17 @@ namespace util
     namespace buffers
     {
 
-        template <typename BufferIterator>
-        struct is_const_buffer_impl
-        {
-            static boost::type_traits::no_type check(...);
-
-            //static boost::type_traits::no_type check(
-            //    boost::asio::mutable_buffers_1);
-
-            static boost::type_traits::yes_type check(
-                boost::asio::const_buffers_1);
-
-            BOOST_STATIC_CONSTANT(unsigned, s = 
-                sizeof(is_const_buffer_impl<BufferIterator>::check(boost::asio::buffer(**(BufferIterator *)0))));
-
-            BOOST_STATIC_CONSTANT(bool, value = (s == sizeof(boost::type_traits::yes_type)));
-        };
-
-        template <typename BufferIterator>
-        struct is_const_buffer
-            : boost::integral_constant<bool, is_const_buffer_impl<BufferIterator>::value>
-        {
-            using boost::integral_constant<bool, is_const_buffer_impl<BufferIterator>::value>::value;
-        };
-
         template<
             typename BufferIterator
         >
         struct BufferIteratorTraits
         {
             typedef typename boost::mpl::if_<
-                is_const_buffer<BufferIterator>, 
+                is_const_buffer_iterator<BufferIterator>, 
                 boost::asio::const_buffer, 
                 boost::asio::mutable_buffer>::type buffer_type;
             typedef typename boost::mpl::if_<
-                is_const_buffer<BufferIterator>, 
+                is_const_buffer_iterator<BufferIterator>, 
                 char const, 
                 char>::type byte_type;
         };
@@ -57,7 +35,7 @@ namespace util
             : public boost::iterator_facade<
                 Derived,
                 typename BufferIteratorTraits<BufferIterator>::byte_type, 
-                boost::random_access_traversal_tag
+                boost::forward_traversal_tag
             >
         {
         public:
@@ -84,6 +62,21 @@ namespace util
             }
 
         public:
+            ByteIteratorT & operator+=(
+                size_t n)
+            {
+                advance(n);
+                return *this;
+            }
+
+            friend ByteIteratorT operator+(
+                ByteIteratorT l, 
+                ByteIteratorT const & r)
+            {
+                return l += r;
+            }
+
+        public:
             template <typename Derived2>
             ByteIteratorT & operator=(
                 ByteIteratorT<Derived2, BufferIterator> const & r)
@@ -91,6 +84,14 @@ namespace util
                 iter_ = r.buffer_iter();
                 dervied().set_offset(r.buffer_offset());
                 return *this;
+            }
+
+            template <typename Derived2>
+            void reset(
+                ByteIteratorT<Derived2, BufferIterator> const & r)
+            {
+                iter_ = r.buffer_iter();
+                dervied().set_offset(r.buffer_offset());
             }
 
             void reset(
@@ -148,6 +149,12 @@ namespace util
             {
                 ++iter_;
                 dervied().set_offset(0);
+            }
+
+            operator BufferIterator() const
+            {
+                assert(buffer_offset() == 0);
+                return iter_;
             }
 
         protected:
@@ -288,6 +295,10 @@ namespace util
             typedef ByteIteratorT<ByteIterator<BufferIterator>, BufferIterator> super;
 
         public:
+            ByteIterator()
+            {
+            }
+
             ByteIterator(
                 BufferIterator const & iter, 
                 size_t off = 0)
@@ -321,7 +332,7 @@ namespace util
             size_t off_;
         };
 
-    } // namespace mux
-} // namespace ppbox
+    } // namespace buffers
+} // namespace util
 
 #endif // _UTIL_BUFFERS_BYTE_TERATOR_H_
