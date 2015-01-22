@@ -53,7 +53,7 @@ void serialize( \
     Archive & ar, \
     type & t) \
 { \
-    util::serialization::split_free(ar, *this); \
+    util::serialization::split_free(ar, t); \
 }
 
 #endif // _UTIL_SERIALIZATION_SPLIT_FREE_H_
