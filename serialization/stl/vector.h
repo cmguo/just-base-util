@@ -155,6 +155,18 @@ namespace std
         load(ar, t, n);
     }
 
+    template<
+        class Archive, 
+        class _Ty, 
+        class _Alloc
+    >
+    inline void serialize(
+        Archive & ar,
+        std::vector<_Ty, _Alloc> & t)
+    {
+        util::serialization::serialize_collection(ar, t);
+    }
+
 } // namespace std
 
 #endif // _UTIL_SERIALIZATION_STL_VECTOR_H_
