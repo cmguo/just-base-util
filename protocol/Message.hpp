@@ -109,7 +109,7 @@ namespace util
 
         template <typename MsgT>
         void Message<MsgT>::save(
-            typename MsgT::o_archive_t & oa)
+            typename MsgT::o_archive_t & oa) const
         {
             typename MsgT::context_t * ctx = 
                 reinterpret_cast<typename MsgT::context_t *>(oa.context());

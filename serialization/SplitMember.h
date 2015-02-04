@@ -3,6 +3,8 @@
 #ifndef _UTIL_SERIALIZATION_SPLIT_MEMBER_H_
 #define _UTIL_SERIALIZATION_SPLIT_MEMBER_H_
 
+#include <boost/mpl/if.hpp>
+
 namespace util
 {
     namespace serialization
