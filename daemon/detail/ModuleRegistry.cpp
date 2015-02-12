@@ -33,15 +33,15 @@ namespace util
                 }
             }
 
-            bool ModuleRegistry::startup(
-                boost::system::error_code & ec)
+            boost::system::error_code ModuleRegistry::startup()
             {
                 boost::mutex::scoped_lock lock(mutex_);
+                boost::system::error_code ec;
                 Module * module = first_module_;
                 while (module) {
                     LOG_INFO("starting module " << module->name());
-                    bool result = module->startup(ec);
-                    if (!result) {
+                    ec = module->startup();
+                    if (ec) {
                         LOG_WARN("start module " << module->name() << " failed: " << ec.message());
                         break;
                     }
@@ -51,31 +51,27 @@ namespace util
                     module = module->prev_;
                     while (module) {
                         LOG_INFO("shutdowning module " << module->name());
-                        module->shutdown(ec);
+                        module->shutdown();
                         module = module->prev_;
                     }
                 } else {
                     is_started_ = true;
                 }
-                return is_started_;
+                return ec;
             }
 
-            bool ModuleRegistry::shutdown(
-                boost::system::error_code & ec)
+            void ModuleRegistry::shutdown()
             {
                 boost::mutex::scoped_lock lock(mutex_);
-                if (!is_started_) {
-                    ec.clear();
-                    return true;
-                }
+                if (!is_started_)
+                    return;
                 Module * module = last_module_;
                 while (module) {
                     LOG_INFO("shutdowning module " << module->name());
-                    module->shutdown(ec);
+                    module->shutdown();
                     module = module->prev_;
                 }
                 is_started_ = false;
-                return true;
             }
 
         } // namespace detail

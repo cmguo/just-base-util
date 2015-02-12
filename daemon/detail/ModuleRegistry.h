@@ -63,11 +63,9 @@ namespace util
                 ~ModuleRegistry();
 
             public:
-                bool startup(
-                    boost::system::error_code & ec);
+                boost::system::error_code startup();
 
-                bool shutdown(
-                    boost::system::error_code & ec);
+                void shutdown();
 
                 bool is_started() const
                 {
@@ -122,10 +120,8 @@ namespace util
                     } else {
                         first_module_ = last_module_ = new_module.release();
                     }
-                    if (is_started_) {
-                        boost::system::error_code ec;
-                        static_cast<detail::Module &>(new_module_ref).startup(ec);
-                    }
+                    if (is_started_)
+                        static_cast<detail::Module &>(new_module_ref).startup();
                     return new_module_ref;
                 }
 

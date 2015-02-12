@@ -53,11 +53,9 @@ namespace util
                 }
 
             private:
-                virtual bool startup(
-                    boost::system::error_code & ec) = 0;
+                virtual boost::system::error_code startup() = 0;
 
-                virtual bool shutdown(
-                    boost::system::error_code & ec) = 0;
+                virtual void shutdown() = 0;
 
                 friend class detail::ModuleRegistry;
 
