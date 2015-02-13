@@ -22,7 +22,7 @@ namespace util
         {
             using namespace boost::asio;
 
-            if (size == 0 || idst != edst || isrc != esrc) {
+            if (size == 0 || idst == edst || isrc == esrc) {
                 return 0;
             }
 
