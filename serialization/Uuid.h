@@ -9,7 +9,7 @@
 
 #include <framework/string/Uuid.h>
 
-namespace frameowrk
+namespace framework
 {
     namespace string
     {

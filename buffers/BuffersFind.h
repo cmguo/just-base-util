@@ -88,9 +88,9 @@ namespace util
                 BufferIterator2 const & end2, 
                 size_t size)
             {
-                BuffersPosition<Buffer2, BufferIterator2> bpos2(pos2, end2);
-                BuffersPosition<Buffer2, BufferIterator2> bend2(end2);
-                return detail::buffers_compare_impl(beg_, end_, bpos2, bend2, size);
+                BuffersBufferIterator<Buffer, BufferIterator> pos1(beg_, end_);
+                BuffersBufferIterator<Buffer, BufferIterator> end1;
+                return buffers_compare(pos1, end1, pos2, end2, size);
             }
 
         public:
