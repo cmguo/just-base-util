@@ -79,7 +79,7 @@ namespace util
             /// 从流中读出数组（优化）
             template<class T>
             void load_array(
-                framework::container::Array<T> & a, 
+                framework::container::Array<T> const & a, 
                 typename boost::enable_if<use_array_optimization<T> >::type * = NULL)
             {
                 load_binary((_Elem *)a.address(), sizeof(T) * a.count());
