@@ -20,7 +20,7 @@ namespace util
         struct RtspMessageContext;
 
         struct RtspMessageTraits
-            : MessageTraits
+            : MessageTraits<RtspMessageTraits>
         {
             typedef boost::uint8_t id_type;
 

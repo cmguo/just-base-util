@@ -17,7 +17,7 @@ namespace util
         class MmspMessageHelper;
 
         struct MmspMessageTraits
-            : MessageTraits
+            : MessageTraits<MmspMessageTraits>
         {
             typedef boost::uint32_t id_type;
 

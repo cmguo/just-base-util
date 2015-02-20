@@ -18,7 +18,7 @@ namespace util
         class RtmpMessageContext;
 
         struct RtmpMessageTraits
-            : MessageTraits
+            : MessageTraits<RtmpMessageTraits>
         {
             typedef boost::uint8_t id_type;
 

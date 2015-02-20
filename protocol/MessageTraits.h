@@ -18,6 +18,9 @@ namespace util
         >
         class MessageDataHelper;
 
+        template <
+            typename MsgT
+        >
         class MessageTraits
         {
         public:
@@ -33,7 +36,7 @@ namespace util
 
             typedef void context_t;
 
-            typedef MessageHelper<MessageTraits> helper_t;
+            typedef MessageHelper<MsgT> helper_t;
         };
 
     } // namespace protocol
