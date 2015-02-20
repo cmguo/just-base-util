@@ -88,95 +88,120 @@ namespace util
             return p - argv;
         }
 
-        static void startup_notify(
-            boost::system::error_code & result2, 
+        static void finish_notify(
+            bool & result2, 
             boost::mutex & mutex, 
             boost::condition_variable & cond, 
-            boost::system::error_code const & result)
+            bool result)
         {
             boost::mutex::scoped_lock lock(mutex);
             result2 = result;
             cond.notify_all();
         }
 
-        boost::system::error_code Daemon::start(
-            size_t concurrency)
+        bool Daemon::start(
+            boost::system::error_code & ec)
+        {
+            return start(0, ec);
+        }
+
+        bool Daemon::start(
+            size_t concurrency, 
+            boost::system::error_code & ec)
         {
             io_work_ = new boost::asio::io_service::work(io_svc_);
-            boost::system::error_code result;
+            bool result = false;
             LOG_INFO("[start] beg");
             if (concurrency == 0) {
-                result = module_registry_->startup();
+                result = module_registry_->startup(ec);
             } else {
                 boost::mutex mutex;
                 boost::condition_variable cond;
                 boost::mutex::scoped_lock lock(mutex);
-                io_svc_.post(boost::bind(startup_notify, 
+                io_svc_.post(boost::bind(finish_notify, 
                     boost::ref(result), 
                     boost::ref(mutex), 
                     boost::ref(cond), 
-                    boost::bind(&detail::ModuleRegistry::startup, module_registry_)));
+                    boost::bind(&detail::ModuleRegistry::startup, module_registry_, boost::ref(ec))));
                 for (size_t i = 0; i < concurrency; ++i) {
                     th_grp_.create_thread(boost::bind(&boost::asio::io_service::run, &io_svc_));
                 }
                 cond.wait(lock);
             }
             LOG_INFO("[start] end");
-            if (result) {
+            if (!result) {
                 LOG_INFO("[stop] beg");
                 delete io_work_;
                 io_work_ = NULL;
-                run();
+                result = run(ec);
             }
             return result;
         }
 
-        boost::system::error_code Daemon::start(
-            start_call_back_type const & start_call_back)
+        bool Daemon::start(
+            start_call_back_type const & start_call_back, 
+            boost::system::error_code & ec)
         {
             LOG_INFO("[start] beg");
             io_work_ = new boost::asio::io_service::work(io_svc_);
-            boost::system::error_code result;
-            result = module_registry_->startup();
+            bool result = module_registry_->startup(ec);
             LOG_INFO("[start] end");
-            start_call_back(result);
-            if (result) {
+            start_call_back(ec);
+            if (!result) {
             	LOG_INFO("[stop] beg");
                 delete io_work_;
                 io_work_ = NULL;
             }
-            run();
+            result = run(ec);
             return result;
         }
 
-        void Daemon::run()
+        bool Daemon::run(
+            boost::system::error_code & ec)
         {
             if (th_grp_.size()) {
                 th_grp_.join_all();
                 io_svc_.reset();
             } else {
-                io_svc_.run();
+                io_svc_.run(ec);
                 io_svc_.reset();
             }
             LOG_INFO("[stop] end");
+            return !ec;
         }
 
-        void Daemon::stop(
-            bool wait)
+        bool Daemon::stop(
+            boost::system::error_code & ec)
         {
+            return stop(true, ec);
+        }
+
+        bool Daemon::stop(
+            bool wait, 
+            boost::system::error_code & ec)
+        {
+            bool result = false;
+            boost::mutex mutex;
+            boost::condition_variable cond;
+            boost::mutex::scoped_lock lock(mutex);
+            io_svc_.post(boost::bind(finish_notify, 
+                boost::ref(result), 
+                boost::ref(mutex), 
+                boost::ref(cond), 
+                boost::bind(&detail::ModuleRegistry::shutdown, module_registry_, boost::ref(ec))));
             delete io_work_;
             io_work_ = NULL;
-            io_svc_.post(
-                boost::bind(&detail::ModuleRegistry::shutdown, module_registry_));
+            cond.wait(lock);
             if (wait) {
                 LOG_INFO("[stop] beg");
-                run();
+                result = run(ec);
             }
+            return result;
         }
 
         void Daemon::post_stop()
         {
-            io_svc_.post(boost::bind(&Daemon::stop, this, false));
+            io_svc_.post(boost::bind(&Daemon::stop, this, false, boost::system::error_code()));
         }
 
         void Daemon::quick_stop()

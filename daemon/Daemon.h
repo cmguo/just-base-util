@@ -54,10 +54,12 @@ namespace util
              * start 完成后，函数返回
              * start 如果失败，会等到行io_service结束，不需要再执行stop
              */
-            boost::system::error_code start(
-                size_t concurrency = 0);
+            bool start(
+                boost::system::error_code & ec);
 
-            void run();
+            bool start(
+                size_t concurrency, 
+                boost::system::error_code & ec);
 
             typedef boost::function<
                 void (boost::system::error_code const &)
@@ -68,11 +70,19 @@ namespace util
              * 外面可以在线程内部调用stop(false)停止，在线程外部需要调用post_stop()停止
              * start 如果失败，会等到行io_service结束，不需要再执行stop
              */
-            boost::system::error_code start(
-                start_call_back_type const & start_call_back);
+            bool start(
+                start_call_back_type const & start_call_back, 
+                boost::system::error_code & ec);
 
-            void stop(
-                bool wait = true);
+            bool run(
+                boost::system::error_code & ec);
+
+            bool stop(
+                bool wait, 
+                boost::system::error_code & ec);
+
+            bool stop(
+                boost::system::error_code & ec);
 
             void post_stop();
 
