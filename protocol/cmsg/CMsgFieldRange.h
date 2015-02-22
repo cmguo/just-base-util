@@ -19,10 +19,13 @@ namespace util
         {
 
             template <
-                typename T
+                typename Traits
             >
             struct RangeUnitT
             {
+             public:
+                typedef typename Traits::type value_type;
+
             public:
                 RangeUnitT()
                     : b_(0)
@@ -32,7 +35,7 @@ namespace util
                 }
 
                 RangeUnitT(
-                    T b)
+                    value_type b)
                     : b_(b)
                     , e_(0)
                     , has_end_(false)
@@ -40,8 +43,8 @@ namespace util
                 }
 
                 RangeUnitT(
-                    T b, 
-                    T e)
+                    value_type b, 
+                    value_type e)
                     : b_(b)
                     , e_(e)
                     , has_end_(true)
@@ -49,12 +52,12 @@ namespace util
                 }
 
             public:
-                T begin() const
+                value_type begin() const
                 {
                     return b_;
                 }
 
-                T end() const
+                value_type end() const
                 {
                     return e_;
                 }
@@ -64,6 +67,11 @@ namespace util
                     return has_end_;
                 }
 
+                value_type size() const
+                {
+                    return e_ - b_;
+                }
+
             public:
                 std::string to_string() const
                 {
@@ -71,7 +79,7 @@ namespace util
 
                     if (b_ >= 0) {
                         if (has_end()) {
-                            return format(b_) + "-" + format(e_);
+                            return format(b_) + "-" + format(e_ - Traits::adjust_end);;
                         } else {
                             return format(b_) + "-";
                         }
@@ -97,6 +105,7 @@ namespace util
                         ec = parse2(str.substr(0, p), b_);
                         if (!ec) {
                             ec = parse2(str.substr(p + 1), e_);
+                            e_ += Traits::adjust_end;
                         }
                         if (!ec) {
                             has_end_ = true;
@@ -105,8 +114,8 @@ namespace util
                     return ec;
                 }
 
-                T b_;
-                T e_;
+                value_type b_;
+                value_type e_;
                 bool has_end_;
             };
 
@@ -119,7 +128,7 @@ namespace util
             {
             public:
                 typedef typename Traits::type value_type;
-                typedef RangeUnitT<value_type> Unit;
+                typedef RangeUnitT<Traits> Unit;
 
             public:
                 RangeT(
@@ -168,6 +177,11 @@ namespace util
                 }
 
             public:
+                size_t count() const
+                {
+                    return units_.size();
+                }
+
                 Unit & operator[](
                     size_t index)
                 {
@@ -192,7 +206,7 @@ namespace util
             {
             public:
                 typedef typename Traits::type value_type;
-                typedef RangeUnitT<value_type> Unit;
+                typedef RangeUnitT<Traits> Unit;
 
             public:
                 ContentRangeT(
@@ -218,6 +232,16 @@ namespace util
                 {
                 }
 
+                ContentRangeT(
+                    value_type total, 
+                    Unit const & unit)
+                    : unit_(unit)
+                {
+                    if (!unit_.has_end()) {
+                        unit_ = Unit(unit_.begin(), total);
+                    }
+                }
+
             public:
                 Unit unit() const
                 {
@@ -229,10 +253,15 @@ namespace util
                     return total_;
                 }
 
+                value_type size() const
+                {
+                    return unit_.size();
+                }
+
             public:
                 std::string to_string() const
                 {
-                    return std::string(traits_()) + " " + unit_.to_string() + "/" + framework::string::format(total_);
+                    return std::string(traits_.prefix()) + " " + unit_.to_string() + "/" + framework::string::format(total_);
                 }
 
                 boost::system::error_code from_string(

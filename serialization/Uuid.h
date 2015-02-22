@@ -44,7 +44,7 @@ namespace framework
                     framework::container::make_array(uuid.Data4, sizeof(uuid.Data4)));
         }
 
-    }
-}
+    } // namespace string
+} // namespace framework
 
 #endif // _UTIL_SERIALIZATION_STRING_GUID_H_
