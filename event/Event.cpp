@@ -6,46 +6,30 @@
 
 #include <boost/function_equal.hpp>
 
+#include <algorithm>
+
 namespace util
 {
     namespace event
     {
 
         void Event::on(
-            Listener const & l)
+            EventListener const & l)
         {
-            listeners_.push_back(l);
+            assert(std::find(listeners_.begin(), listeners_.end(), l) == listeners_.end());
+            listeners_.push_front(l);
         }
 
-        struct ListenerEqual
-        {
-        public:
-            ListenerEqual(
-                Listener const & r)
-                : r_(r)
-            {
-            }
-
-            bool operator()(
-                Listener const & l)
-            {
-                return memcmp(&l, &r_, sizeof(l)) == 0;
-            }
-
-        private:
-            Listener const & r_;
-        };
-
         void Event::un(
-            Listener const & l)
+            EventListener const & l)
         {
-            listeners_.remove_if(ListenerEqual(l));
+            listeners_.remove(l);
         }
 
         void Event::raise(
             Observable const & sender) const
         {
-            for (std::list<Listener>::const_iterator i = listeners_.begin(); i != listeners_.end();) {
+            for (std::list<EventListener>::const_iterator i = listeners_.begin(); i != listeners_.end();) {
                 (*i++)(sender, *this);
             }
         }

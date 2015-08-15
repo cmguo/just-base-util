@@ -3,20 +3,12 @@
 #ifndef _UTIL_EVENT_EVENT_H_
 #define _UTIL_EVENT_EVENT_H_
 
-#include <boost/function.hpp>
+#include "util/event/EventListener.h"
 
 namespace util
 {
     namespace event
     {
-
-        class Observable;
-        class Event;
-
-        typedef boost::function<void (
-            Observable const & sender, 
-            Event const &)
-        > Listener;
 
         class Event
         {
@@ -24,11 +16,19 @@ namespace util
             virtual ~Event() {}
 
         public:
+            template <typename T>
             void on(
-                Listener const & l);
+                T const & l)
+            {
+                on(EventListener(l));
+            }
 
+            template <typename T>
             void un(
-                Listener const & l);
+                T const & l)
+            {
+                un(EventListener(l));
+            }
 
         public:
             friend bool operator==(
@@ -38,10 +38,31 @@ namespace util
                 return &l == &r;
             }
 
+            Event & operator+=(
+                EventListener const & l)
+            {
+                on(l);
+                return *this;
+            }
+
+            Event & operator-=(
+                EventListener const & l)
+            {
+                un(l);
+                return *this;
+            }
+
         protected:
             Event()
             {
             }
+
+        private:
+            void on(
+                EventListener const & l);
+
+            void un(
+                EventListener const & l);
 
         private:
             // noncopyable
@@ -58,7 +79,7 @@ namespace util
                 Observable const & sender) const;
 
         private:
-            std::list<Listener> listeners_;
+            std::list<EventListener> listeners_;
         };
 
     } // namespace event
