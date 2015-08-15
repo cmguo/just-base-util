@@ -131,6 +131,10 @@ namespace util
                 typedef RangeUnitT<Traits> Unit;
 
             public:
+                RangeT()
+                {
+                }
+
                 RangeT(
                     value_type b, 
                     value_type e)
@@ -139,7 +143,7 @@ namespace util
                 }
 
                 RangeT(
-                    value_type b = 0)
+                    value_type b)
                 {
                     add_range(b);
                 }

@@ -7,6 +7,7 @@
 
 #include <framework/network/TcpSocket.h>
 
+#include <boost/function.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
 
