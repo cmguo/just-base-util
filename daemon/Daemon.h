@@ -6,7 +6,8 @@
 #include <framework/configure/Config.h>
 
 #include <boost/asio/io_service.hpp>
-#include <boost/thread//thread.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/function.hpp>
 
 namespace util
 {

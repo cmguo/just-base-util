@@ -6,6 +6,7 @@
 #include <streambuf>
 #include <stdexcept>
 #include <limits>
+#include <algorithm>
 
 #include <boost/asio/buffer.hpp>
 

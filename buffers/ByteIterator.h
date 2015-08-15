@@ -71,7 +71,7 @@ namespace util
 
             friend ByteIteratorT operator+(
                 ByteIteratorT l, 
-                ByteIteratorT const & r)
+                size_t r)
             {
                 return l += r;
             }
