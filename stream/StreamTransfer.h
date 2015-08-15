@@ -10,6 +10,8 @@
 
 #include <boost/asio/strand.hpp>
 #include <boost/asio/detail/throw_error.hpp>
+#include <boost/asio/detail/wrapped_handler.hpp>
+#include <boost/intrusive_ptr.hpp>
 
 namespace util
 {
@@ -403,12 +405,12 @@ namespace util
                     }
                 }
 
-                boost::asio::detail::wrapped_handler<boost::asio::strand, read_handler_t> get_read_handler()
+                boost::asio::detail::wrapped_handler<boost::asio::strand, read_handler_t, boost::asio::detail::is_continuation_if_running> get_read_handler()
                 {
                     return strand_.wrap(read_handler_t(*this));
                 }
 
-                boost::asio::detail::wrapped_handler<boost::asio::strand, write_handler_t> get_write_handler()
+                boost::asio::detail::wrapped_handler<boost::asio::strand, write_handler_t, boost::asio::detail::is_continuation_if_running> get_write_handler()
                 {
                     return strand_.wrap(write_handler_t(*this));
                 }

@@ -4,6 +4,8 @@
 #include "util/protocol/http/HttpSocket.h"
 #include "util/protocol/http/HttpSocket.hpp"
 
+#include "util/stream/LimitedSource.h"
+#include "util/stream/LimitedSink.h"
 #include "util/stream/ChunkedSource.h"
 #include "util/stream/ChunkedSink.h"
 #include "util/stream/FilterSource.h"
@@ -95,8 +97,12 @@ namespace util
 
         void HttpSocket::set_source(
             HttpHead const & head)
-        {
+      {
             assert(source_ == &stream_);
+            boost::uint64_t content_length = head.content_length.get_value_or(boost::uint64_t(-1));
+            if (content_length != boost::uint64_t(-1)) {
+                source_ = new util::stream::LimitedSource(*source_, content_length);
+            }
             std::string encoding = head.transfer_encoding.get_value_or("");
             if ("chunked" == encoding) {
                 source_ = new util::stream::ChunkedSource(*source_);
@@ -126,6 +132,12 @@ namespace util
                 source_ = &chunked_source->source();
                 delete chunked_source;
             }
+            boost::uint64_t content_length = head.content_length.get_value_or(boost::uint64_t(-1));
+            if (content_length != boost::uint64_t(-1)) {
+                util::stream::LimitedSource * limited_source = (util::stream::LimitedSource *)source_;
+                source_ = &limited_source->source();
+                delete limited_source;
+            }
             assert(source_ == &stream_);
         }
 
@@ -133,6 +145,10 @@ namespace util
             HttpHead const & head)
         {
             assert(sink_ == &stream_);
+            boost::uint64_t content_length = head.content_length.get_value_or(boost::uint64_t(-1));
+            if (content_length != boost::uint64_t(-1)) {
+                sink_ = new util::stream::LimitedSink(*sink_, content_length);
+            }
             std::string encoding = head.transfer_encoding.get_value_or("");
             if ("chunked" == encoding) {
                 sink_ = new util::stream::ChunkedSink(*sink_);
@@ -161,6 +177,12 @@ namespace util
                 util::stream::ChunkedSink * chunked_sink = (util::stream::ChunkedSink *)sink_;
                 sink_ = &chunked_sink->sink();
                 delete chunked_sink;
+            }
+            boost::uint64_t content_length = head.content_length.get_value_or(boost::uint64_t(-1));
+            if (content_length != boost::uint64_t(-1)) {
+                util::stream::LimitedSink * limited_sink = (util::stream::LimitedSink *)sink_;
+                sink_ = &limited_sink->sink();
+                delete limited_sink;
             }
             assert(sink_ == &stream_);
         }
