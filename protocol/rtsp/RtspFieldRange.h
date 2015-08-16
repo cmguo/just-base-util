@@ -16,6 +16,8 @@ namespace util
             {
                 typedef float type;
 
+                static float const adjust_end;
+
                 char const * prefix() const
                 {
                     return "npt";
