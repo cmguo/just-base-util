@@ -1,5 +1,7 @@
 // Ctype.h
 
+#include <locale>
+
 namespace std {
 
 template <>
