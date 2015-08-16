@@ -5,6 +5,7 @@
 
 #include "util/protocol/cmsg/CMsgPacket.h"
 #include "util/archive/ArchiveBuffer.h"
+#include "util/archive/Ctype.h"
 #include "util/buffers/StreamBuffer.h"
 
 namespace util
