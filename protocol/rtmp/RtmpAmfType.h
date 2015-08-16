@@ -159,26 +159,11 @@ namespace util
 
             template <typename Archive>
             void load(
-                Archive & ar)
-            {
-                RtmpAmfObjectProperty Property;
-                ObjectProperties.clear();
-                while (ar & Property) {
-                    ObjectProperties.push_back(Property);
-                    if (FLV_Property_End(Property))
-                        break;
-                }
-            }
+                Archive & ar);
 
             template <typename Archive>
             void save(
-                Archive & ar) const
-            {
-                for (size_t i = 0; i < ObjectProperties.size(); ++i) {
-                    ar & ObjectProperties[i];
-                }
-                ar & RtmpAmfObjectProperty();
-            }
+                Archive & ar) const;
         };
 
         struct RtmpAmfECMAArray
@@ -672,6 +657,29 @@ namespace util
             RtmpAmfObjectProperty const & Property)
         {
             return Property.PropertyData.Type == RtmpAmfType::OBJECT_END;
+        }
+
+        template <typename Archive>
+        void RtmpAmfObject::load(
+            Archive & ar)
+        {
+            RtmpAmfObjectProperty Property;
+            ObjectProperties.clear();
+            while (ar & Property) {
+                ObjectProperties.push_back(Property);
+                if (FLV_Property_End(Property))
+                    break;
+            }
+        }
+
+        template <typename Archive>
+        void RtmpAmfObject::save(
+            Archive & ar) const
+        {
+            for (size_t i = 0; i < ObjectProperties.size(); ++i) {
+                ar & ObjectProperties[i];
+            }
+            ar & RtmpAmfObjectProperty();
         }
 
     } // namespace protocol
