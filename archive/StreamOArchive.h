@@ -83,6 +83,13 @@ namespace util
 
         protected:
             void save_binary(
+                void const * p, 
+                std::size_t n)
+            {
+                this->save_binary((_Elem const *)p, n);
+            }
+
+            void save_binary(
                 _Elem const * p, 
                 std::size_t n)
             {

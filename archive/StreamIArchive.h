@@ -84,6 +84,13 @@ namespace util
 
         protected:
             void load_binary(
+                void * p, 
+                std::size_t n)
+            {
+                this->load_binary((_Elem *)p, n);
+            }
+
+            void load_binary(
                 _Elem * p, 
                 std::size_t n)
             {
