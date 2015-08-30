@@ -76,7 +76,7 @@ namespace util
                 state_ = 0;
             }
 
-#ifdef SERIALIZATION_DEGUG
+#ifdef SERIALIZATION_DEBUG
             std::string failed_item_path() const
             {
                 std::string path;
@@ -107,16 +107,17 @@ namespace util
                 state_ = s;
             }
 
-            void path_push()
+            void path_push(
+                std::string const & name)
             {
-#ifdef SERIALIZATION_DEGUG
-                path_.push_back(t.name());
+#ifdef SERIALIZATION_DEBUG
+                path_.push_back(name);
 #endif
             }
 
             void path_pop()
             {
-#ifdef SERIALIZATION_DEGUG
+#ifdef SERIALIZATION_DEBUG
                 if (state_ == 0)
                     path_.pop_back();
 #endif
