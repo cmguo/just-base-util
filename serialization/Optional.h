@@ -10,6 +10,15 @@ namespace util
     namespace serialization
     {
 
+        template <
+            class Ar, 
+            class _T
+        >
+        struct is_primitive<Ar, boost::optional<_T> >
+            : boost::true_type
+        {
+        };
+
         template<
             class _T
         >
