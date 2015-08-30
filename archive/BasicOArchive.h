@@ -140,7 +140,7 @@ namespace util
                 };
 
                 /// 处理标准类型（非基本类型）序列化
-                struct save_standard_single_unit
+                struct save_single_unit
                 {
                     template<class T>
                     static void invoke(
@@ -150,6 +150,19 @@ namespace util
                         // 直接调用serialize方法
                         using namespace util::serialization;
                         serialize(ar, const_cast<T &>(t));
+                    }
+                };
+
+                /// 处理标准类型（字符串转换）的读
+                struct save_stringlized
+                {
+                    template<class T>
+                    static void invoke(
+                        Archive &ar, 
+                        T & t)
+                    {
+                        std::string str = t.to_string();
+                        ar << str;
                     }
                 };
 
@@ -166,9 +179,13 @@ namespace util
                             util::serialization::is_wrapper<T>, 
                             save_wrapper, 
                             BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                                util::serialization::is_sigle_unit<T>, 
-                                save_standard_single_unit, 
-                                save_standard
+                                util::serialization::is_sigle_unit<Archive, T>, 
+                                save_single_unit, 
+                                BOOST_DEDUCED_TYPENAME boost::mpl::if_<
+                                    util::serialization::is_stringlized<Archive, T>, 
+                                    save_stringlized, 
+                                    save_standard
+                                >::type
                             >::type
                         >::type
                     >::type invoke_type;
@@ -222,7 +239,7 @@ namespace util
             void save_wrapper(
                 util::serialization::NVPair<T> const & t)
             {
-                this->path_push();
+                this->path_push(t.name());
 
                 This()->save_start(t.name());
                 This()->operator << (t.data());

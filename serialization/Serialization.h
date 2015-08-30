@@ -32,9 +32,19 @@ namespace util
 
         /// 指示一个类型是否是序列化基本类型
         template <
+            typename Ar, 
             typename T
         >
         struct is_sigle_unit
+            : boost::false_type
+        {
+        };
+
+        template <
+            typename Ar, 
+            typename T
+        >
+        struct is_stringlized
             : boost::false_type
         {
         };

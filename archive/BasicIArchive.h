@@ -146,7 +146,7 @@ namespace util
                 };
 
                 /// 处理标准类型（非基本类型）的读
-                struct load_standard_single_unit
+                struct load_single_unit
                 {
                     template<class T>
                     static void invoke(
@@ -154,8 +154,23 @@ namespace util
                         T & t)
                     {
                         // 直接调用serialize方法
-                        using namespace util::serialization;
+                        using util::serialization::serialize;
                         serialize(ar, t);
+                    }
+                };
+
+                /// 处理标准类型（字符串转换）的读
+                struct load_stringlized
+                {
+                    template<class T>
+                    static void invoke(
+                        Archive &ar, 
+                        T & t)
+                    {
+                        std::string str;
+                        ar >> str;
+                        if (ar && t.from_string(str))
+                            ar.fail();
                     }
                 };
 
@@ -172,9 +187,13 @@ namespace util
                             util::serialization::is_wrapper<T>, 
                             load_wrapper, 
                             BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                                util::serialization::is_sigle_unit<T>, 
-                                load_standard_single_unit, 
-                                load_standard
+                                util::serialization::is_sigle_unit<Archive, T>, 
+                                load_single_unit, 
+                                BOOST_DEDUCED_TYPENAME boost::mpl::if_<
+                                    util::serialization::is_stringlized<Archive, T>, 
+                                    load_stringlized, 
+                                    load_standard
+                                >::type
                             >::type
                         >::type
                     >::type invoke_type;
@@ -237,7 +256,7 @@ namespace util
             void load_wrapper(
                 util::serialization::NVPair<T> & t)
             {
-                this->path_push();
+                this->path_push(t.name());
 
                 this->This()->load_start(t.name());
                 This()->operator >> (t.data());
