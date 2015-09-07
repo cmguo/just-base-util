@@ -92,14 +92,16 @@ namespace util
 
             void save_xml()
             {
-                std::string file_name("xml_o_archive_" + framework::string::format(size_t(this)) + ".xml");
-                doc_.SaveFile(file_name.c_str());
-                {
-                    std::ifstream ifs(file_name.c_str(), std::ios::binary);
-                    std::basic_ostream<_Elem, _Traits> os(this->buf_);
-                    os << ifs.rdbuf();
-                }
-                ::unlink(file_name.c_str());
+                //std::string file_name("xml_o_archive_" + framework::string::format(size_t(this)) + ".xml");
+                //doc_.SaveFile(file_name.c_str());
+                //{
+                //    std::ifstream ifs(file_name.c_str(), std::ios::binary);
+                //    std::basic_ostream<_Elem, _Traits> os(this->buf_);
+                //    os << ifs.rdbuf();
+                //}
+                //::unlink(file_name.c_str());
+                std::basic_ostream<_Elem, _Traits> os(this->buf_);
+                os << doc_;
             }
 
         private:
