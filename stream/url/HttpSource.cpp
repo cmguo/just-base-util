@@ -21,6 +21,29 @@ namespace util
 
         HttpSource::~HttpSource() {}
 
+        static void build_request(
+            util::protocol::HttpRequest & request, 
+            framework::string::Url const & url,
+            boost::uint64_t beg, 
+            boost::uint64_t end)
+        {
+            util::protocol::HttpRequestHead & head = request.head();
+            head.path = url.path_all();
+            head["Accept"] = "{*.*}";
+            head.host = url.host_svc();
+            head.connection = util::protocol::http_field::Connection::keep_alive;
+            if (beg == 0 && end == (boost::uint64_t)-1) {
+                head.range.reset();
+            } else if (end == (boost::uint64_t)-1) {
+                head.range.reset(util::protocol::http_field::Range((boost::int64_t)beg));
+            } else {
+                head.range.reset(util::protocol::http_field::Range((boost::int64_t)beg, (boost::int64_t)end));
+            }
+            std::ostringstream oss;
+            head.get_content(oss);
+            LOG_STR(framework::logger::Trace, ("http_request_head", oss.str()));
+        }
+
         bool HttpSource::open(
             framework::string::Url const & url,
             boost::uint64_t beg, 
@@ -28,24 +51,9 @@ namespace util
             boost::system::error_code & ec)
         {
             flag_ = true;
-
             util::protocol::HttpRequest request;
-            util::protocol::HttpRequestHead & head = request.head();
-            head.path = url.path_all();
-            head["Accept"] = "{*.*}";
-            head.host = url.host_svc();
-            head.connection = util::protocol::http_field::Connection::keep_alive;
-            if (beg != 0 || end != (boost::uint64_t)-1) {
-                head.range.reset(util::protocol::http_field::Range((boost::int64_t)beg, (boost::int64_t)end));
-            } else {
-                head.range.reset();
-            }
-            std::ostringstream oss;
-            head.get_content(oss);
-            LOG_STR(framework::logger::Trace, ("http_request_head", oss.str()));
-
+            build_request(request, url, beg, end);
             http_.open(request, ec);
-
             return !ec;
         }
 
@@ -56,23 +64,8 @@ namespace util
             response_type const & resp)
         {
             flag_ = true;
-
-            boost::system::error_code ec;
             util::protocol::HttpRequest request;
-            util::protocol::HttpRequestHead & head = request.head();
-            head.path = url.path_all();
-            head["Accept"] = "{*.*}";
-            head.host = url.host_svc();
-            head.connection = util::protocol::http_field::Connection::keep_alive;
-            if (beg != 0 || end != (boost::uint64_t)-1) {
-                head.range.reset(util::protocol::http_field::Range((boost::int64_t)beg, (boost::int64_t)end));
-            } else {
-                head.range.reset();
-            }
-            std::ostringstream oss;
-            head.get_content(oss);
-            LOG_STR(framework::logger::Trace, ("http_request_head", oss.str()));
-
+            build_request(request, url, beg, end);
             http_.async_open(request, resp);
         }
 
