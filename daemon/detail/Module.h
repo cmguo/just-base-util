@@ -47,6 +47,11 @@ namespace util
                     return daemon_.config();
                 }
 
+                framework::configure::ConfigModule & module_config()
+                {
+                    return daemon_.config().register_module(name_);
+                }
+
                 std::string const & name() const
                 {
                     return name_;
