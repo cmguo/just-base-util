@@ -7,6 +7,8 @@
 
 #include <framework/string/Format.h>
 
+#include <boost/tti/has_member_function.hpp>
+
 #include <tinyxml/tinyxml.h>
 
 #include <fstream>
@@ -26,7 +28,7 @@ namespace util
             friend class StreamOArchive<XmlOArchive<_Elem, _Traits>, _Elem, _Traits>;
         public:
             XmlOArchive(
-                std::basic_istream<_Elem, _Traits> & is)
+                std::basic_ostream<_Elem, _Traits> & is)
                 : StreamOArchive<XmlOArchive<_Elem, _Traits>, _Elem, _Traits>(*is.rdbuf())
             {
                 init_xml();
@@ -65,21 +67,37 @@ namespace util
                 elem->LinkEndChild(text);
             }
 
+            template<class T>
+            void save(
+                boost::optional<T> const & t)
+            {
+                TiXmlElement *& elem = stack_.back();
+                if (t.is_initialized()) {
+                    (*this) << t.get();
+                } else {
+                    delete elem;
+                    elem = NULL;
+                }
+            }
+
             using StreamOArchive<XmlOArchive<_Elem, _Traits>, _Elem, _Traits>::save;
 
             void save_start(
                 std::string const & name)
             {
-                TiXmlElement * parent = stack_.back();
                 TiXmlElement * elem = new TiXmlElement(name.c_str());
-                parent->LinkEndChild(elem);
                 stack_.push_back(elem);
             }
 
             void save_end(
                 std::string const & name)
             {
+                TiXmlElement * elem = stack_.back();
                 stack_.pop_back();
+                if (elem) {
+                    TiXmlElement * parent = stack_.back();
+                    parent->LinkEndChild(elem);
+                }
             }
 
         private:
@@ -111,5 +129,50 @@ namespace util
 
     } // namespace archive
 } // namespace util
+
+namespace util
+{
+    namespace serialization
+    {
+
+        template<
+            typename _Elem, 
+            typename _Traits, 
+            class _T
+        >
+        struct is_primitive<util::archive::XmlOArchive<_Elem, _Traits>, boost::optional<_T> >
+            : boost::true_type
+        {
+        };
+
+        template<
+            class _T
+        >
+        struct optional_ref;
+
+        template<
+            typename _Elem, 
+            typename _Traits, 
+            class _T
+        >
+        struct is_primitive<util::archive::XmlOArchive<_Elem, _Traits>, optional_ref<_T> >
+            : boost::true_type
+        {
+        };
+
+        BOOST_TTI_HAS_MEMBER_FUNCTION(to_string);
+
+        template<
+            typename _Elem, 
+            typename _Traits, 
+            class _T
+        >
+        struct is_stringlized<util::archive::XmlOArchive<_Elem, _Traits>, _T>
+            : has_member_function_to_string<_T const, std::string>
+        {
+        };
+
+    }
+}
 
 #endif // _UTIL_ARCHIVE_XML_O_ARCHIVE_H_

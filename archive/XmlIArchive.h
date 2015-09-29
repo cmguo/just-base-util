@@ -8,6 +8,8 @@
 
 #include <framework/string/Parse.h>
 
+#include <boost/tti/has_member_function.hpp>
+
 #include <iterator>
 
 #include <tinyxml/tinyxml.h>
@@ -342,6 +344,20 @@ namespace util
         >
         struct is_primitive<util::archive::XmlIArchive<_Elem, _Traits>, optional_ref<_T> >
             : boost::true_type
+        {
+        };
+
+        BOOST_TTI_HAS_MEMBER_FUNCTION(from_string);
+
+        template<
+            typename _Elem, 
+            typename _Traits, 
+            class _T
+        >
+        struct is_stringlized<util::archive::XmlIArchive<_Elem, _Traits>, _T>
+            : boost::mpl::or_<
+                has_member_function_from_string<_T, bool, boost::mpl::vector<std::string const &> >, 
+                has_member_function_from_string<_T, boost::system::error_code, boost::mpl::vector<std::string const &> > >
         {
         };
 
