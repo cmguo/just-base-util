@@ -144,17 +144,18 @@ namespace util
                 io_stream_.set_buffer(p, p, p, *this);
             }
 
+            char_type * get_ptr() const
+            {
+                return io_stream_.get_ptr(*this);
+            }
+
+        protected:
             void set_buffer(
                 char_type * beg,
                 char_type * cur,
                 char_type * end)
             {
                 io_stream_.set_buffer(beg, cur, end, *this);
-            }
-
-            char_type * get_ptr() const
-            {
-                return io_stream_.get_ptr(*this);
             }
 
         private:

@@ -34,7 +34,7 @@ namespace util
                 switch_t & switch_buf,
                 byte_iterator iter)
                 : std_io_buf_t(io_stream)
-                , byte_buf_t(iter)
+                , byte_buf_t(iter, byte_buf_t::delay_init())
                 , switch_buf_(switch_buf)
                 , pos_(0)
             {
@@ -55,6 +55,8 @@ namespace util
             {
                 byte_buf_t::operator=(r);
                 pos_ = r.position() - get_offset();
+                // make another be in the left side
+                r.set_offset(get_offset());
                 return *this;
             }
 
@@ -86,13 +88,17 @@ namespace util
 
             void next_buffer()
             {
+                pos_ += get_offset();
                 byte_buf_t::advance(switch_buf_, 0);
+                pos_ -= get_offset();
             }
 
             void next_buffer(
                 BufferIterator end)
             {
+                pos_ += get_offset();
                 byte_buf_t::advance(ByteIterator<BufferIterator>(end), 0);
+                pos_ -= get_offset();
             }
 
             size_t position() const
@@ -110,25 +116,38 @@ namespace util
             friend class ByteIteratorT<SimpleIoBuffer, BufferIterator>;
             friend class SimpleIoBuffer<typename _Mode::switch_t, BufferIterator, _Elem, _Traits>;
 
+            void take_full()
+            {
+                char_type * p = (char_type *)byte_buf_t::buffer_ptr();
+                char_type * c = this->get_ptr();
+                char_type * e = p + byte_buf_t::buffer_size();
+                std_io_buf_t::set_buffer(p, c, e);
+            }
+
             void set_offset(
                 size_t o)
             {
                 char_type * p = (char_type *)byte_buf_t::buffer_ptr();
-                size_t s = byte_buf_t::buffer_size();
+                char_type * c = p + o;
+                char_type * e = p + byte_buf_t::buffer_size();
                 if (byte_buf_t::buffer_iter() == switch_buf_.buffer_iter()) {
-                    size_t o1 = switch_buf_.get_offset();
-                    if (o1 < o) {
-                        switch_buf_.set_buffer(p, p + o1, p + o);
-                        std_io_buf_t::set_buffer(p + o, p + o, p + s);
-                    } else if (o < o1) {
-                        std_io_buf_t::set_buffer(p, p + o, p + o1);
-                        switch_buf_.set_buffer(p + o1, p + o1, p + s);
+                    char_type * c1 = switch_buf_.get_ptr();
+                    if (c1 < c) {
+                        // if in front of another, then leave my left to it
+                        std_io_buf_t::set_buffer(c, c, e);
+                        switch_buf_.set_buffer(p, c1, c);
+                    } else if (c < c1) {
+                        // if in back of another, then take it's left
+                        std_io_buf_t::set_buffer(p, c, c1);
+                        switch_buf_.set_buffer(c1, c1, e);
                     } else {
-                        switch_buf_.set_buffer(p, p + o, p + o);
-                        std_io_buf_t::set_buffer(p + o, p + o, p + s);
+                        // if come up with another, then we are in left halt
+                        std_io_buf_t::set_buffer(p, c, c);
+                        switch_buf_.set_buffer(c, c, e);
                     }
                 } else {
-                    std_io_buf_t::set_buffer(p, p + o, p + s);
+                    std_io_buf_t::set_buffer(p, c, e);
+                    switch_buf_.take_full();
                 }
             }
 

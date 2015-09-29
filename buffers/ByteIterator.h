@@ -61,6 +61,16 @@ namespace util
                 dervied().set_offset(r.buffer_offset());
             }
 
+            struct delay_init_t{};
+            static delay_init_t delay_init() { return delay_init_t(); }
+
+            template <typename Derived2>
+            ByteIteratorT(
+                ByteIteratorT<Derived2, BufferIterator> const & r, delay_init_t)
+                : iter_(r.buffer_iter())
+            {
+            }
+
         public:
             ByteIteratorT & operator+=(
                 size_t n)
@@ -81,8 +91,7 @@ namespace util
             ByteIteratorT & operator=(
                 ByteIteratorT<Derived2, BufferIterator> const & r)
             {
-                iter_ = r.buffer_iter();
-                dervied().set_offset(r.buffer_offset());
+                reset(r);
                 return *this;
             }
 

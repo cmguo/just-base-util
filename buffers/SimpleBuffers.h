@@ -30,7 +30,6 @@ namespace util
  
             typedef typename StdIoStream<Elem, Traits>::off_type off_type;
  
-            typedef SimpleBuffers simple_buffers_type;
 
             typedef StdIoStream<Elem, Traits> stream_type;
 
@@ -88,9 +87,9 @@ namespace util
                 : beg_(beg)
                 , end_(beg_ + avail)
                 , write_(*this, read_, beg_)
-                , read_(*this, write_, end_)
+                , read_(*this, write_, beg_)
             {
-                reset();
+                reset(avail);
             }
 
             SimpleBuffers(
@@ -245,12 +244,12 @@ namespace util
                 size_t avail)
             {
                 reset(buffers.begin(), buffers.end());
+                reset(avail);
             }
 
             void reset(
                 size_t avail = 0)
             {
-                read_.reset(beg_);
                 if (avail) {
                     write_.reset(beg_ + avail);
                 } else if (is_const_buffer_iterator<BufferIterator>::value) {
@@ -258,6 +257,7 @@ namespace util
                 } else {
                     write_.reset(beg_);
                 }
+                read_.reset(beg_);
             }
 
         private:
@@ -342,7 +342,8 @@ namespace util
                         write_.seek_off(end_, (size_t)pos - write_.position());
                     } else if (pos < write_.position()) {
                         write_ = read_;
-                        write_.seek_off(end_, (size_t)pos - write_.position());
+                        if (pos > write_.position())
+                            write_.seek_off(end_, (size_t)pos - write_.position());
                     }
                     assert(pos == write_.position());
                 } else { // mode == std::ios_base::in | std::ios_base::out
@@ -358,6 +359,9 @@ namespace util
             void check()
             {
                 assert(write_.position() >= read_.position());
+                if (write_.buffer_iter() == read_.buffer_iter()) {
+                    assert(this->egptr() == this->pbase() || this->epptr() == this->eback());
+                }
             }
 
         private:
