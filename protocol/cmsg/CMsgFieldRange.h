@@ -125,6 +125,7 @@ namespace util
                 typename Traits
             >
             class RangeT
+                : public std::deque<RangeUnitT<Traits> >
             {
             public:
                 typedef typename Traits::type value_type;
@@ -139,26 +140,31 @@ namespace util
                     value_type b, 
                     value_type e)
                 {
-                    add_range(b, e);
+                    put(b, e);
                 }
 
                 RangeT(
                     value_type b)
                 {
-                    add_range(b);
+                    put(b);
                 }
 
-                void add_range(
+                void put(
                     value_type b)
                 {
-                    units_.push_back(Unit(b));
+                    this->push_back(Unit(b));
                 }
 
-                void add_range(
+                void put(
                     value_type b, 
                     value_type e)
                 {
-                    units_.push_back(Unit(b, e));
+                    this->push_back(Unit(b, e));
+                }
+
+                void pop()
+                {
+                    this->pop_front();
                 }
 
             public:
@@ -167,39 +173,20 @@ namespace util
                     using namespace framework::string;
                     std::string prefix = traits_.prefix();
                     prefix.append(1, '=');
-                    return join(units_.begin(), units_.end(), ",", prefix);
+                    return join(this->begin(), this->end(), ",", prefix);
                 }
 
                 boost::system::error_code from_string(
                     std::string const & str)
                 {
-                    units_.clear();
+                    this->clear();
                     std::string prefix = traits_.prefix();
                     prefix.append(1, '=');
                     using namespace framework::string;
-                    return slice<Unit>(str, std::inserter(units_, units_.end()), ",", prefix);
-                }
-
-            public:
-                size_t count() const
-                {
-                    return units_.size();
-                }
-
-                Unit & operator[](
-                    size_t index)
-                {
-                    return units_[index];
-                }
-
-                Unit const & operator[](
-                    size_t index) const
-                {
-                    return units_[index];
+                    return slice<Unit>(str, std::inserter(*this, this->end()), ",", prefix);
                 }
 
             private:
-                std::vector<Unit> units_;
                 Traits traits_;
             };
 
