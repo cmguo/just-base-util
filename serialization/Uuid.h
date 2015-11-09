@@ -23,25 +23,17 @@ namespace framework
         template <typename Archive>
         void load(Archive & ar, Uuid & t)
         {
-            framework::string::UUID uuid;
-            ar & SERIALIZATION_NVP_1(uuid, Data1)
-                & SERIALIZATION_NVP_1(uuid, Data2)
-                & SERIALIZATION_NVP_1(uuid, Data3)
-                & util::serialization::make_nvp("Data4", 
-                    framework::container::make_array(uuid.Data4, sizeof(uuid.Data4)));
+            framework::string::Uuid::bytes_type uuid;
+            ar >> framework::container::make_array(uuid.elems);
             if (ar)
-                t.assign(uuid);
+                t.from_bytes(uuid);
         };
 
         template <typename Archive>
         void save(Archive & ar, Uuid const & t)
         {
-            framework::string::UUID const & uuid = t.data();
-            ar & SERIALIZATION_NVP_1(uuid, Data1)
-                & SERIALIZATION_NVP_1(uuid, Data2)
-                & SERIALIZATION_NVP_1(uuid, Data3)
-                & util::serialization::make_nvp("Data4", 
-                    framework::container::make_array(uuid.Data4, sizeof(uuid.Data4)));
+            framework::string::Uuid::bytes_type uuid = t.to_bytes();
+            ar << framework::container::make_array(uuid.elems);
         }
 
     } // namespace string
