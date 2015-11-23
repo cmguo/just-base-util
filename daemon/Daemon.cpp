@@ -181,19 +181,23 @@ namespace util
             boost::system::error_code & ec)
         {
             bool result = false;
-            boost::mutex mutex;
-            boost::condition_variable cond;
-            boost::mutex::scoped_lock lock(mutex);
-            io_svc_.post(boost::bind(finish_notify, 
-                boost::ref(result), 
-                boost::ref(mutex), 
-                boost::ref(cond), 
-                boost::bind(&detail::ModuleRegistry::shutdown, module_registry_, boost::ref(ec))));
             delete io_work_;
             io_work_ = NULL;
-            cond.wait(lock);
+            LOG_INFO("[stop] beg");
+            if (th_grp_.size()) {
+                boost::mutex mutex;
+                boost::condition_variable cond;
+                boost::mutex::scoped_lock lock(mutex);
+                io_svc_.post(boost::bind(finish_notify, 
+                    boost::ref(result), 
+                    boost::ref(mutex), 
+                    boost::ref(cond), 
+                    boost::bind(&detail::ModuleRegistry::shutdown, module_registry_, boost::ref(ec))));
+                cond.wait(lock);
+            } else {
+                result = module_registry_->shutdown(ec);
+            }
             if (wait) {
-                LOG_INFO("[stop] beg");
                 result = run(ec);
             }
             return result;
