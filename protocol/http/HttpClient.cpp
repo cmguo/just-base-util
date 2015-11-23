@@ -554,6 +554,7 @@ namespace util
 
             if (ec) {
                 status_ = broken;
+                close_socket(broken_error_);
                 broken_error_ = ec;
                 async_resume();
                 return;
