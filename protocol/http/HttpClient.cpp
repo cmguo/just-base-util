@@ -267,6 +267,9 @@ namespace util
             response_type const & resp, 
             error_code & ec)
         {
+            HttpRequestHead const & head(request.head());
+            LOG_DEBUG("[post_reqeust] [%u] [%u] %s http://%s%s"
+                % id_ % req_id_ % head.method_str[head.method] % head.host.get_value_or(addr_.host_svc()) % head.path);
             if (requests_.size() == 1 && requests_[0].is_fetch && requests_[0].status == finished) {
                 // 兼容老版本，fetch不需要close的机制，但是只用于非串行请求的情形
                 assert(status_ == closed || status_ == broken);
@@ -278,14 +281,14 @@ namespace util
                 return ec;
             } else if (requests_.empty()) {
                 is_keep_alive_ = (http_field::Connection::keep_alive 
-                    == request.head().connection.get_value_or(http_field::Connection::close));
+                    == head.connection.get_value_or(http_field::Connection::close));
             } else {
                 if (is_keep_alive_) {
                     is_keep_alive_ &= (http_field::Connection::keep_alive 
-                        == request.head().connection.get_value_or(http_field::Connection::close));
+                        == head.connection.get_value_or(http_field::Connection::close));
                 } else {
                     if (http_field::Connection::keep_alive 
-                        == request.head().connection.get_value_or(http_field::Connection::close)) {
+                        == head.connection.get_value_or(http_field::Connection::close)) {
                             ec = keepalive_error;
                     } else {
                             ec = busy_work;
