@@ -64,6 +64,8 @@ namespace util
                 virtual bool shutdown(
                     boost::system::error_code & ec) = 0;
 
+                virtual void dump() const {}
+
                 friend class detail::ModuleRegistry;
 
                 util::daemon::Daemon & daemon_;

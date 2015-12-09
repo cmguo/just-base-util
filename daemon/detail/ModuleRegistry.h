@@ -69,6 +69,8 @@ namespace util
                 bool shutdown(
                     boost::system::error_code & ec);
 
+                void dump();
+
                 bool is_started() const
                 {
                     return is_started_;

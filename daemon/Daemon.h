@@ -89,6 +89,8 @@ namespace util
 
             void quick_stop();
 
+            void dump();
+
         public:
             bool is_started() const;
 

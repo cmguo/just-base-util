@@ -78,6 +78,16 @@ namespace util
                 return true;
             }
 
+            void ModuleRegistry::dump()
+            {
+                boost::mutex::scoped_lock lock(mutex_);
+                Module * module = first_module_;
+                while (module) {
+                    module->dump();
+                    module = module->next_;
+                }
+            }
+
         } // namespace detail
     } // namespace daemon
 } // namespace util

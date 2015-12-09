@@ -221,6 +221,11 @@ namespace util
             }
         }
 
+        void Daemon::dump()
+        {
+            module_registry_->dump();
+        }
+
         bool Daemon::is_started() const
         {
             return module_registry_->is_started();
