@@ -72,6 +72,14 @@ namespace util
                     return e_ - b_;
                 }
 
+                friend bool operator==(
+                    RangeUnitT const & l, 
+                    RangeUnitT const & r)
+                {
+                    return l.b_ == r.b_ && l.has_end_ == r.has_end_ 
+                        && (!l.has_end_ || l.e_ == r.e_);
+                }
+
             public:
                 std::string to_string() const
                 {
@@ -210,7 +218,7 @@ namespace util
                     value_type total, 
                     value_type b)
                     : total_(total)
-                    , unit_(b, b - 1)
+                    , unit_(b)
                 {
                 }
 
