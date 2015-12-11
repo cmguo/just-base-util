@@ -30,7 +30,7 @@ namespace util
             if (bytes_write <= limit_)
                 bytes_write = sink_.write_some(buffers, ec);
             else if (limit_)
-                bytes_write = sink_.write_some(util::buffers::sub_buffers(buffers, 0, limit_));
+                bytes_write = sink_.write_some(util::buffers::sub_buffers(buffers, 0, limit_), ec);
             else
                 ec = boost::asio::error::eof, bytes_write = 0;
             limit_ -= bytes_write;
