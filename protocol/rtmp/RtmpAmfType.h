@@ -395,7 +395,7 @@ namespace util
             >
             void destroy()
             {
-                ((T *)_union)->~T();
+                as<T>().~T();
             }
 
             template <
@@ -431,7 +431,11 @@ namespace util
             T & as()
             {
                 assert(Type == T::TYPE);
-                return *(T *)_union;
+                union {
+                    boost::uint8_t * n;
+                    T * t;
+                } u = {_union};
+                return *u.t;
             }
 
             template <
@@ -440,7 +444,11 @@ namespace util
             T const & as() const
             {
                 assert(Type == T::TYPE);
-                return *(T const *)_union;
+                union {
+                    boost::uint8_t const * n;
+                    T const * t;
+                } u = {_union};
+                return *u.t;
             }
 
             void reset()

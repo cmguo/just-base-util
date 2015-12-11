@@ -62,7 +62,7 @@ namespace util
             header_type::id(T::static_id);
             def_ = &T::msg_def;
             BOOST_STATIC_ASSERT(sizeof(T) <= sizeof(data_));
-            new (data_) T(t);
+            new ((void *)data_) T(t);
         }
 
         template <typename MsgT>
@@ -77,7 +77,11 @@ namespace util
         T const & Message<MsgT>::as() const
         {
             assert(is<T>());
-            return *(T const *)data_;
+            union {
+                boost::uint64_t const * n;
+                T const * t;
+            } u = {&_u64};
+            return *u.t;
         }
 
         template <typename MsgT>
@@ -85,7 +89,11 @@ namespace util
         T & Message<MsgT>::as()
         {
             assert(is<T>());
-            return *(T *)data_;
+            union {
+                boost::uint64_t * n;
+                T * t;
+            } u = {&_u64};
+            return *u.t;
         }
 
         template <typename MsgT>
@@ -218,7 +226,7 @@ namespace util
             MessageBase * mb)
         {
             Message * m = static_cast<Message *>(mb);
-            ((T *)m->data_)->~T();
+            m->as<T>().~T();
         }
 
     } // namespace protocol
