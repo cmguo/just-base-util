@@ -119,7 +119,10 @@ namespace util
                 //}
                 //::unlink(file_name.c_str());
                 std::basic_ostream<_Elem, _Traits> os(this->buf_);
-                os << doc_;
+                //os << doc_;
+                TiXmlPrinter printer;
+                doc_.Accept( &printer );
+                os << printer.Str();
             }
 
         private:
