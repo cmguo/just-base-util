@@ -62,8 +62,6 @@ namespace util
         class BigEndianBinaryIArchive
             : public StreamIArchive<BigEndianBinaryIArchive<_Elem, _Traits>, _Elem, _Traits>
         {
-            friend class StreamIArchive<BigEndianBinaryIArchive<_Elem, _Traits>, _Elem, _Traits>;
-
         public:
             BigEndianBinaryIArchive(
                 std::basic_istream<_Elem, _Traits> & is)
@@ -78,6 +76,26 @@ namespace util
             }
 
         public:
+            /// 判断某个类型是否可以优化数组的读
+            /// 只有char类型能够直接读数组，不需要转换字节顺序
+            template<class T>
+            struct use_array_optimization
+                : boost::integral_constant<bool, sizeof(T) == 1>
+            {
+            };
+
+            /// 读数组，直接二进制批量读取，针对char数组的优化实现
+            template<class T>
+            void load_array(
+                framework::container::Array<T> & a, 
+                typename boost::enable_if<use_array_optimization<T> >::type * = NULL)
+            {
+                this->load_binary((_Elem *)a.address(), a.count());
+            }
+
+        protected:
+            friend class LoadAccess;
+
             /// 从流中读出变量
             template<class T>
             void load(
@@ -114,23 +132,6 @@ namespace util
             }
 
             using StreamIArchive<BigEndianBinaryIArchive<_Elem, _Traits>, _Elem, _Traits>::load;
-
-            /// 判断某个类型是否可以优化数组的读
-            /// 只有char类型能够直接读数组，不需要转换字节顺序
-            template<class T>
-            struct use_array_optimization
-                : boost::integral_constant<bool, sizeof(T) == 1>
-            {
-            };
-
-            /// 读数组，直接二进制批量读取，针对char数组的优化实现
-            template<class T>
-            void load_array(
-                framework::container::Array<T> & a, 
-                typename boost::enable_if<use_array_optimization<T> >::type * = NULL)
-            {
-                this->load_binary((_Elem *)a.address(), a.count());
-            }
         };
 
     } // namespace archive

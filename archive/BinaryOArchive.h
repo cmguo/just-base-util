@@ -35,8 +35,6 @@ namespace util
                 BinaryOArchive<_Elem, _Traits>, 
                 _Archive>::type, _Elem, _Traits> super;
 
-            friend struct SaveAccess;
-
         public:
             BinaryOArchive(
                 std::basic_ostream<_Elem, _Traits> & os)
@@ -51,24 +49,6 @@ namespace util
             }
 
         public:
-            using super::save_binary;
-
-            /// 向流中写入参数化类型变量
-            template <typename T>
-            void save(
-                T const & t)
-            {
-                save_binary((_Elem const *)&t, sizeof(T));
-            }
-
-            void save(
-                framework::system::UInt24 const & t)
-            {
-                save_binary((_Elem const *)t.data(), 3);
-            }
-
-            using super::save;
-
             /// 判断某个类型是否可以优化数组的序列化
             /// 只有基本类型能够直接序列化数组
             template<class T>
@@ -85,6 +65,25 @@ namespace util
             {
                 save_binary((_Elem const *)a.address(), sizeof(T) * a.count());
             }
+
+        protected:
+            friend struct SaveAccess;
+
+            /// 向流中写入参数化类型变量
+            template <typename T>
+            void save(
+                T const & t)
+            {
+                save_binary((_Elem const *)&t, sizeof(T));
+            }
+
+            void save(
+                framework::system::UInt24 const & t)
+            {
+                save_binary((_Elem const *)t.data(), 3);
+            }
+
+            using super::save;
         };
 
     } // namespace archive

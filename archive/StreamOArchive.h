@@ -20,7 +20,8 @@ namespace util
         class StreamOArchive
             : public BasicOArchive<Archive>
         {
-            friend class BasicOArchive<Archive>;
+            friend class SaveAccess;
+
         public:
             typedef _Elem char_type;
 

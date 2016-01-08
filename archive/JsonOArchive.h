@@ -23,8 +23,6 @@ namespace util
         class JsonOArchive
             : public StreamOArchive<JsonOArchive<_Elem, _Traits>, _Elem, _Traits>
         {
-            friend class StreamOArchive<JsonOArchive<_Elem, _Traits>, _Elem, _Traits>;
-
         public:
             JsonOArchive(
                 std::basic_ostream<_Elem, _Traits> & os)
@@ -45,17 +43,20 @@ namespace util
 
             ~JsonOArchive()
             {
+                os_.flush();
                 if (local_os_)
                     delete &os_;
             }
 
-        public:
+        protected:
+            friend class SaveAccess;
+
             /// 向流中写入参数化类型变量
             template <typename T>
             void save(
                 T const & t)
             {
-                if (splits.back() == 'c') {
+                if (!splits.empty() && splits.back() == 'c') {
                     return;
                 }
                 os_ << t;
@@ -114,6 +115,8 @@ namespace util
 
             void sub_end()
             {
+                if (splits.back() != ',')
+                    os_ << splits.back();
                 os_ << std::endl;
                 splits.pop_back();
                 ident_.erase(ident_.size() - 2);
@@ -131,6 +134,24 @@ namespace util
         };
 
     } // namespace archive
+} // namespace util
+
+namespace util
+{
+    namespace serialization
+    {
+
+        template<
+            typename _Elem, 
+            typename _Traits, 
+            class _T
+        >
+        struct is_stringlized<util::archive::JsonOArchive<_Elem, _Traits>, _T>
+            : has_to_string<_T>
+        {
+        };
+
+    } // namespace serialization
 } // namespace util
 
 #endif // _UTIL_ARCHIVE_JSON_O_ARCHIVE_H_

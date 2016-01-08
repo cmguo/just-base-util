@@ -3,7 +3,7 @@
 #ifndef _UTIL_ARCHIVE_BASIC_I_ARCHIVE_H_
 #define _UTIL_ARCHIVE_BASIC_I_ARCHIVE_H_
 
-#include "util/archive/BasicArchive.h"
+#include "util/archive/BasicArchiveT.h"
 
 #include <boost/mpl/if.hpp>
 #include <boost/type_traits/is_pointer.hpp>
@@ -16,6 +16,42 @@ namespace util
 
         struct LoadAccess
         {
+            template <typename Archive, typename T>
+            static void load_wrapper(Archive & ar, T & t)
+            {
+                ar.load_wrapper(t);
+            }
+
+            template <typename Archive, typename T>
+            static void load(Archive & ar, T & t)
+            {
+                ar.load(t);
+            }
+
+            template <typename Archive, typename T, typename Catalog>
+            static void load_catalog(Archive & ar, T & t, Catalog * cat)
+            {
+                ar.load_catalog(t, cat);
+            }
+
+            template <typename Archive>
+            static void load_binary(Archive & ar, char * p, std::size_t n)
+            {
+                ar.load_binary(p, n);
+            }
+
+            template <typename Archive>
+            static void load_start(Archive & ar, std::string const & name)
+            {
+                ar.load_start(name);
+            }
+
+            template <typename Archive>
+            static void load_end(Archive & ar, std::string const & name)
+            {
+                ar.load_end(name);
+            }
+
             template <typename Archive>
             static void sub_start(Archive & ar)
             {
@@ -26,12 +62,6 @@ namespace util
             static void sub_end(Archive & ar)
             {
                 ar.sub_end();
-            }
-
-            template <typename Archive, typename T>
-            static void load_wrapper(Archive & ar, T & t)
-            {
-                ar.load_wrapper(t);
             }
         };
 
@@ -49,187 +79,126 @@ namespace util
         public:
             typedef boost::mpl::false_ is_saving; ///< 表明该归档“不是”用于保存数据的
             typedef boost::mpl::true_ is_loading; ///< 表明该归档是用于加载数据的
+            friend struct archive_access;
             friend struct LoadAccess;
 
         public:
-            /// 处理指针类型的读
-            struct load_pointer
-            {
-                template<class T>
-                static void invoke(
-                    Archive & ar, 
-                    T & t)
-                {
-                   ar.operator >> (*t);
-                }
-            };
-
-            /// 处理数组序列化
-            struct load_array
-            {
-                template<class T>
-                static void invoke(
-                    Archive & ar, 
-                    T const & t)
-                {
-                    size_t current_count = sizeof(t) / (
-                        static_cast<const char *>(static_cast<const void *>(&t[1])) 
-                        - static_cast<const char *>(static_cast<const void *>(&t[0]))
-                        );
-                    size_t count;
-                    ar.operator >> (SERIALIZATION_NVP(count));
-                    if (count > current_count) {
-                        ar.fail();
-                        return;
-                    }
-                    ar.operator >> (make_array(static_cast<T *>(&t[0]), count));
-                }
-            };
-
-            /// 处理枚举类型的读
-            struct load_enum
-            {
-                template<class T>
-                static void invoke(
-                    Archive & ar, 
-                    T & t)
-                {
-                    int i;
-                    ar.load(i);
-                    t = static_cast<T>(i);
-                }
-            };
-
-            struct load_non_pointer
-            {
-
-                /// 处理包装类型的读
-                struct load_wrapper
-                {
-                    template<class T>
-                    static void invoke(
-                        Archive & ar, 
-                        T & t)
-                    {
-                        // 直接调用Archive的load方法，通过load_access中转
-                        LoadAccess::load_wrapper(ar, t);
-                    }
-                };
-
-                /// 处理基本类型的读
-                struct load_primitive
-                {
-                    template<class T>
-                    static void invoke(
-                        Archive & ar, 
-                        T & t)
-                    {
-                        // 直接调用Archive的load方法，通过load_access中转
-                       ar.load(t);
-                    }
-                };
-
-                /// 处理标准类型（非基本类型）的读
-                struct load_standard
-                {
-                    template<class T>
-                    static void invoke(
-                        Archive &ar, 
-                        T & t)
-                    {
-                        LoadAccess::sub_start(ar);
-                        // 直接调用serialize方法
-                        using namespace util::serialization;
-                        serialize(ar, t);
-                        LoadAccess::sub_end(ar);
-                    }
-                };
-
-                /// 处理标准类型（非基本类型）的读
-                struct load_single_unit
-                {
-                    template<class T>
-                    static void invoke(
-                        Archive &ar, 
-                        T & t)
-                    {
-                        // 直接调用serialize方法
-                        using util::serialization::serialize;
-                        serialize(ar, t);
-                    }
-                };
-
-                /// 处理标准类型（字符串转换）的读
-                struct load_stringlized
-                {
-                    template<class T>
-                    static void invoke(
-                        Archive &ar, 
-                        T & t)
-                    {
-                        std::string str;
-                        ar >> str;
-                        if (ar && t.from_string(str))
-                            ar.fail();
-                    }
-                };
-
-                template<class T>
-                static void invoke(
-                    Archive &ar, 
-                    T & t)
-                {
-                /// 根据类型类别（基本类型，标准类型），分别处理读
-                    typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                        util::serialization::is_primitive<Archive, T>, 
-                        load_primitive, 
-                        BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                            util::serialization::is_wrapper<T>, 
-                            load_wrapper, 
-                            BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                                util::serialization::is_sigle_unit<Archive, T>, 
-                                load_single_unit, 
-                                BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                                    util::serialization::is_stringlized<Archive, T>, 
-                                    load_stringlized, 
-                                    load_standard
-                                >::type
-                            >::type
-                        >::type
-                    >::type invoke_type;
-                    invoke_type::invoke(ar, t);
-                }
-            };
-
             /// 重载操作符“>>”
             template<class T>
-            Archive & operator >> (
-                T const & t)
+            Archive & operator >>(
+                T & t)
             {
-                if (this->state()) return *This();
-                typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                    boost::is_pointer<T>, 
-                    load_pointer, 
-                    BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                        boost::is_enum<T>, 
-                        load_enum, 
-                        load_non_pointer
-                    >::type
-                >::type invoke_type;
-                invoke_type::invoke(*this->This(), const_cast<T &>(t));
-                return *This();
+                return BasicArchiveT<Archive>::operator &(t);
             }
 
             /// 重载操作符“&”
             template<class T>
-            Archive & operator & (
+            Archive & operator &(
                 T & t)
             {
-                return This()->operator >> (t);
+                return This()->operator >>(t);
             }
 
         protected:
             using BasicArchiveT<Archive>::This;
+
+            template<class T, class C>
+            void serialize_catalog(
+                T & t, C * c)
+            {
+                LoadAccess::load_catalog(*This(), t, c);
+            }
+
+            void serialize_binary(
+                char * p, 
+                std::size_t n)
+            {
+                LoadAccess::load_binary(*This(), p, n);
+            }
+
+        protected:
+            template<class T, class C>
+            void load_catalog(
+                T & t, C * c)
+            {
+                BasicArchiveT<Archive>::serialize_catalog(t, c);
+            }
+
+            template<class T>
+            void load_catalog(
+                T & t, catalog_wrapper *)
+            {
+                LoadAccess::load_wrapper(*This(), t);
+            }
+
+            template <class T>
+            void load_catalog(
+                T & t, catalog_primitive *)
+            {
+                LoadAccess::load(*This(), t);
+            }
+
+            struct failed
+            {
+                bool operator()(
+                    bool b)
+                {
+                    return !b;
+                }
+
+                bool operator()(
+                    boost::system::error_code ec)
+                {
+                    return ec;
+                }
+            };
+
+            template <class T>
+            void load_catalog(
+                T & t, catalog_stringlized *)
+            {
+                std::string str;
+                serialize_catalog(str, (catalog_primitive *)NULL);
+                if (this->state())
+                    return;
+                if (failed()(t.from_string(str)))
+                    this->fail();
+            }
+
+        protected:
+            void start_name(
+                std::string const & name)
+            {
+                LoadAccess::load_start(*This(), name);
+            }
+
+            void finish_name(
+                std::string const & name)
+            {
+                LoadAccess::load_end(*This(), name);
+            }
+
+            template <typename Catalog>
+            void start_child(
+                Catalog *)
+            {
+                LoadAccess::sub_start(*This());
+            }
+
+            template <typename Catalog>
+            void finish_child(
+                Catalog *)
+            {
+                LoadAccess::sub_end(*This());
+            }
+
+        protected:
+            template <class T>
+            void load(
+                T & t)
+            {
+                this->state(3);
+            }
 
             /// 从流中读出标准库字符串
             template<class _Elem, class _Traits, class _Ax>
@@ -237,41 +206,36 @@ namespace util
                 std::basic_string<_Elem, _Traits, _Ax> & t)
             {
                 typename std::basic_string<_Elem, _Traits, _Ax>::size_type len;
-                This()->operator >> (len);
+                LoadAccess::load(*This(), len);
                 if (this->state()) return;
                 std::size_t l = 0;
                 if (len > 1024) {
                     for (; len > 1024; l += 1024, len -= 1024) {
                         t.resize(l + 1024);
-                        This()->load_binary(&t[l], sizeof(_Elem) * 1024);
+                        LoadAccess::load_binary(*This(), &t[l], sizeof(_Elem) * 1024);
                         if (this->state()) return;
                     }
                 }
                 t.resize(l + len);
-                This()->load_binary(&t[l], len * sizeof(_Elem));
+                LoadAccess::load_binary(*This(), &t[l], len * sizeof(_Elem));
             }
 
-            /// 从流中读出名字-值对
             template<class T>
             void load_wrapper(
-                util::serialization::NVPair<T> & t)
+                util::serialization::NVPair<T> const & t)
             {
-                this->path_push(t.name());
-
-                this->This()->load_start(t.name());
-                This()->operator >> (t.data());
-                This()->load_end(t.name());
-
-                this->path_pop();
+                BasicArchiveT<Archive>::serialize_catalog(
+                    const_cast<util::serialization::NVPair<T> &>(t), (catalog_wrapper *)NULL);
             }
 
             void load_binary(
                 char * p, 
                 std::size_t n)
             {
-                this->state(1);
+                this->state(3);
             }
 
+        protected:
             void load_start(
                 std::string const & name)
             {
@@ -281,9 +245,37 @@ namespace util
                 std::string const & name)
             {
             }
-        }; // class basic_iarchive
 
-    }  // namespace archive
+            void sub_start()
+            {
+            }
+
+            void sub_end()
+            {
+            }
+
+        }; // class BasicIArchive
+
+    } // namespace archive
+} // namespace util
+
+namespace util
+{
+    namespace serialization
+    {
+        BOOST_TTI_HAS_MEMBER_FUNCTION(from_string);
+
+        template<
+            class _T
+        >
+        struct has_from_string
+            : boost::mpl::or_<
+                has_member_function_from_string<_T, bool, boost::mpl::vector<std::string const &> >, 
+                has_member_function_from_string<_T, boost::system::error_code, boost::mpl::vector<std::string const &> > >
+        {
+        };
+
+    }  // namespace serialization
 } // namespace util
 
 #endif // _UTIL_ARCHIVE_BASIC_I_ARCHIVE_H_

@@ -7,8 +7,6 @@
 
 #include <framework/string/Format.h>
 
-#include <boost/tti/has_member_function.hpp>
-
 #include <tinyxml/tinyxml.h>
 
 #include <fstream>
@@ -25,7 +23,8 @@ namespace util
         class XmlOArchive
             : public StreamOArchive<XmlOArchive<_Elem, _Traits>, _Elem, _Traits>
         {
-            friend class StreamOArchive<XmlOArchive<_Elem, _Traits>, _Elem, _Traits>;
+            friend class SaveAccess;
+
         public:
             XmlOArchive(
                 std::basic_ostream<_Elem, _Traits> & is)
@@ -46,7 +45,7 @@ namespace util
                 save_xml();
             }
 
-        public:
+        protected:
             /// 从流中读出变量
             template<class T>
             void save(
@@ -163,15 +162,13 @@ namespace util
         {
         };
 
-        BOOST_TTI_HAS_MEMBER_FUNCTION(to_string);
-
         template<
             typename _Elem, 
             typename _Traits, 
             class _T
         >
         struct is_stringlized<util::archive::XmlOArchive<_Elem, _Traits>, _T>
-            : has_member_function_to_string<_T const, std::string>
+            : has_to_string<_T>
         {
         };
 

@@ -42,7 +42,8 @@ namespace util
         class XmlIArchive
             : public StreamIArchive<XmlIArchive<_Elem, _Traits>, _Elem, _Traits>
         {
-            friend class StreamIArchive<XmlIArchive<_Elem, _Traits>, _Elem, _Traits>;
+            friend class LoadAccess;
+
         public:
             XmlIArchive(
                 std::basic_istream<_Elem, _Traits> & is)
@@ -58,7 +59,7 @@ namespace util
                 load_xml();
             }
 
-        public:
+        protected:
             /// 从流中读出变量
             template<class T>
             void load(
@@ -347,17 +348,13 @@ namespace util
         {
         };
 
-        BOOST_TTI_HAS_MEMBER_FUNCTION(from_string);
-
         template<
             typename _Elem, 
             typename _Traits, 
             class _T
         >
         struct is_stringlized<util::archive::XmlIArchive<_Elem, _Traits>, _T>
-            : boost::mpl::or_<
-                has_member_function_from_string<_T, bool, boost::mpl::vector<std::string const &> >, 
-                has_member_function_from_string<_T, boost::system::error_code, boost::mpl::vector<std::string const &> > >
+            : has_from_string<_T>
         {
         };
 

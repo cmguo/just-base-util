@@ -130,19 +130,6 @@ namespace util
             std::vector<std::string> path_;
         };
 
-        template <typename Archive>
-        class BasicArchiveT
-            : public BasicArchive
-        {
-        protected:
-            /// 获取派生类的指针
-            Archive * This()
-            {
-                return static_cast<Archive *>(this);
-            }
-
-        };
-
     }  // namespace archive
 } // namespace util
 

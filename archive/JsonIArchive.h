@@ -288,6 +288,16 @@ namespace util
         {
         };
 
+        template<
+            typename _Elem, 
+            typename _Traits, 
+            class _T
+        >
+        struct is_stringlized<util::archive::JsonIArchive<_Elem, _Traits>, _T>
+            : has_from_string<_T>
+        {
+        };
+
     }
 }
 

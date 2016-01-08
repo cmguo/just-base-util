@@ -49,6 +49,15 @@ namespace util
         {
         };
 
+        template <
+            typename Ar, 
+            typename T
+        >
+        struct is_collection
+            : boost::false_type
+        {
+        };
+
         template<class Archive, class T>
         inline void serialize(Archive & ar, T & t){
             t.serialize(ar);

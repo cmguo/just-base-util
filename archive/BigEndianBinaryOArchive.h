@@ -63,8 +63,6 @@ namespace util
         class BigEndianBinaryOArchive
             : public StreamOArchive<BigEndianBinaryOArchive<_Elem, _Traits>, _Elem, _Traits>
         {
-            friend class StreamOArchive<BigEndianBinaryOArchive<_Elem, _Traits>, _Elem, _Traits>;
-
         public:
             /// 从ostream构造
             BigEndianBinaryOArchive(
@@ -78,6 +76,27 @@ namespace util
                 : StreamOArchive<BigEndianBinaryOArchive<_Elem, _Traits>, _Elem, _Traits>(buf)
             {
             }
+
+        public:
+            /// 判断某个类型是否可以优化数组的序列化
+            /// 只有_Elem类型能够直接序列化数组，不需要转换字节顺序
+            template<class T>
+            struct use_array_optimization
+                : boost::integral_constant<bool, sizeof(T) == 1>
+            {
+            };
+            
+            // 序列化数组，直接二进制批量写入，是针对_Elem数组的优化实现
+            template<class T>
+            void save_array(
+                framework::container::Array<T> const & a, 
+                typename boost::enable_if<use_array_optimization<T> >::type * = NULL)
+            {
+                this->save_binary((_Elem *)a.address(), a.count());
+            }
+
+        protected:
+            friend class SaveAccess;
 
             /// 序列化通用类型实现
             template <typename T>
@@ -107,23 +126,6 @@ namespace util
             }
 
             using StreamOArchive<BigEndianBinaryOArchive<_Elem, _Traits>, _Elem, _Traits>::save;
-            
-            /// 判断某个类型是否可以优化数组的序列化
-            /// 只有_Elem类型能够直接序列化数组，不需要转换字节顺序
-            template<class T>
-            struct use_array_optimization
-                : boost::integral_constant<bool, sizeof(T) == 1>
-            {
-            };
-
-            // 序列化数组，直接二进制批量写入，是针对_Elem数组的优化实现
-            template<class T>
-            void save_array(
-                framework::container::Array<T> const & a, 
-                typename boost::enable_if<use_array_optimization<T> >::type * = NULL)
-            {
-                this->save_binary((_Elem *)a.address(), a.count());
-            }
         };
 
     } // namespace archive

@@ -20,7 +20,8 @@ namespace util
         class StreamIArchive
             : public BasicIArchive<Archive>
         {
-            friend class BasicIArchive<Archive>;
+            friend class LoadAccess;
+
         public:
             typedef _Elem char_type;
 

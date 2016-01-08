@@ -49,7 +49,25 @@ namespace util
             }
 
         public:
-            using super::load_binary;
+            /// 判断某个类型是否可以优化数组的序列化
+            /// 只有基本类型能够直接序列化数组
+            template<class T>
+            struct use_array_optimization
+                : boost::is_fundamental<T>
+            {
+            };
+
+            /// 从流中读出数组（优化）
+            template<class T>
+            void load_array(
+                framework::container::Array<T> const & a, 
+                typename boost::enable_if<use_array_optimization<T> >::type * = NULL)
+            {
+                load_binary((_Elem *)a.address(), sizeof(T) * a.count());
+            }
+
+        protected:
+            friend class LoadAccess;
 
             /// 从流中读出变量
             template<class T>
@@ -67,23 +85,6 @@ namespace util
             }
 
             using super::load;
-
-            /// 判断某个类型是否可以优化数组的序列化
-            /// 只有基本类型能够直接序列化数组
-            template<class T>
-            struct use_array_optimization
-                : boost::is_fundamental<T>
-            {
-            };
-
-            /// 从流中读出数组（优化）
-            template<class T>
-            void load_array(
-                framework::container::Array<T> const & a, 
-                typename boost::enable_if<use_array_optimization<T> >::type * = NULL)
-            {
-                load_binary((_Elem *)a.address(), sizeof(T) * a.count());
-            }
         };
 
     } // namespace archive
