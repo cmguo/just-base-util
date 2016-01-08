@@ -97,6 +97,26 @@ namespace util
         }
 
         template <typename MsgT>
+        Message<MsgT> & Message<MsgT>::operator=(
+            Message const & r)
+        {
+            // default copy assignment will copy member "data_", which is not expected to 
+            MessageBase::operator=(r);
+            header_type::operator=(r);
+            return *this;
+        }
+
+        /*
+        template <typename MsgT>
+        inline bool operator==(
+            Message const & l, 
+            Message const & r)
+        {
+            return l.equal_to(r);
+        }
+        */
+
+        template <typename MsgT>
         void Message<MsgT>::reset()
         {
             MessageBase::reset();

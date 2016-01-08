@@ -52,6 +52,17 @@ namespace util
             void reset();
 
         public:
+            Message & operator=(
+                Message const & r);
+
+            template <
+                typename T
+            >
+            friend bool operator==(
+                Message<T> const & l, 
+                Message<T> const & r);
+
+        public:
             void from_data(
                 StreamBuffer & buf, 
                 void *);

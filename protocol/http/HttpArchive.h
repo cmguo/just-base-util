@@ -562,7 +562,7 @@ namespace util
         private:
             template<class T>
             void load_wrapper(
-                util::serialization::NVPair<T> & nvp)
+                util::serialization::NVPair<T> const & nvp)
             {
                 if (nvp.name() == field_.name()) {
                     handler_.reset(get_handler(nvp.data()));
