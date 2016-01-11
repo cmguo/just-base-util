@@ -24,6 +24,7 @@ namespace util
     {
         class HttpHeadIArchive;
         class HttpHeadOArchive;
+        class HttpHeadVisitor;
     }
 
     namespace serialization
@@ -37,6 +38,12 @@ namespace util
 
         template <typename T>
         struct is_primitive<util::protocol::HttpHeadOArchive, boost::optional<T> >
+            : boost::true_type
+        {
+        };
+
+        template <typename T>
+        struct is_primitive<util::protocol::HttpHeadVisitor, boost::optional<T> >
             : boost::true_type
         {
         };

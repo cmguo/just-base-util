@@ -40,7 +40,7 @@ namespace util
         struct WrapObject;
 
         template <typename T>
-        struct is_sigle_unit
+        struct is_single_unit
             : boost::mpl::false_
         {
         };
@@ -61,7 +61,7 @@ namespace util
                             typename WrapData<T, float>::node_type
                         >::type, 
                         typename boost::mpl::if_<
-                            is_sigle_unit<T>, 
+                            is_single_unit<T>, 
                             typename WrapObject<T>::node_type, 
                             typename WrapObject<T>::node_type
                         >::type
