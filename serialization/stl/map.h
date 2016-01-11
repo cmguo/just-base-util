@@ -9,6 +9,26 @@
 
 #include <map>
 
+namespace util
+{
+    namespace serialization
+    {
+
+        template<
+            class Archive, 
+            class _Kty, 
+            class _Ty, 
+            class _Pr, 
+            class _Alloc
+        >
+        struct is_collection<Archive, std::map<_Kty, _Ty, _Pr, _Alloc> >
+            : boost::true_type
+        {
+        };
+
+    }  // namespace serialization
+} // namespace util
+
 namespace std
 {
 

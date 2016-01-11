@@ -8,6 +8,24 @@
 
 #include <deque>
 
+namespace util
+{
+    namespace serialization
+    {
+
+        template<
+            class Archive, 
+            class _Ty, 
+            class _Alloc
+        >
+        struct is_collection<Archive, std::deque<_Ty, _Alloc> >
+            : boost::true_type
+        {
+        };
+
+    }  // namespace serialization
+} // namespace util
+
 namespace std
 {
 

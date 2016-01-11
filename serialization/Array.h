@@ -19,6 +19,15 @@ namespace util
         template <class Archive, typename T>
         struct use_array_optimization : boost::mpl::false_ {};
 
+        template<
+            class Archive, 
+            class T 
+        >
+        struct is_collection<Archive, framework::container::Array<T> >
+            : boost::true_type
+        {
+        };
+
     }  // namespace serialization
 } // namespace util
 

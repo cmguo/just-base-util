@@ -35,7 +35,7 @@ namespace util
             typename Ar, 
             typename T
         >
-        struct is_sigle_unit
+        struct is_single_unit
             : boost::false_type
         {
         };

@@ -8,6 +8,25 @@
 
 #include <set>
 
+namespace util
+{
+    namespace serialization
+    {
+
+        template<
+            class Archive, 
+            class _Kty, 
+            class _Pr, 
+            class _Alloc
+        >
+        struct is_collection<Archive, std::set<_Kty, _Pr, _Alloc> >
+            : boost::true_type
+        {
+        };
+
+    }  // namespace serialization
+} // namespace util
+
 namespace std
 {
 
