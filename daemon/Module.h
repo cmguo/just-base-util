@@ -18,6 +18,18 @@ namespace util
         public:
             static detail::ModuleId<Type> id;
 
+            static Type & get(
+                Daemon & daemon)
+            {
+                return use_module<Type>(daemon);
+            }
+
+            static Type & get(
+                boost::asio::io_service & io_svc)
+            {
+                return use_module<Type>(io_svc);
+            }
+
             // Constructor.
             ModuleBase(
                 Daemon & daemon, 
