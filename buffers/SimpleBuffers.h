@@ -144,8 +144,8 @@ namespace util
             mutable_byte_buffers prepare(
                 size_t size) const
             {
-                if (size > this->out_avail()) 
-                    throw std::length_error("util::buffer::CycleStreamBuffers too long");
+                //if (size > this->out_avail()) 
+                //    throw std::length_error("util::buffer::SimpleBuffers too long");
                 return mutable_byte_buffers(write_, byte_iterator(write_) + size);
             }
 
@@ -158,7 +158,7 @@ namespace util
                 size_t size) const
             {
                 if (size > this->in_avail()) 
-                    throw std::length_error("util::buffer::CycleStreamBuffers too long");
+                    throw std::length_error("util::buffer::SimpleBuffers too long");
                 return const_byte_buffers(read_, byte_iterator(read_) + size);
             }
 
