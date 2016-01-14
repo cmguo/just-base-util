@@ -63,7 +63,7 @@ namespace util
                 framework::container::Array<T> const & a, 
                 typename boost::enable_if<use_array_optimization<T> >::type * = NULL)
             {
-                load_binary((_Elem *)a.address(), sizeof(T) * a.count());
+                this->load_binary((_Elem *)a.address(), sizeof(T) * a.count());
             }
 
         protected:
@@ -74,14 +74,14 @@ namespace util
             void load(
                 T & t)
             {
-                load_binary((_Elem *)&t, sizeof(T));
+                this->load_binary((_Elem *)&t, sizeof(T));
             }
 
             void load(
                 framework::system::UInt24 & t)
             {
                 t = framework::system::UInt24();
-                load_binary((_Elem *)t.data(), 3);
+                this->load_binary((_Elem *)t.data(), 3);
             }
 
             using super::load;

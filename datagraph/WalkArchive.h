@@ -3,7 +3,6 @@
 #ifndef _UTIL_DATA_GRAPH_WALK_ARCHIVE_H_
 #define _UTIL_DATA_GRAPH_WALK_ARCHIVE_H_
 
-#include "util/datagraph/Path.h"
 #include "util/archive/BasicOArchive.h"
 
 #include <framework/string/Format.h>

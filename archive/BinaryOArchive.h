@@ -63,7 +63,7 @@ namespace util
                 framework::container::Array<T> const & a, 
                 typename boost::enable_if<use_array_optimization<T> >::type * = NULL)
             {
-                save_binary((_Elem const *)a.address(), sizeof(T) * a.count());
+                this->save_binary((_Elem const *)a.address(), sizeof(T) * a.count());
             }
 
         protected:
@@ -74,13 +74,13 @@ namespace util
             void save(
                 T const & t)
             {
-                save_binary((_Elem const *)&t, sizeof(T));
+                this->save_binary((_Elem const *)&t, sizeof(T));
             }
 
             void save(
                 framework::system::UInt24 const & t)
             {
-                save_binary((_Elem const *)t.data(), 3);
+                this->save_binary((_Elem const *)t.data(), 3);
             }
 
             using super::save;
