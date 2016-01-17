@@ -30,6 +30,14 @@ namespace util
                 un(EventListener(l));
             }
 
+            std::string const & name() const
+            {
+                return name_;
+            }
+
+            virtual std::string get_value(
+                std::string const & key) const;
+
         public:
             friend bool operator==(
                 Event const & l, 
@@ -52,10 +60,15 @@ namespace util
                 return *this;
             }
 
-        protected:
-            Event()
+            std::string operator[](
+                std::string const & key)
             {
+                return get_value(key);
             }
+
+        protected:
+            Event(
+                char const * name);
 
         private:
             void on(
@@ -79,6 +92,7 @@ namespace util
                 Observable const & sender) const;
 
         private:
+            std::string name_;
             std::list<EventListener> listeners_;
         };
 

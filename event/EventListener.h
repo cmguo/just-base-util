@@ -13,9 +13,9 @@ namespace util
     namespace event
     {
 
-        class Observable;
+        class Observable;
         class Event;
-
+
         class EventListener
         {
         public:

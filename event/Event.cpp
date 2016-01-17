@@ -13,6 +13,12 @@ namespace util
     namespace event
     {
 
+        Event::Event(
+            char const * name)
+            : name_(name)
+        {
+        }
+
         void Event::on(
             EventListener const & l)
         {
@@ -24,6 +30,12 @@ namespace util
             EventListener const & l)
         {
             listeners_.remove(l);
+        }
+
+        std::string Event::get_value(
+            std::string const & key) const
+        {
+            return "";
         }
 
         void Event::raise(
