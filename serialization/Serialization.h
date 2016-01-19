@@ -14,7 +14,10 @@ namespace util
 
         struct wrapper {};
 
-        template <typename T>
+        template <
+            typename Ar, 
+            typename T
+        >
         struct is_wrapper
             : boost::is_base_and_derived<wrapper, T>
         {};
