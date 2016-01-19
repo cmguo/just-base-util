@@ -198,10 +198,10 @@ namespace util
 
             template<class T>
             void save_wrapper(
-                util::serialization::NVPair<T> const & t)
+                T const & t)
             {
                 BasicArchiveT<Archive>::serialize_catalog(
-                    const_cast<util::serialization::NVPair<T> &>(t), (catalog_wrapper *)NULL);
+                    const_cast<T &>(t), (catalog_wrapper *)NULL);
             }
 
             void save_binary(

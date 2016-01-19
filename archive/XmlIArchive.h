@@ -59,6 +59,13 @@ namespace util
                 load_xml();
             }
 
+            template<class T>
+            AbnormalCollection<T> const abnormal_collection(
+                T & t)
+            {
+                return AbnormalCollection<T>(t);
+            }
+
         protected:
             /// 从流中读出变量
             template<class T>
@@ -138,6 +145,9 @@ namespace util
 
             using StreamIArchive<XmlIArchive<_Elem, _Traits>, _Elem, _Traits>::load;
 
+            template<class T>
+            friend struct AbnormalCollection;
+
             void start_abnormal_collection()
             {
                 if (this->state())
@@ -152,13 +162,6 @@ namespace util
                     v.attr = NULL; // no such item, so the collection is empty
                 }
                 value_stack_.push_back(v);
-            }
-
-            template<class T>
-            AbnormalCollection<T> const abnormal_collection(
-                T & t)
-            {
-                return AbnormalCollection<T>(t);
             }
 
             void load_start(

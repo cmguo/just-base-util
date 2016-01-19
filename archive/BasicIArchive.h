@@ -138,7 +138,7 @@ namespace util
                 LoadAccess::load(*This(), t);
             }
 
-            struct failed
+            struct isfailed
             {
                 bool operator()(
                     bool b)
@@ -161,7 +161,7 @@ namespace util
                 serialize_catalog(str, (catalog_primitive *)NULL);
                 if (this->state())
                     return;
-                if (failed()(t.from_string(str)))
+                if (isfailed()(t.from_string(str)))
                     this->fail();
             }
 
@@ -222,10 +222,10 @@ namespace util
 
             template<class T>
             void load_wrapper(
-                util::serialization::NVPair<T> const & t)
+                T const & t)
             {
                 BasicArchiveT<Archive>::serialize_catalog(
-                    const_cast<util::serialization::NVPair<T> &>(t), (catalog_wrapper *)NULL);
+                    const_cast<T &>(t), (catalog_wrapper *)NULL);
             }
 
             void load_binary(

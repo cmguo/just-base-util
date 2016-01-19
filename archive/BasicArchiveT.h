@@ -5,6 +5,8 @@
 
 #include "util/archive/BasicArchive.h"
 
+#include <framework/string/Format.h>
+
 #include <boost/mpl/if.hpp>
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/is_enum.hpp>
@@ -109,7 +111,7 @@ namespace util
                         util::serialization::is_primitive<Archive, T>, 
                         catalog_primitive, 
                         BOOST_DEDUCED_TYPENAME boost::mpl::if_<
-                            util::serialization::is_wrapper<T>, 
+                            util::serialization::is_wrapper<Archive, T>, 
                             catalog_wrapper, 
                             BOOST_DEDUCED_TYPENAME boost::mpl::if_<
                                 util::serialization::is_single_unit<Archive, T>, 
@@ -163,16 +165,15 @@ namespace util
                 this->state(3);
             }
 
-            /// 从流中读出名字-值对
             template<class T>
             void serialize_catalog(
-                util::serialization::NVPair<T> & t, catalog_wrapper*)
+                T & t, catalog_wrapper*)
             {
-                this->path_push(t.name());
+                this->path_push(wrapper_name(t));
 
-                archive_access::start_name(*This(), t.name());
-                This()->operator &(t.data());
-                archive_access::finish_name(*This(), t.name());
+                archive_access::start_name(*This(), wrapper_name(t));
+                This()->operator &(wrapper_data(t));
+                archive_access::finish_name(*This(), wrapper_name(t));
 
                 this->path_pop();
             }
