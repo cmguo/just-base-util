@@ -57,6 +57,20 @@ namespace util
             return NVPair<T>(name, const_cast<T &>(t));
         }
 
+        template<class T>
+        char const * wrapper_name(
+            NVPair<T> const & t)
+        {
+            return t.name();
+        }
+
+        template<class T>
+        T & wrapper_data(
+            NVPair<T> const & t)
+        {
+            return t.data();
+        }
+
     } // namespace serialize
 } // namespace util
 
@@ -73,5 +87,8 @@ namespace util
 
 #define SERIALIZATION_NVP_2(t, v) \
     util::serialization::make_nvp(STRINGLIZE(v), t.v())
+
+#define SERIALIZATION_NVP_3(t, v) \
+    util::serialization::make_nvp(STRINGLIZE(v), t.v ## _)
 
 #endif // _UTIL_SERIALIZATION_NV_PAIR_H_
