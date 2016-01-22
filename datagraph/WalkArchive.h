@@ -44,11 +44,11 @@ namespace util
 
             template <typename T>
             void save_wrapper(
-                util::serialization::NVPair<T> const & t)
+                T const & t)
             {
                 if (name_.empty()) return;
-                if (t.name() == name_) {
-                    if (framework::string::format(t.data()) == value_)
+                if (wrapper_name(t) == name_) {
+                    if (framework::string::format(wrapper_data(t)) == value_)
                         found_ = true;
                     else
                         this->fail();
@@ -92,25 +92,25 @@ namespace util
 
             template <typename T>
             void save_wrapper(
-                util::serialization::NVPair<T> const & t)
+                T const & t)
             {
                 if (found_) return;
-                if (path_[level_] != t.name()) return;
+                if (path_[level_] != wrapper_name(t)) return;
                 ++level_;
                 if (level_ == path_.size()) {
                     found_ = true;
-                    This()->found(t.data());
+                    This()->found(wrapper_data(t));
                 } else {
-                    This()->operator <<(t.data());
+                    This()->operator <<(wrapper_data(t));
                     if (!found_)
                         this->fail();
                 }
                 --level_;
             }
 
-            template <class T>
+            template <class T, class C>
             void save_catalog(
-                T const & t, util::archive::catalog_object * c)
+                T const & t, C * c)
             {
                 if (path_.size() == 0)
                     This()->found(t);
