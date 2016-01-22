@@ -49,4 +49,20 @@ namespace util
     } // namespace event
 } // namespace util
 
+namespace util
+{
+    namespace serialization
+    {
+
+        template<
+            class _T
+        >
+        struct is_stringlized<util::event::EventValue, _T>
+            : has_to_string<_T>
+        {
+        };
+
+    }
+}
+
 #endif // _UTIL_EVENT_EVENT_EX_HPP_

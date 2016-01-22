@@ -14,7 +14,7 @@ namespace util
         {
         public:
             Observable(
-                std::string const & name);
+                std::string const & name = "");
 
         public:
             void register_event(

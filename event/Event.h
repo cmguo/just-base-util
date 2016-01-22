@@ -68,7 +68,7 @@ namespace util
 
         protected:
             Event(
-                char const * name);
+                char const * name = "");
 
         private:
             void on(
