@@ -127,7 +127,7 @@ namespace util
         FilterSource::~FilterSource()        {        }        void FilterSource::complete()
         {
             boost::iostreams::filtering_istream::push(BufferSource(buf_));
-        }
+        }
         std::size_t FilterSource::filter_read(
             buffers_t const & buffers,
             boost::system::error_code & ec)

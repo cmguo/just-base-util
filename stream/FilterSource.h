@@ -22,7 +22,7 @@ namespace util
                 Source & source);
 
             virtual ~FilterSource();        public:
-            void complete();            Source & source()            {                return source_;            }
+            void complete();            Source & source()            {                return source_;            }
         private:
             friend class read_handler;
 

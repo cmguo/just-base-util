@@ -32,7 +32,11 @@ namespace util
                 rcv_buf_.reset();
             }
 
-            Source & source()            {                return source_;            }
+            Source & source()
+            {
+                return source_;
+            }
+
         public:
             std::size_t read_eof(
                 boost::system::error_code & ec);
