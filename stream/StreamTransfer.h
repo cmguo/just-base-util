@@ -354,7 +354,9 @@ namespace util
                 {
                     boost::system::error_code ec;
                     handler_read(ec, 0);
-                    handler_write(ec, 0);
+                    if (!writing_ && !write_end_) {
+                        handler_write(ec, 0);
+                    }
                 }
 
                 void handler_read(
