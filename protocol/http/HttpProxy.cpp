@@ -164,6 +164,9 @@ namespace util
                     case transferring_request_data:
                     case sending_response_head:
                     case transferring_response_data:
+                    case connectting:
+                    case sending_request_head:
+                    case receiving_response_head:
                         on_finish();
                         state_ = exiting;
                         if (watch_state_ == watching) {
@@ -178,12 +181,14 @@ namespace util
                             response_.head().content_length.reset(bytes_transferred.get_size_t());
                         }
                     case preparing:
-                    case connectting:
-                    case sending_request_head:
-                    case receiving_response_head:
                         state_ = sending_response_head;
                         response_error(ec, boost::bind(&HttpProxy::handle_async, this, _1, _2));
-                        break;
+                    //case connectting:
+                    //case sending_request_head:
+                    //case receiving_response_head:
+                    //    state_ = sending_response_head;
+                    //    response_error(ec, boost::bind(&HttpProxy::handle_async, this, _1, _2));
+                    //    break;
                     default:
                         assert(0);
                         break;
@@ -212,11 +217,15 @@ namespace util
                     break;
                 case preparing:
                     if (bytes_transferred.get_bool()) {
-                        if (!http_to_server_)
+                        if (!http_to_server_) {
                             http_to_server_ = new HttpSocket(get_io_service());
-                        state_ = connectting;
-                        http_to_server_->async_connect(request_.head().host.get(), 
-                            boost::bind(&HttpProxy::handle_async, this, _1, Size()));
+                            state_ = connectting;
+                            http_to_server_->async_connect(request_.head().host.get(), 
+                                boost::bind(&HttpProxy::handle_async, this, _1, Size()));
+                        } else {
+                            state_ = connectting;
+                            handle_async(ec, Size());
+                        }
                     } else {
                         state_ = transferring_request_data;
                         transfer_request_data(
@@ -283,6 +292,10 @@ namespace util
                     break;
                 case sending_response_head:
                     state_ = transferring_response_data;
+                    if (response_.head().err_code < 200 
+                        || response_.head().err_code == http_error::no_content
+                        || response_.head().err_code == http_error::not_modified)
+                        response_.head().content_length = 0;
                     transfer_response_data(
                         boost::bind(&HttpProxy::handle_async, this, _1, _2));
                     break;
@@ -386,6 +399,7 @@ namespace util
             if (!head.content_length.is_initialized())
                 head.content_length.reset(0);
             response_.head().connection = http_field::Connection::close;
+            on_receive_response_head(response_.head());
             async_write(response_.head(), 
                 boost::bind(resp, _1, _2));
         }
