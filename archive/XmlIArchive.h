@@ -100,6 +100,7 @@ namespace util
                 char const * value = NULL;
                 switch (v.type) {
                     case Value::t_elem:
+                    case Value::t_text:
                         value = v.elem->GetText();
                         break;
                     case Value::t_attr:
@@ -170,16 +171,12 @@ namespace util
                 Value & vp = value_stack_.back();
                 Value v;
                 if (vp.type == Value::t_elem) {
-                    TiXmlElement * elem = vp.elem->FirstChildElement(name.c_str());
-                    if (elem) {
+                    if ((v.elem = vp.elem->FirstChildElement(name.c_str()))) {
                         v.type = Value::t_elem;
-                        v.elem = elem;
-                    } else {
-                        char const * attr = vp.elem->Attribute(name.c_str());
-                        if (attr) {
-                            v.type = Value::t_attr;
-                            v.attr = attr;
-                        }
+                    } else if ((v.attr = vp.elem->Attribute(name.c_str()))) {
+                        v.type = Value::t_attr;
+                    } else if ((name == "_TEXT_") && (v.attr = vp.elem->GetText())) {
+                        v.type = Value::t_text;
                     }
                     if (v.type == Value::t_none) {
                         if (name == "count") {
@@ -192,8 +189,9 @@ namespace util
                             v2.type = Value::t_set;
                             value_stack_.push_back(v2);
                         }
-                    } else {
+                    } else if (v.type == Value::t_elem) {
                         if (name == "count") {
+                            TiXmlNode * elem = v.elem;
                             v.type = Value::t_count;
                             v.count = 0;
                             for (TiXmlNode * node = elem->NextSibling(); 
@@ -298,6 +296,7 @@ namespace util
                     t_set2, 
                     t_count, 
                     t_item, 
+                    t_text, 
                 } type;
                 union {
                     TiXmlElement * elem;
