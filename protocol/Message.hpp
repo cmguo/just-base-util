@@ -6,6 +6,8 @@
 #include "util/protocol/Message.h"
 #include "util/protocol/MessageTraits.h"
 
+#include <boost/static_assert.hpp>
+
 namespace util
 {
     namespace protocol

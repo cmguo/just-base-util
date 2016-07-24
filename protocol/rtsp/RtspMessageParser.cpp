@@ -4,6 +4,7 @@
 #include "util/protocol/rtsp/RtspMessageParser.h"
 #include "util/protocol/rtsp/RtspMessage.h"
 #include "util/protocol/rtsp/RtspMessageData.h"
+#include "util/protocol/Message.hpp"
 
 namespace util
 {
