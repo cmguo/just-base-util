@@ -751,10 +751,16 @@ namespace util
                 return false;
             }
             if (!response_.head().location.is_initialized()) {
+                LOG_WARN("[handle_redirect] redirect failed! (id = %u, no location)" % id_);
                 ec = format_error;
                 return false;
             }
             Url location(response_.head().location.get());
+            if (!location.is_valid()) {
+                LOG_WARN("[handle_redirect] redirect failed! (id = %u, location: %s)" % id_ % response_.head().location.get());
+                ec = format_error;
+                return false;
+            }
             if (!location.host().empty()) {
                 request.head().host.reset(location.host_svc());
             }
