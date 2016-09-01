@@ -51,6 +51,12 @@ namespace util
         protected:
             friend class SaveAccess;
 
+            void save(
+                null_ptr const &)
+            {
+                os_ << "null";
+            }
+
             /// 向流中写入参数化类型变量
             template <typename T>
             void save(

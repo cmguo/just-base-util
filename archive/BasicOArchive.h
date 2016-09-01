@@ -138,6 +138,13 @@ namespace util
 
             template <class T>
             void save_catalog(
+                T const & t, catalog_null_ptr *)
+            {
+                SaveAccess::save(*This(), null_ptr());
+            }
+
+            template <class T>
+            void save_catalog(
                 T const & t, catalog_primitive *)
             {
                 SaveAccess::save(*This(), t);

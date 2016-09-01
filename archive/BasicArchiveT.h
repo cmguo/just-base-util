@@ -51,11 +51,15 @@ namespace util
         };
 
         struct catalog_wrapper;
+        struct catalog_null_ptr;
         struct catalog_primitive;
+        struct catalog_enum;
         struct catalog_single_unit;
         struct catalog_stringlized;
         struct catalog_object;
         struct catalog_collection;
+
+        struct null_ptr {};
 
         /** 
             文档的基类
@@ -80,7 +84,10 @@ namespace util
                     Archive & ar, 
                     T & t)
                 {
-                   ar.operator &(*t);
+                    if (t == T())
+                        archive_access::serialize_catalog(ar, t, (catalog_null_ptr*)NULL);
+                    else
+                        ar.operator &(*t);
                 }
             };
 
