@@ -62,11 +62,11 @@ namespace util
         struct null_ptr {};
 
         /** 
-            ÎÄµµµÄ»ùÀà
+            æ–‡æ¡£çš„åŸºç±»
 
-            Ìá¹©¡°&¡±²Ù×÷·ûÖØÔØ
-            Çø±ğ¶Ô´ı»ù±¾ÀàĞÍÓë±ê×¼ÀàĞÍµÄ¶Á
-            @param Archive ÅÉÉúÀà
+            æä¾›â€œ&â€æ“ä½œç¬¦é‡è½½
+            åŒºåˆ«å¯¹å¾…åŸºæœ¬ç±»å‹ä¸æ ‡å‡†ç±»å‹çš„è¯»
+            @param Archive æ´¾ç”Ÿç±»
          */
         template <typename Archive>
         class BasicArchiveT
@@ -76,7 +76,19 @@ namespace util
             friend struct archive_access;
 
         public:
-            /// ´¦ÀíÖ¸ÕëÀàĞÍµÄ¶Á
+            /// å¤„ç†æŒ‡é’ˆç±»å‹çš„è¯»
+            struct serialize_void_pointer
+            {
+                template<class T>
+                static void invoke(
+                    Archive & ar, 
+                    T & t)
+                {
+                    archive_access::serialize_catalog(ar, t, (catalog_primitive*)NULL);
+                }
+            };
+
+            /// å¤„ç†æŒ‡é’ˆç±»å‹çš„è¯»
             struct serialize_pointer
             {
                 template<class T>
@@ -91,7 +103,7 @@ namespace util
                 }
             };
 
-            /// ´¦ÀíÃ¶¾ÙÀàĞÍµÄ¶Á
+            /// å¤„ç†æšä¸¾ç±»å‹çš„è¯»
             struct serialize_enum
             {
                 template<class T>
@@ -113,7 +125,7 @@ namespace util
                     Archive &ar, 
                     T & t)
                 {
-                /// ¸ù¾İÀàĞÍÀà±ğ£¨»ù±¾ÀàĞÍ£¬±ê×¼ÀàĞÍ£©£¬·Ö±ğ´¦Àí¶Á
+                /// æ ¹æ®ç±»å‹ç±»åˆ«ï¼ˆåŸºæœ¬ç±»å‹ï¼Œæ ‡å‡†ç±»å‹ï¼‰ï¼Œåˆ†åˆ«å¤„ç†è¯»
                     typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_<
                         util::serialization::is_primitive<Archive, T>, 
                         catalog_primitive, 
@@ -139,7 +151,7 @@ namespace util
                 }
             };
 
-            /// ÖØÔØ²Ù×÷·û &
+            /// é‡è½½æ“ä½œç¬¦ &
             template<class T>
             Archive & operator &(
                 T const & t)
@@ -147,7 +159,11 @@ namespace util
                 if (this->state()) return *This();
                 typedef BOOST_DEDUCED_TYPENAME boost::mpl::if_<
                     boost::is_pointer<T>, 
-                    serialize_pointer, 
+                    BOOST_DEDUCED_TYPENAME boost::mpl::if_<
+                        boost::is_same<void, typename boost::remove_cv<typename boost::remove_pointer<T>::type>::type>, 
+                        serialize_void_pointer, 
+                        serialize_pointer
+                    >::type, 
                     BOOST_DEDUCED_TYPENAME boost::mpl::if_<
                         boost::is_enum<T>, 
                         serialize_enum, 
@@ -159,7 +175,7 @@ namespace util
             }
 
         protected:
-            /// »ñÈ¡ÅÉÉúÀàµÄÖ¸Õë
+            /// è·å–æ´¾ç”Ÿç±»çš„æŒ‡é’ˆ
             Archive * This()
             {
                 return static_cast<Archive *>(this);
@@ -190,7 +206,7 @@ namespace util
                 T & t, 
                 catalog_single_unit *)
             {
-                // Ö±½Óµ÷ÓÃserialize·½·¨
+                // ç›´æ¥è°ƒç”¨serializeæ–¹æ³•
                 using namespace util::serialization;
                 serialize(*This(), t);
             }
@@ -201,7 +217,7 @@ namespace util
                 catalog_collection * c)
             {
                 archive_access::start_child(*This(), c);
-                // Ö±½Óµ÷ÓÃserialize·½·¨
+                // ç›´æ¥è°ƒç”¨serializeæ–¹æ³•
                 using namespace util::serialization;
                 serialize(*This(), t);
                 archive_access::finish_child(*This(), c);
@@ -213,7 +229,7 @@ namespace util
                 catalog_object * c)
             {
                 archive_access::start_child(*This(), c);
-                // Ö±½Óµ÷ÓÃserialize·½·¨
+                // ç›´æ¥è°ƒç”¨serializeæ–¹æ³•
                 using namespace util::serialization;
                 serialize(*This(), t);
                 archive_access::finish_child(*This(), c);
