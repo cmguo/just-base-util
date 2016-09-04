@@ -75,6 +75,17 @@ namespace util
         public:
             friend struct archive_access;
 
+            BasicArchiveT()
+                : depth_(65536)
+            {
+            }
+
+            void set_depth(
+                int depth)
+            {
+                depth_ = depth;
+            }
+
         public:
             /// 处理指针类型的读
             struct serialize_void_pointer
@@ -216,11 +227,14 @@ namespace util
                 T & t, 
                 catalog_collection * c)
             {
+                --depth_;
                 archive_access::start_child(*This(), c);
                 // 直接调用serialize方法
                 using namespace util::serialization;
-                serialize(*This(), t);
+                if (depth_ >= 0)
+                    serialize(*This(), t);
                 archive_access::finish_child(*This(), c);
+                ++depth_;
             }
 
             template<class T>
@@ -228,11 +242,14 @@ namespace util
                 T & t, 
                 catalog_object * c)
             {
+                --depth_;
                 archive_access::start_child(*This(), c);
                 // 直接调用serialize方法
                 using namespace util::serialization;
-                serialize(*This(), t);
+                if (depth_ >= 0)
+                    serialize(*This(), t);
                 archive_access::finish_child(*This(), c);
+                ++depth_;
             }
 
         protected:
@@ -273,6 +290,9 @@ namespace util
             {
                 finish_child();
             }
+
+        private:
+            int depth_;
         }; // class BasicArchiveT
 
     }  // namespace archive
