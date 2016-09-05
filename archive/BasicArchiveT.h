@@ -10,6 +10,8 @@
 #include <boost/mpl/if.hpp>
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/is_enum.hpp>
+#include <boost/type_traits/remove_pointer.hpp>
+#include <boost/type_traits/remove_cv.hpp>
 #include <boost/tti/has_member_function.hpp>
 
 namespace util
