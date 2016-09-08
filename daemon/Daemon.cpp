@@ -81,6 +81,13 @@ namespace util
                     config_.profile().pre_set(argv[i] + 2);
                 } else if (argv[i][0] == '+' && argv[i][1] == '+') {
                     config_.profile().post_set(argv[i] + 2);
+                } else if (argv[i][0] == ':') {
+                    char const * clone = strchr(argv[i] + 1, ':');
+                    char const * equal = strchr(clone + 1, '=');
+                    char const * key = strrchr(clone, '.');
+                    config_.set_ext_config(std::string(argv[i] + 1, clone), 
+                        std::string(clone + 1, key), 
+                        std::string(key + 1, equal), equal + 1);
                 } else {
                     *p++ = argv[i];
                 }
