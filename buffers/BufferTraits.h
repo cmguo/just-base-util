@@ -10,10 +10,10 @@
 namespace boost { namespace asio {
     template <typename T>
     void * buffer(T);
-    template <typename P, typename T>
-    P buffer_cast(T t) { return buffer_cast<P>(buffer(t)); }
-    template <typename T>
-    size_t buffer_size(T t) { return buffer_size(buffer(t)); }
+//    template <typename P, typename T>
+//    P buffer_cast(T t) { return buffer_cast<P>(buffer(t)); }
+//    template <typename T>
+//    size_t buffer_size(T t) { return buffer_size(buffer(t)); }
 }}
 
 namespace util

@@ -5,7 +5,7 @@
 
 #include "util/buffers/BuffersSize.h"
 #include "util/buffers/ByteIterator.h"
-#include "util/buffers/BuffersCompare2.h"
+#include "util/buffers/BuffersCompare.h"
 
 #include <boost/iterator/iterator_facade.hpp>
 

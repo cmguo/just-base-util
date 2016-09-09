@@ -241,7 +241,7 @@ namespace util
             template <typename Buffers>
             void reset(
                 Buffers const & buffers, 
-                size_t avail)
+                size_t avail = 0)
             {
                 reset(buffers.begin(), buffers.end());
                 reset(avail);
