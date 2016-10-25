@@ -4,6 +4,7 @@
 #define _UTIL_TOOLS_CLASS_FACTORY_H_
 
 #include "util/tools/Creator.h"
+#include "util/tools/StaticInitor.h"
 
 #include <boost/function.hpp>
 #include <boost/type_traits/is_same.hpp>
@@ -15,6 +16,10 @@ namespace util
 
         struct ClassFactoryTraits
         {
+            typedef void (sinit_proto)();
+            typedef void sinitor_type;
+            typedef void sinitor_map_type;
+
             typedef void creator_type;
             typedef void creator_map_type;
 
@@ -34,6 +39,17 @@ namespace util
             typedef ClassFactory factory_type;
             typedef FactoryTraits factory_traits;
             typedef typename FactoryTraits::key_type key_type;
+            typedef typename FactoryTraits::sinit_proto sinit_proto;
+            typedef typename boost::mpl::if_<
+                boost::is_same<void, typename FactoryTraits::sinitor_type>, 
+                boost::function<sinit_proto>, 
+                typename FactoryTraits::sinitor_type
+            >::type sinitor_type;
+            typedef typename boost::mpl::if_<
+                boost::is_same<void, typename FactoryTraits::sinitor_map_type>, 
+                std::map<key_type, sinitor_type>, 
+                typename FactoryTraits::sinitor_map_type
+            >::type sinitor_map_type;
             typedef typename FactoryTraits::create_proto create_proto;
             typedef typename boost::mpl::if_<
                 boost::is_same<void, typename FactoryTraits::creator_type>, 
@@ -52,7 +68,15 @@ namespace util
             static void register_class(
                 key_type const & key)
             {
+                register_sinitor(key, StaticInitor<C, sinit_proto>());
                 register_creator(key, Creator<C>());
+            }
+
+            static void register_sinitor(
+                key_type const & key, 
+                sinitor_type sinitor)
+            {
+                sinitor_map().insert(std::make_pair(key, sinitor));
             }
 
             static void register_creator(
@@ -62,6 +86,45 @@ namespace util
                 creator_map().insert(std::make_pair(key, creator));
             }
 
+        public:
+            static void static_init()
+            {
+                typename sinitor_map_type::const_iterator iter =
+                    sinitor_map().begin();
+                for (; iter != sinitor_map().end(); ++iter) {
+                    iter->second();
+                }
+            }
+
+            template <
+                typename Arg1
+            >
+            static void static_init(
+                Arg1 & arg1)
+            {
+                typename sinitor_map_type::const_iterator iter =
+                    sinitor_map().begin();
+                for (; iter != sinitor_map().end(); ++iter) {
+                    iter->second(arg1);
+                }
+            }
+
+            template <
+                typename Arg1, 
+                typename Arg2
+            >
+            static void static_init(
+                Arg1 & arg1, 
+                Arg2 & arg2)
+            {
+                typename sinitor_map_type::const_iterator iter =
+                    sinitor_map().begin();
+                for (; iter != sinitor_map().end(); ++iter) {
+                    iter->second(arg1, arg2);
+                }
+            }
+
+        public:
             static result_type create(
                 key_type const & key, 
                 boost::system::error_code & ec)
@@ -144,6 +207,12 @@ namespace util
             }
 
         protected:
+            static sinitor_map_type & sinitor_map()
+            {
+                static sinitor_map_type smap;
+                return smap;
+            }
+
             static creator_map_type & creator_map()
             {
                 static creator_map_type smap;
