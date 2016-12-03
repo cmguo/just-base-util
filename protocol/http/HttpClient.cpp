@@ -124,9 +124,7 @@ namespace util
             HttpRequest const & request, 
             error_code & ec)
         {
-            LOG_DEBUG("[open] (id = %u, url = %s)" 
-                % id_ % request.head().path.c_str());
-
+            dump_request(request, "open");
             post_reqeust(request, false, ec);
             if (!ec) {
                 resume(requests_.size() > 1, ec);
@@ -158,9 +156,7 @@ namespace util
             HttpRequest const & request, 
             response_type const & resp)
         {
-            LOG_DEBUG("[async_open] (id = %u, url = %s)" 
-                % id_ % request.head().path);
-
+            dump_request(request, "async_open");
             error_code ec;
             post_reqeust(request, false, resp, ec);
             if (ec) {
@@ -185,9 +181,7 @@ namespace util
             HttpRequest const & request, 
             boost::system::error_code & ec)
         {
-            LOG_DEBUG("[fetch] (id = %u, url = %s)" 
-                % id_ % request.head().path.c_str());
-
+            dump_request(request, "fetch");
             post_reqeust(request, true, ec);
             if (!ec) {
                 resume(requests_.size() > 1, ec);
@@ -215,9 +209,7 @@ namespace util
             HttpRequest const & request, 
             response_type const & resp)
         {
-            LOG_DEBUG("[async_fetch] (id = %u, url = %s)" 
-                % id_ % request.head().path);
-
+            dump_request(request, "async_fetch");
             error_code ec;
             post_reqeust(request, true, resp, ec);
             if (ec) {
@@ -268,8 +260,6 @@ namespace util
             error_code & ec)
         {
             HttpRequestHead const & head(request.head());
-            LOG_DEBUG("[post_reqeust] [%u] [%u] %s http://%s%s"
-                % id_ % req_id_ % head.method_str[head.method] % head.host.get_value_or(addr_.host_svc()) % head.path);
             if (requests_.size() == 1 && requests_[0].is_fetch && requests_[0].status == finished) {
                 // 兼容老版本，fetch不需要close的机制，但是只用于非串行请求的情形
                 assert(status_ == closed || status_ == broken);
@@ -303,6 +293,7 @@ namespace util
                 requests_.push_back(Request(req_id_++, request, is_fetch, resp));
             }
             Request & request2 = requests_.back();
+            dump_request(request2, "post_request", ec);
             if (request2.data().size())
                 request2.head().content_length.reset(request2.data().size());
             if (status_ == ready)
@@ -755,6 +746,7 @@ namespace util
                 ec = format_error;
                 return false;
             }
+            LOG_DEBUG("[handle_redirect] (id = %u, location: %s)" % id_ % response_.head().location.get());
             Url location(response_.head().location.get());
             if (!location.is_valid()) {
                 LOG_WARN("[handle_redirect] redirect failed! (id = %u, location: %s)" % id_ % response_.head().location.get());
@@ -904,6 +896,15 @@ namespace util
         {
             LOG_TRACE("[%s] (id = %u, status = %s, ec = %s)" 
                 % function % id_ % con_status_str[status_] % ec.message());
+        }
+
+        void HttpClient::dump_request(
+            HttpRequest const & request, 
+            char const * function)
+        {
+            HttpRequestHead const & head(request.head());
+            LOG_DEBUG("[%s] (id = %u, request = %s http://%s%s"
+                % function % id_ % head.method_str[head.method] % head.host.get_value_or(addr_.host_svc()) % head.path);
         }
 
         void HttpClient::dump_request(

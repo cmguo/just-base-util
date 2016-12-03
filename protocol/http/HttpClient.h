@@ -482,6 +482,10 @@ namespace util
                 boost::system::error_code const & ec);
 
             void dump_request(
+                HttpRequest const & request, 
+                char const * function); 
+
+            void dump_request(
                 Request const & request, 
                 char const * function, 
                 boost::system::error_code const & ec);
