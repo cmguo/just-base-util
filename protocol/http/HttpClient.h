@@ -59,7 +59,6 @@ namespace util
                     ec == boost::asio::error::timed_out || 
                     ec == boost::asio::error::network_down || 
                     ec == boost::asio::error::connection_reset || 
-                    ec == boost::asio::error::connection_refused || 
                     ec == boost::asio::error::host_not_found || 
                     ec == boost::asio::error::eof || 
                     ec == boost::asio::error::host_unreachable);
