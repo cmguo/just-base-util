@@ -234,7 +234,8 @@ namespace util
                 ContentRangeT(
                     value_type total, 
                     Unit const & unit)
-                    : unit_(unit)
+                    : total_(total)
+                    , unit_(unit)
                 {
                     if (!unit_.has_end()) {
                         unit_ = Unit(unit_.begin(), total);
