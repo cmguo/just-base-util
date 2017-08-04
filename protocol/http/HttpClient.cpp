@@ -33,7 +33,7 @@ namespace util
     namespace protocol
     {
 
-        FRAMEWORK_LOGGER_DECLARE_MODULE("util.protocol.HttpClient");
+        FRAMEWORK_LOGGER_DECLARE_MODULE_LEVEL("util.protocol.HttpClient", framework::logger::Debug);
 
         static char const SERVICE_NAME[] = "http";
 
@@ -57,12 +57,14 @@ namespace util
         };
 
         HttpClient::HttpClient(
-            boost::asio::io_service & io_svc)
+            boost::asio::io_service & io_svc,
+            bool debug_enable)
             : HttpSocket(io_svc)
             , status_(closed)
             , is_keep_alive_(false)
             , req_id_(0)
             , num_sent_(0)
+            , debug_enable_(debug_enable)
         {
             static size_t gid = 0;
             id_ = gid++;
@@ -894,7 +896,9 @@ namespace util
             char const * function, 
             boost::system::error_code const & ec)
         {
-            LOG_TRACE("[%s] (id = %u, status = %s, ec = %s)" 
+            if (!debug_enable_)
+                return;
+            LOG_DEBUG("[%s] (id = %u, status = %s, ec = %s)" 
                 % function % id_ % con_status_str[status_] % ec.message());
         }
 
@@ -902,6 +906,8 @@ namespace util
             HttpRequest const & request, 
             char const * function)
         {
+            if (!debug_enable_)
+                return;
             HttpRequestHead const & head(request.head());
             LOG_DEBUG("[%s] (id = %u, request = %s http://%s%s"
                 % function % id_ % head.method_str[head.method] % head.host.get_value_or(addr_.host_svc()) % head.path);
@@ -912,7 +918,9 @@ namespace util
             char const * function, 
             boost::system::error_code const & ec)
         {
-            LOG_TRACE("[%s] (id = %u, req_id = %u, req_status = %s, ec = %s)" 
+            if (!debug_enable_)
+                return;
+            LOG_DEBUG("[%s] (id = %u, req_id = %u, req_status = %s, ec = %s)" 
                 % function % id_ % request.id % req_status_str[request.status] % ec.message());
         }
 

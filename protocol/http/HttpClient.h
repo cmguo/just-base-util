@@ -66,7 +66,8 @@ namespace util
 
         public:
             HttpClient(
-                boost::asio::io_service & io_svc);
+                boost::asio::io_service & io_svc,
+                bool debug_enable = true);
 
             ~HttpClient();
 
@@ -509,7 +510,7 @@ namespace util
             HttpResponse response_;
             size_t req_id_;
             size_t num_sent_;   // 已经发出去的请求数
-
+            bool debug_enable_;
         private:
             size_t id_;
         };
