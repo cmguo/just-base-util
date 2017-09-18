@@ -91,4 +91,16 @@ namespace util
 #define SERIALIZATION_NVP_3(t, v) \
     util::serialization::make_nvp(STRINGLIZE(v), t.v ## _)
 
+#define SERIALIZATION_NVP_TV(t, v) \
+    util::serialization::make_nvp(STRINGLIZE(v), t.v)
+
+#define SERIALIZATION_NVP_TV$(t, v) \
+    util::serialization::make_nvp(STRINGLIZE(v), t.v())
+
+#define SERIALIZATION_NVP_TV_(t, v) \
+    util::serialization::make_nvp(STRINGLIZE(v), t.v ## _)
+
+#define SERIALIZATION_NVP_V_(v) \
+    util::serialization::make_nvp(STRINGLIZE(v), v ## _)
+
 #endif // _UTIL_SERIALIZATION_NV_PAIR_H_
