@@ -220,7 +220,9 @@ namespace util
                         if (!http_to_server_) {
                             http_to_server_ = new HttpSocket(get_io_service());
                             state_ = connectting;
-                            http_to_server_->async_connect(request_.head().host.get(), 
+                            NetName addr(":80");
+                            addr.from_string(request_.head().host.get());
+                            http_to_server_->async_connect(addr,
                                 boost::bind(&HttpProxy::handle_async, this, _1, Size()));
                         } else {
                             state_ = connectting;
