@@ -29,7 +29,7 @@ namespace util
         {
             util::protocol::HttpRequestHead & head = request.head();
             head.path = url.path_all();
-            head["Accept"] = "{*.*}";
+            head["Accept"] = "{*/*}";
             head.host = url.host_svc();
             head.connection = util::protocol::http_field::Connection::keep_alive;
             if (beg == 0 && end == (boost::uint64_t)-1) {
