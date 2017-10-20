@@ -28,6 +28,12 @@ namespace util
                 boost::uint64_t end, 
                 boost::system::error_code & ec);
 
+            virtual bool open(
+                std::string const & path,
+                boost::uint64_t beg, 
+                boost::uint64_t end, 
+                boost::system::error_code & ec);
+
             virtual bool is_open(
                 boost::system::error_code & ec);
 

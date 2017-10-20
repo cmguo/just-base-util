@@ -29,9 +29,19 @@ namespace util
             boost::uint64_t end, 
             boost::system::error_code & ec)
         {
+            open(url.path(), beg, end, ec);
+            return !ec;
+        }
+
+        bool FileSource::open(
+            std::string const & path,
+            boost::uint64_t beg, 
+            boost::uint64_t end, 
+            boost::system::error_code & ec)
+        {
             if (is_open_)
                 file_.close(ec);
-            is_open_ = file_.open(url.path(), file_.f_read, ec);
+            is_open_ = file_.open(path, file_.f_read, ec);
             if (!is_open_) {
                 ec = framework::system::last_system_error();
                 if (!ec) {

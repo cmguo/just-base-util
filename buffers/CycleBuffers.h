@@ -317,7 +317,7 @@ namespace util
                 }
 
             private:
-                CycleBuffers const buffers_;
+                CycleBuffers const & buffers_;
                 size_t max_size_;
             };
 
@@ -351,7 +351,7 @@ namespace util
                 }
 
             private:
-                CycleBuffers const buffers_;
+                CycleBuffers const & buffers_;
                 size_t max_size_;
             };
 
