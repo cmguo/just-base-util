@@ -65,6 +65,7 @@ namespace util
             , state_(stopped)
             , watch_state_(watch_stopped)
             , http_to_server_(NULL)
+            , is_local_(false)
         {
             static size_t gid = 0;
             id_ = gid++;
@@ -217,6 +218,7 @@ namespace util
                     break;
                 case preparing:
                     if (bytes_transferred.get_bool()) {
+                        is_local_ = false;
                         if (!http_to_server_) {
                             http_to_server_ = new HttpSocket(get_io_service());
                             state_ = connectting;
@@ -229,6 +231,7 @@ namespace util
                             handle_async(ec, Size());
                         }
                     } else {
+                        is_local_ = true;
                         state_ = transferring_request_data;
                         transfer_request_data(
                             boost::bind(&HttpProxy::handle_async, this, _1, _2));

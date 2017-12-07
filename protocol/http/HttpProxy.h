@@ -98,7 +98,7 @@ namespace util
 
             bool is_local()
             {
-                return http_to_server_ == NULL;
+                return is_local_;
             }
 
         protected:
@@ -260,6 +260,7 @@ namespace util
             HttpRequest request_;
             HttpResponse response_;
             boost::asio::streambuf transfer_buf_;
+            bool is_local_;
         };
 
     } // namespace protocol
